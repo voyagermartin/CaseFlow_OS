@@ -2,6 +2,9 @@
 
 歡迎來到 **CaseFlow OS**！本手冊旨在幫助新進夥伴、實習生與工讀生在「第一天第一小時」就能光速上手。這套系統是我們團隊高效協作的秘密武器，請務必詳細閱讀以下指南。
 
+> 🛠️ **技術與架構規格 (Phase 2 Checkpoint)**
+> 本系統採用 **FastAPI** 作為後端核心 API 框架，底層使用 **SQLite** 與 **SQLAlchemy** 進行高效資料讀寫與關聯設計。前端架構採用 **Tailwind CSS**，並深度整合 **FullCalendar v6** (日曆模式) 與 **Frappe Gantt** (甘特圖模式)，提供流暢且現代化的單頁應用 (SPA) 互動體驗。
+
 ---
 
 ## 🌟 1. 歡迎來到 CaseFlow OS（核心精神）
@@ -132,3 +135,14 @@ graph TD
 ---
 
 > 💡 **小貼士**：本手冊將隨系統升級持續更新。若在操作過程中發現任何 Bug 或有更好用的功能提案，歡迎隨時向系統管理團隊反映！
+
+---
+
+## 🛠️ 開發日誌 (Development Log)
+
+### 📅 2026-08-17 - 核心 MVP 基礎建設與三視圖實作
+- **專案骨架與環境搭建**：初始化 Git 儲存庫並配置 Python 3.12 虛擬環境 (`.venv`) 與 `requirements.txt`。
+- **資料庫與 ORM 模型設計**：建置 `database.py` 及定義 `User`、`Case`、`TaskGroup`、`TaskItem`、`TaskComment` 及權限關聯表。
+- **資料過濾與安全查詢 (CRUD)**：實作 `get_user_cases` 查詢，確保未授權成員無法讀取特定任務、備註與留言，避免資訊洩漏與超載。
+- **示範資料生成器 (Seed)**：實作 `seed.py` 自動建立專案管理員 (Martin)、作業 (OP_Ning)、銷售 (Sales_Yang)、實習生 (Intern_A) 角色，並自動寫入包含 3 大任務分組與 4 項待辦細項的怡保專案出團示範資料。
+- **全視圖儀表板與 API 串接**：完成 [index.html](file:///d:/Projects/CaseFlow_OS/templates/index.html) 的實作，整合 FullCalendar v6 與 Frappe Gantt，並透過網頁頂端「使用者切換下拉選單」動態刷新 API，達成無縫權限展示與任務狀態勾選更新。
