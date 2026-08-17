@@ -30,8 +30,9 @@ templates = Jinja2Templates(directory="templates")
 def read_dashboard(request: Request, db: Session = Depends(get_db)):
     users = crud.get_users(db)
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "users": users}
+        request=request,
+        name="index.html",
+        context={"users": users}
     )
 
 # --- Users API ---
