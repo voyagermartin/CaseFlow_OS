@@ -325,8 +325,40 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
-                <button onclick="closeNewCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-colors" data-i18n="cancelBtn">取消</button>
+                <button onclick="closeNewCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors" data-i18n="cancelBtn">取消</button>
                 <button onclick="submitNewCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="createCaseBtn">建立案件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome / Connect GAS Modal -->
+    <div id="welcome-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-slate-950/85 backdrop-blur-md"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-8 relative z-10 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <img src="logo.jpg" class="h-16 w-16 mx-auto rounded-2xl object-cover shadow-lg shadow-brand-500/20 border border-slate-800" alt="Logo">
+                <h3 class="text-xl font-bold text-slate-100 mt-4">歡迎來到 CaseFlow OS！</h3>
+                <p class="text-xs text-slate-400">專案協同與權限管家 ➔ 試算表無伺服器整合系統</p>
+            </div>
+            
+            <div class="space-y-4 border-t border-slate-800 pt-5">
+                <p class="text-sm text-slate-300 leading-relaxed">
+                    本系統使用 <strong>Google Sheets</strong> 作為雲端資料庫。偵測到您尚未設定連線 API。請選擇連線方式：
+                </p>
+                
+                <div class="space-y-2">
+                    <label class="text-xs text-slate-400 font-semibold uppercase block">貼上您的 GAS Web App API 網址</label>
+                    <input type="text" id="modal-gas-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-brand-500 placeholder-slate-700" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button onclick="connectFromModal()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20">
+                    連線 Google 試算表資料庫
+                </button>
+                <button onclick="useDemoModeFromModal()" class="w-full py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">
+                    進入內建 Demo 測試模式 (免設定)
+                </button>
             </div>
         </div>
     </div>
@@ -473,6 +505,11 @@
             const savedGasUrl = localStorage.getItem('gasApiUrl') || '';
             document.getElementById('gas-api-url').value = savedGasUrl;
 
+            // If empty, show welcome modal
+            if (!savedGasUrl) {
+                document.getElementById('welcome-modal').classList.remove('hidden');
+            }
+
             await loadUsers();
             
             // Set default active user
@@ -495,6 +532,26 @@
         // Save GAS URL to Local Storage
         function saveGasUrl(val) {
             localStorage.setItem('gasApiUrl', val.trim());
+            reloadAllViews();
+        }
+
+        // Welcome Modal Handlers
+        function connectFromModal() {
+            const inputVal = document.getElementById('modal-gas-url').value.trim();
+            if (!inputVal) {
+                alert('請輸入 Google Apps Script API 網址！');
+                return;
+            }
+            document.getElementById('gas-api-url').value = inputVal;
+            localStorage.setItem('gasApiUrl', inputVal);
+            document.getElementById('welcome-modal').classList.add('hidden');
+            reloadAllViews();
+        }
+
+        function useDemoModeFromModal() {
+            document.getElementById('gas-api-url').value = '';
+            localStorage.removeItem('gasApiUrl');
+            document.getElementById('welcome-modal').classList.add('hidden');
             reloadAllViews();
         }
 
