@@ -87,7 +87,7 @@
 
 ### 第一步：貼上並部署 Apps Script 後端
 1. 打開您的 Google 試算表，點選上方選單的 **「擴充功能」➔「Apps Script」**。
-2. 將本專案中的 [Code.gs](file:///d:/Projects/CaseFlow_OS/Code.gs) 內容完整複製，並貼入 Apps Script 的編輯器中（覆蓋預設的 `Code.gs`）。
+2. 將本專案中的 [Code.gs](file:///f:/Projects/CaseFlow_OS/Code.gs) 內容完整複製，並貼入 Apps Script 的編輯器中（覆蓋預設的 `Code.gs`）。
 3. 在編輯器上方選單中，點選執行 **`initDatabase`** 函式。這會自動在試算表中建立 `Users`, `Cases`, `Tasks`, `Comments` 四張工作表並寫入示範資料。
 4. 點選編輯器右上角的 **「部署」➔「新增部署」**：
    * **選取類型**：網頁應用程式 (Web App)
@@ -97,7 +97,7 @@
 5. 點選「部署」並授權存取。部署完成後，複製產生的 **「網頁應用程式 URL」**。
 
 ### 第二步：連接前端介面
-1. 打開本系統網頁 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)。
+1. 打開本系統網頁 [index.html](file:///f:/Projects/CaseFlow_OS/index.html)。
 2. 在網頁頂端的「GAS API URL」輸入框中，貼上剛剛複製的網頁應用程式 URL。
 3. 系統將會自動將連線切換至您真實的 Google Sheets，開始即時同步資料。
 4. *註：若輸入框留空，系統將會自動運作於「內建 Demo 模式」，使用本機記憶體進行測試模擬。*
@@ -116,8 +116,13 @@
 ### 📅 2026-08-18 - 無伺服器試算表資料庫移轉與多國語言 (i18n) 實作
 - **後端架構移轉**：將後端 API 完全遷移至 **Google Apps Script (Code.gs)**，使用 **Google Sheets** 作為雲端資料庫，並將舊的 Python/SQLite MVP 移入 `archive_python_mvp/`。
 - **資料庫初始化**：在 `Code.gs` 中實作 `initDatabase()`，自動在試算表中建立 `Users`, `Cases`, `Tasks`, `Comments` 四張工作表並寫入示範資料。
-- **前端 SPA 介面現代化**：在根目錄重寫 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)，支援輸入 GAS Web App URL 進行連線，並實作完整的**本機 Mock 測試引擎**（無 URL 時自動切換為本機模擬運行）。
+- **前端 SPA 介面現代化**：在根目錄重寫 [index.html](file:///f:/Projects/CaseFlow_OS/index.html)，支援輸入 GAS Web App URL 進行連線，並實作完整的**本機 Mock 測試引擎**（無 URL 時自動切換為本機模擬運行）。
 - **多國語言 (i18n) 與身份切換**：新增繁體中文 (zh-TW) 與越南文 (vi-VN) 翻譯字典。當人員選單切換至跨國夥伴 `Local_Nguyen` 時，介面與提示自動翻譯為越南文。
 - **GitHub Pages 部署優化**：移除非必要目錄，使專案可以直接透過 GitHub Pages 發佈，達成零伺服器維護成本之專案管理系統。
 - **視覺與安全防護優化**：新增 AI 生成之 CaseFlow OS 專屬 Logo (`logo.jpg`)，將其設為網頁 Header 標誌與瀏覽器 Favicon，並加入 robots meta 標籤與 `robots.txt` 檔案，全面阻擋搜尋引擎與爬蟲蒐集網頁內容。
 - **引導連線設定彈窗**：實作首次造訪引導連線彈窗（Welcome Connection Modal），提供使用者輸入 GAS Web App API 網址的入口或選擇進入 Demo 測試模式。輸入連線後，透過 `localStorage` 自動進行網址綁定，提升首訪引導之使用者體驗 (UX)。
+
+### 📅 2026-08-19 - 專案狀態同步、本機開發基準線確立與文檔更新
+- **儲存庫與雲端狀態同步**：完成 GitHub 遠端儲存庫與本機 Git 狀態拉取與同步驗證，確立最新主線 (`main`) 開發基準。
+- **架構與開發手冊同步更新**：同步更新 [HANDBOOK.md](file:///f:/Projects/CaseFlow_OS/HANDBOOK.md) 專案說明與最新技術規格，包含 GAS Web App API、Google Sheets 資料庫架構、GitHub Pages 無伺服器 SPA 部署模式與多語系支援說明。
+- **版本控制基線里程碑**：完成全套程式碼與文件狀態紀錄並提交至 GitHub，作為下一階段功能開發與維護之起點。
