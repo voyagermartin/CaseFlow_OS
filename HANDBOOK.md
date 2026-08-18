@@ -120,3 +120,4 @@
 - **多國語言 (i18n) 與身份切換**：新增繁體中文 (zh-TW) 與越南文 (vi-VN) 翻譯字典。當人員選單切換至跨國夥伴 `Local_Nguyen` 時，介面與提示自動翻譯為越南文。
 - **GitHub Pages 部署優化**：移除非必要目錄，使專案可以直接透過 GitHub Pages 發佈，達成零伺服器維護成本之專案管理系統。
 - **視覺與安全防護優化**：新增 AI 生成之 CaseFlow OS 專屬 Logo (`logo.jpg`)，將其設為網頁 Header 標誌與瀏覽器 Favicon，並加入 robots meta 標籤與 `robots.txt` 檔案，全面阻擋搜尋引擎與爬蟲蒐集網頁內容。
+- **引導連線設定彈窗**：實作首次造訪引導連線彈窗（Welcome Connection Modal），提供使用者輸入 GAS Web App API 網址的入口或選擇進入 Demo 測試模式。輸入連線後，透過 `localStorage` 自動進行網址綁定，提升首訪引導之使用者體驗 (UX)。
