@@ -119,3 +119,4 @@
 - **前端 SPA 介面現代化**：在根目錄重寫 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)，支援輸入 GAS Web App URL 進行連線，並實作完整的**本機 Mock 測試引擎**（無 URL 時自動切換為本機模擬運行）。
 - **多國語言 (i18n) 與身份切換**：新增繁體中文 (zh-TW) 與越南文 (vi-VN) 翻譯字典。當人員選單切換至跨國夥伴 `Local_Nguyen` 時，介面與提示自動翻譯為越南文。
 - **GitHub Pages 部署優化**：移除非必要目錄，使專案可以直接透過 GitHub Pages 發佈，達成零伺服器維護成本之專案管理系統。
+- **視覺與安全防護優化**：新增 AI 生成之 CaseFlow OS 專屬 Logo (`logo.jpg`)，將其設為網頁 Header 標誌與瀏覽器 Favicon，並加入 robots meta 標籤與 `robots.txt` 檔案，全面阻擋搜尋引擎與爬蟲蒐集網頁內容。
