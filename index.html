@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaseFlow OS - 案件協同與權限管家</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#eedeff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FullCalendar CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <!-- FullCalendar Locales -->
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales-all.global.min.js"></script>
+    <!-- Frappe Gantt CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', 'Noto Sans', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        /* FullCalendar Overrides to match Dark Theme */
+        .fc {
+            --fc-border-color: #1e293b;
+            --fc-daygrid-event-dot-width: 8px;
+            background: #0f172a;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            border: 1px solid #1e293b;
+        }
+        .fc-theme-standard td, .fc-theme-standard th {
+            border: 1px solid #1e293b;
+        }
+        .fc .fc-col-header-cell-cushion, .fc .fc-daygrid-day-number {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .fc .fc-toolbar-title {
+            color: #f8fafc;
+            font-size: 1.25rem !important;
+            font-weight: 700;
+        }
+        .fc .fc-button-primary {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .fc .fc-button-primary:hover {
+            background-color: #4338ca;
+            border-color: #4338ca;
+        }
+        .fc .fc-button-primary:disabled {
+            background-color: #1e1b4b;
+            border-color: #1e1b4b;
+        }
+        /* Frappe Gantt Custom dark tweaks */
+        .gantt .grid-header {
+            fill: #0f172a;
+            stroke: #1e293b;
+        }
+        .gantt .grid-row {
+            fill: #020617;
+        }
+        .gantt .grid-row:nth-child(even) {
+            fill: #0f172a;
+        }
+        .gantt .row-line {
+            stroke: #1e293b;
+        }
+        .gantt .tick {
+            stroke: #1e293b;
+        }
+        .gantt .bar {
+            fill: #818cf8;
+        }
+        .gantt .bar-progress {
+            fill: #4f46e5;
+        }
+        .gantt .bar-label {
+            fill: #ffffff;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .gantt-container {
+            background-color: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 1rem;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950">
+
+    <!-- Global Header -->
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 py-4 z-30 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <span class="text-white font-bold text-xl">C</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
+                    CaseFlow OS
+                    <span class="text-xs bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-indigo-400 font-normal">GAS v2.0</span>
+                </h1>
+                <p class="text-xs text-slate-400" data-i18n="subtitle">專案協同與權限管家</p>
+            </div>
+        </div>
+
+        <!-- GAS Configuration & Active User Switcher -->
+        <div class="flex items-center gap-4">
+            <!-- GAS API input -->
+            <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <span class="text-xs text-slate-400 font-semibold">API URL:</span>
+                <input type="text" id="gas-api-url" oninput="saveGasUrl(this.value)" class="bg-transparent text-xs text-slate-300 w-64 focus:outline-none focus:border-brand-500" data-i18n="gasUrlPlaceholder" placeholder="輸入 GAS API URL 進行雲端同步...">
+            </div>
+
+            <!-- Active User Switcher -->
+            <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <span class="text-xs text-slate-400 font-medium" data-i18n="activeUser">當前人員:</span>
+                <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer">
+                    <!-- User options loaded dynamically -->
+                </select>
+                <div id="user-avatar-indicator" class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold uppercase transition-all duration-300">
+                    -
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button onclick="openNewCaseModal()" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-sm font-semibold text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <span data-i18n="addCaseBtn">新增案件</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900/40 border-r border-slate-800/80 flex flex-col p-4 shrink-0">
+            <nav class="space-y-1.5 flex-1">
+                <button onclick="switchView('calendar')" id="tab-calendar" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10">
+                    <span data-i18n="calendarTab">📅 日曆模式</span>
+                </button>
+                <button onclick="switchView('case')" id="tab-case" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <span data-i18n="caseTreeTab">📋 案件樹狀</span>
+                </button>
+                <button onclick="switchView('gantt')" id="tab-gantt" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <span data-i18n="ganttTab">📊 甘特圖模式</span>
+                </button>
+            </nav>
+            <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
+                <div class="font-bold text-slate-300" data-i18n="guideTitle">💡 每日檢視指引</div>
+                <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-red-500"></span><span data-i18n="redLight">🔴 已過期未完成</span></div>
+                <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-yellow-500"></span><span data-i18n="yellowLight">🟡 48小時內即將到期</span></div>
+                <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-indigo-500"></span><span data-i18n="blueLight">🔵 進行中(充足時間)</span></div>
+                <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-green-500"></span><span data-i18n="greenLight">🟢 已完成任務</span></div>
+            </div>
+        </aside>
+
+        <!-- Dynamic Content Body -->
+        <main class="flex-1 bg-slate-950 p-6 overflow-y-auto relative">
+            <!-- Loading Indicator -->
+            <div id="view-loading" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-20 hidden">
+                <div class="flex flex-col items-center gap-3">
+                    <div class="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+                    <span class="text-sm text-slate-400" data-i18n="loadingText">載入中...</span>
+                </div>
+            </div>
+
+            <!-- Calendar View Container -->
+            <div id="view-calendar" class="w-full h-full">
+                <div id="calendar" class="h-full"></div>
+            </div>
+
+            <!-- Case Tree View Container -->
+            <div id="view-case" class="w-full hidden space-y-6">
+                <div id="cases-tree-container" class="space-y-6">
+                    <!-- Dynamic case cards go here -->
+                </div>
+            </div>
+
+            <!-- Gantt View Container -->
+            <div id="view-gantt" class="w-full hidden">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-slate-100" data-i18n="ganttTitle">甘特圖時程全局圖</h3>
+                    <div class="flex gap-2">
+                        <button onclick="changeGanttMode('Day')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="dayView">日</button>
+                        <button onclick="changeGanttMode('Week')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="weekView">週</button>
+                        <button onclick="changeGanttMode('Month')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="monthView">月</button>
+                    </div>
+                </div>
+                <div class="gantt-target overflow-x-auto">
+                    <svg id="gantt-svg"></svg>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Task Detail Drawer / Modal (Right Side Drawer style) -->
+    <div id="task-drawer" class="fixed inset-y-0 right-0 w-[450px] bg-slate-900 border-l border-slate-800 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2" data-i18n="taskDetailTitle">
+                📋 任務詳情
+            </h3>
+            <button onclick="closeTaskDrawer()" class="text-slate-400 hover:text-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- Task Basic Info -->
+            <div class="space-y-1">
+                <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="taskTitleLabel">任務標題</label>
+                <div id="drawer-task-title" class="text-lg font-bold text-slate-200"></div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="space-y-2">
+                <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="notesLabel">執行備註 (Notes)</label>
+                <textarea id="drawer-task-notes" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-brand-500 transition-colors" data-i18n="notesPlaceholder" placeholder="請在此填寫訂購代碼等備註..."></textarea>
+                <button onclick="saveTaskNotes()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="saveNotesBtn">
+                    儲存備註
+                </button>
+            </div>
+
+            <!-- Visibility / Assignee Config -->
+            <div class="space-y-3">
+                <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="visibilityLabel">可見人員設定 (誰能看見此任務與留言)</label>
+                <div id="drawer-task-visibility" class="grid grid-cols-2 gap-2">
+                    <!-- Checkboxes of users -->
+                </div>
+                <button onclick="saveTaskVisibility()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="updateVisBtn">
+                    更新可見權限
+                </button>
+            </div>
+
+            <!-- Comments Thread -->
+            <div class="space-y-4 pt-4 border-t border-slate-800">
+                <label class="text-xs text-slate-500 font-semibold uppercase block" data-i18n="commentLabel">項目級討論留言 (@精準對象)</label>
+                <div id="drawer-comments-list" class="space-y-3">
+                    <!-- Dynamically rendered comments -->
+                </div>
+                
+                <!-- New Comment Form -->
+                <div class="flex gap-2">
+                    <input type="text" id="new-comment-input" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-brand-500" data-i18n="commentPlaceholder" placeholder="寫點留言...可使用 @小明 標註">
+                    <button onclick="submitComment()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors" data-i18n="submitCommentBtn">
+                        送出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop for drawer -->
+    <div id="drawer-backdrop" onclick="closeTaskDrawer()" class="fixed inset-0 bg-slate-950/60 z-30 hidden backdrop-blur-sm"></div>
+
+    <!-- New Case Modal -->
+    <div id="new-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeNewCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100" data-i18n="newCaseModalTitle">🚀 發起新案件 (New Case)</h3>
+                <button onclick="closeNewCaseModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseNameLabel">案件名稱 / 團號</label>
+                    <input type="text" id="new-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseNamePlaceholder" placeholder="例如：2026/09/15 馬航怡保專案">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseDescLabel">案件描述</label>
+                    <textarea id="new-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseDescPlaceholder" placeholder="請填寫專案背景簡介..."></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseGroupsLabel">預設任務群組 (以逗號分隔)</label>
+                    <input type="text" id="new-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" value="票務與交通, LOCAL 與 住宿, 名單與證件">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeNewCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-colors" data-i18n="cancelBtn">取消</button>
+                <button onclick="submitNewCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="createCaseBtn">建立案件</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Scripting Logic -->
+    <script>
+        // Multi-language UI Dictionary
+        const i18n = {
+            "zh-TW": {
+                subtitle: "專案協同與權限管家",
+                activeUser: "當前人員:",
+                addCaseBtn: "新增案件",
+                gasUrlPlaceholder: "輸入 GAS API 網頁應用程式 URL 進行雲端同步...",
+                calendarTab: "📅 日曆模式",
+                caseTreeTab: "📋 案件樹狀",
+                ganttTab: "📊 甘特圖模式",
+                guideTitle: "💡 每日檢視指引",
+                redLight: "🔴 已過期未完成",
+                yellowLight: "🟡 48小時內即將到期",
+                blueLight: "🔵 進行中(充足時間)",
+                greenLight: "🟢 已完成任務",
+                loadingText: "載入中...",
+                ganttTitle: "甘特圖時程全局圖",
+                dayView: "日",
+                weekView: "週",
+                monthView: "月",
+                taskDetailTitle: "📋 任務詳情",
+                taskTitleLabel: "任務標題",
+                notesLabel: "執行備註 (Notes)",
+                notesPlaceholder: "請在此填寫訂購代碼、廠商聯絡電話、對帳細節等備註...",
+                saveNotesBtn: "儲存備註",
+                visibilityLabel: "可見人員設定 (誰能看見此任務與留言)",
+                updateVisBtn: "更新可見權限",
+                commentLabel: "項目級討論留言 (@精準對象)",
+                commentPlaceholder: "寫點留言...可使用 @小明 標註",
+                submitCommentBtn: "送出",
+                newCaseModalTitle: "🚀 發起新案件 (New Case)",
+                caseNameLabel: "案件名稱 / 團號",
+                caseNamePlaceholder: "例如：2026/09/15 馬航怡保專案",
+                caseDescLabel: "案件描述",
+                caseDescPlaceholder: "請填寫專案背景簡介...",
+                caseGroupsLabel: "預設任務群組 (以逗號分隔)",
+                cancelBtn: "取消",
+                createCaseBtn: "建立案件",
+                noPermissionCases: "目前沒有您有權限檢視的案件。",
+                caseOwner: "建立者",
+                taskGroup: "任務組",
+                quickTaskPlaceholder: "快速新增待辦事項...",
+                addBtn: "新增",
+                noComments: "尚無留言討論。",
+                successSaveNotes: "備註儲存成功！",
+                successSaveVis: "可見權限更新成功！",
+                alertFillCaseName: "請填寫案件名稱！",
+                overdueBadge: "截止",
+                driveBtn: "📂 雲端資料夾",
+            },
+            "vi-VN": {
+                subtitle: "Quản lý Dự án & Quyền hạn",
+                activeUser: "Thành viên:",
+                addCaseBtn: "Thêm dự án",
+                gasUrlPlaceholder: "Nhập URL Web App GAS để đồng bộ đám mây...",
+                calendarTab: "📅 Chế độ Lịch",
+                caseTreeTab: "📋 Cấu trúc Dự án",
+                ganttTab: "📊 Biểu đồ Gantt",
+                guideTitle: "💡 Hướng dẫn kiểm tra hàng ngày",
+                redLight: "🔴 Quá hạn chưa hoàn thành",
+                yellowLight: "🟡 Sắp đến hạn trong 48 giờ",
+                blueLight: "🔵 Đang thực hiện (đủ thời gian)",
+                greenLight: "🟢 Đã hoàn thành",
+                loadingText: "Đang tải...",
+                ganttTitle: "Biểu đồ Gantt toàn cảnh",
+                dayView: "Ngày",
+                weekView: "Tuần",
+                monthView: "Tháng",
+                taskDetailTitle: "📋 Chi tiết công việc",
+                taskTitleLabel: "Tiêu đề công việc",
+                notesLabel: "Ghi chú thực hiện (Notes)",
+                notesPlaceholder: "Vui lòng nhập mã đặt chỗ, số điện thoại nhà cung cấp...",
+                saveNotesBtn: "Lưu ghi chú",
+                visibilityLabel: "Thành viên xem (Ai có thể xem việc này & thảo luận)",
+                updateVisBtn: "Cập nhật quyền xem",
+                commentLabel: "Thảo luận chi tiết công việc (@đối tượng chính xác)",
+                commentPlaceholder: "Viết bình luận... dùng @tên để gắn thẻ",
+                submitCommentBtn: "Gửi",
+                newCaseModalTitle: "🚀 Khởi tạo dự án mới (New Case)",
+                caseNameLabel: "Tên dự án / Số đoàn",
+                caseNamePlaceholder: "Ví dụ: 2026/09/15 Tour Ipoh Malaysia",
+                caseDescLabel: "Mô tả dự án",
+                caseDescPlaceholder: "Vui lòng nhập tóm tắt bối cảnh dự án...",
+                caseGroupsLabel: "Nhóm công việc mặc định (cách nhau bằng dấu phẩy)",
+                cancelBtn: "Hủy",
+                createCaseBtn: "Tạo dự án",
+                noPermissionCases: "Hiện tại không có dự án nào bạn có quyền xem.",
+                caseOwner: "Người tạo",
+                taskGroup: "Nhóm việc",
+                quickTaskPlaceholder: "Thêm nhanh công việc...",
+                addBtn: "Thêm",
+                noComments: "Chưa có thảo luận nào.",
+                successSaveNotes: "Lưu ghi chú thành công!",
+                successSaveVis: "Cập nhật quyền xem thành công!",
+                alertFillCaseName: "Vui lòng điền tên dự án!",
+                overdueBadge: "Hạn chót",
+                driveBtn: "📂 Thư mục Drive",
+            }
+        };
+
+        // --- Mock In-Memory Database ---
+        let mockUsers = [
+            { id: 1, username: "Martin", role: "Owner/Admin", avatar_color: "#4f46e5", language: "zh-TW" },
+            { id: 2, username: "OP_Ning", role: "Operation", avatar_color: "#0ea5e9", language: "zh-TW" },
+            { id: 3, username: "Sales_Yang", role: "Sales", avatar_color: "#f59e0b", language: "zh-TW" },
+            { id: 4, username: "Local_Nguyen", role: "Local Agent", avatar_color: "#10b981", language: "vi-VN" }
+        ];
+
+        let mockCases = [
+            { id: 1, title: "2026/09/15 馬航怡保專案", description: "本次怡保出團之完整追蹤與住宿協調工作", owner_id: 1, drive_url: "https://drive.google.com/drive/folders/mock-id", group_names: "票務與交通, LOCAL 與 住宿, 名單與證件" }
+        ];
+
+        let mockTasks = [
+            { id: 1, case_id: 1, group_name: "票務與交通", title: "【票務組】收取訂金與開票確認", due_date: "2026-08-30", start_date: "2026-08-01", is_completed: false, notes: "記得確認開票代號與退改簽規則", visible_user_ids: [1, 2, 3] },
+            { id: 2, case_id: 1, group_name: "LOCAL 與 住宿", title: "訂怡保當地飯店", due_date: "2026-08-25", start_date: "2026-08-10", is_completed: true, notes: "訂單號已收到，請與 Local 再次核對", visible_user_ids: [1, 2, 4] },
+            { id: 3, case_id: 1, group_name: "LOCAL 與 住宿", title: "確認遊覽車車號", due_date: "2026-09-10", start_date: "2026-08-20", is_completed: false, notes: "車型要求3年內新車，含司機電話", visible_user_ids: [1, 2] },
+            { id: 4, case_id: 1, group_name: "名單與證件", title: "收集護照影本與辦理簽證", due_date: "2026-08-15", start_date: "2026-08-01", is_completed: false, notes: "逾期警報！請業務儘速追回護照正本", visible_user_ids: [1, 3, 4] }
+        ];
+
+        let mockComments = [
+            { id: 1, task_id: 2, user_id: 2, content: "飯店確認信已收到，確認號：#12345", created_at: "2026-08-15 14:00:00" },
+            { id: 2, task_id: 2, user_id: 4, content: "Đã xác nhận phòng với khách sạn rồi nhé!", created_at: "2026-08-15 15:30:00" }
+        ];
+
+        // --- Client State ---
+        let currentUserId = null;
+        let allUsers = [];
+        let allCases = [];
+        let activeView = 'calendar';
+        let calendar = null;
+        let gantt = null;
+        let ganttViewMode = 'Day';
+        let selectedTaskId = null;
+
+        // On Document Ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load saved GAS API URL
+            const savedGasUrl = localStorage.getItem('gasApiUrl') || '';
+            document.getElementById('gas-api-url').value = savedGasUrl;
+
+            await loadUsers();
+            
+            // Set default active user
+            const savedUserId = localStorage.getItem('activeUserId');
+            const switcher = document.getElementById('user-switcher');
+            if (savedUserId && Array.from(switcher.options).some(opt => opt.value == savedUserId)) {
+                currentUserId = parseInt(savedUserId);
+            } else if (allUsers.length > 0) {
+                currentUserId = allUsers[0].id;
+            }
+            
+            if (currentUserId) {
+                switcher.value = currentUserId;
+                updateUserIndicatorAndLanguage();
+            }
+
+            await reloadAllViews();
+        });
+
+        // Save GAS URL to Local Storage
+        function saveGasUrl(val) {
+            localStorage.setItem('gasApiUrl', val.trim());
+            reloadAllViews();
+        }
+
+        // Run UI Multilingual Translation
+        function translateUI(lang) {
+            const t = i18n[lang] || i18n["zh-TW"];
+            document.querySelectorAll("[data-i18n]").forEach(el => {
+                const key = el.getAttribute("data-i18n");
+                if (t[key] !== undefined) {
+                    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+                        el.setAttribute("placeholder", t[key]);
+                    } else {
+                        el.textContent = t[key];
+                    }
+                }
+            });
+        }
+
+        // Global Request Wrapper
+        async function apiRequest(action, payload = null, method = 'GET') {
+            showLoading(true);
+            const gasUrl = document.getElementById('gas-api-url').value.trim();
+            
+            try {
+                if (gasUrl) {
+                    // REAL GAS API Connection
+                    if (method === 'GET') {
+                        let url = `${gasUrl}?action=${action}`;
+                        if (payload) {
+                            Object.keys(payload).forEach(k => {
+                                url += `&${k}=${encodeURIComponent(payload[k])}`;
+                            });
+                        }
+                        const res = await fetch(url, { redirect: 'follow' });
+                        const json = await res.json();
+                        if (json.status === 'error') throw new Error(json.message);
+                        return json;
+                    } else {
+                        const bodyPayload = { action: action, ...payload };
+                        const res = await fetch(gasUrl, {
+                            method: 'POST',
+                            body: JSON.stringify(bodyPayload),
+                            redirect: 'follow'
+                        });
+                        const json = await res.json();
+                        if (json.status === 'error') throw new Error(json.message);
+                        return json;
+                    }
+                } else {
+                    // standalone MOCK database
+                    return await runMockApi(action, payload, method);
+                }
+            } catch (err) {
+                console.error("API 請求錯誤:", err);
+                alert(`API Error: ${err.message}`);
+                return null;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Mock Database Processing Engine
+        function runMockApi(action, payload, method) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    if (method === 'GET') {
+                        if (action === 'getUsers') {
+                            resolve(JSON.parse(JSON.stringify(mockUsers)));
+                        } else if (action === 'getCases') {
+                            const userId = parseInt(payload.user_id);
+                            resolve(getMockCasesForUser(userId));
+                        }
+                    } else {
+                        if (action === 'toggleTask') {
+                            const t = mockTasks.find(x => x.id === payload.taskId);
+                            if (t) {
+                                t.is_completed = !t.is_completed;
+                                resolve({ status: 'success', taskId: t.id, is_completed: t.is_completed });
+                            } else {
+                                resolve({ status: 'error', message: 'Task not found' });
+                            }
+                        } else if (action === 'createCase') {
+                            const nextId = mockCases.length > 0 ? Math.max(...mockCases.map(x => x.id)) + 1 : 1;
+                            const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                            mockCases.push({
+                                id: nextId,
+                                title: payload.title,
+                                description: payload.description,
+                                owner_id: payload.owner_id,
+                                drive_url: "https://drive.google.com/drive/folders/mock-id",
+                                group_names: groupsStr
+                            });
+                            resolve({ status: 'success', caseId: nextId });
+                        } else if (action === 'createTask') {
+                            const nextId = mockTasks.length > 0 ? Math.max(...mockTasks.map(x => x.id)) + 1 : 1;
+                            mockTasks.push({
+                                id: nextId,
+                                case_id: payload.case_id,
+                                group_name: payload.group_name,
+                                title: payload.title,
+                                due_date: payload.due_date,
+                                start_date: payload.start_date,
+                                is_completed: false,
+                                notes: '',
+                                visible_user_ids: payload.visible_user_ids
+                            });
+                            resolve({ status: 'success', taskId: nextId });
+                        } else if (action === 'updateTask') {
+                            const t = mockTasks.find(x => x.id === payload.taskId);
+                            if (t) {
+                                if (payload.notes !== undefined) t.notes = payload.notes;
+                                if (payload.visible_user_ids !== undefined) t.visible_user_ids = payload.visible_user_ids;
+                                resolve({ status: 'success', taskId: t.id });
+                            } else {
+                                resolve({ status: 'error', message: 'Task not found' });
+                            }
+                        } else if (action === 'addComment') {
+                            const nextId = mockComments.length > 0 ? Math.max(...mockComments.map(x => x.id)) + 1 : 1;
+                            const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
+                            mockComments.push({
+                                id: nextId,
+                                task_id: payload.taskId,
+                                user_id: payload.user_id,
+                                content: payload.content,
+                                created_at: nowStr
+                            });
+                            resolve({ status: 'success', commentId: nextId });
+                        }
+                    }
+                }, 50);
+            });
+        }
+
+        // Mock nested client object assembler
+        function getMockCasesForUser(userId) {
+            const userMap = {};
+            mockUsers.forEach(u => { userMap[u.id] = u; });
+
+            const commentsByTaskId = {};
+            mockComments.forEach(c => {
+                if (!commentsByTaskId[c.task_id]) commentsByTaskId[c.task_id] = [];
+                commentsByTaskId[c.task_id].push({
+                    ...c,
+                    created_at: c.created_at
+                });
+            });
+
+            const tasksByCaseId = {};
+            mockTasks.forEach(t => {
+                if (!t.visible_user_ids.includes(userId)) return;
+                
+                const taskObj = {
+                    ...t,
+                    visible_users: t.visible_user_ids.map(uId => userMap[uId]).filter(u => u !== undefined),
+                    comments: commentsByTaskId[t.id] || []
+                };
+
+                if (!tasksByCaseId[t.case_id]) tasksByCaseId[t.case_id] = [];
+                tasksByCaseId[t.case_id].push(taskObj);
+            });
+
+            const cases = [];
+            mockCases.forEach(c => {
+                const caseTasks = tasksByCaseId[c.id] || [];
+                if (c.owner_id !== userId && caseTasks.length === 0) return;
+
+                const groupNames = c.group_names ? c.group_names.split(',').map(g => g.trim()).filter(g => g.length > 0) : [];
+                const groupMap = {};
+                groupNames.forEach(gn => { groupMap[gn] = []; });
+
+                caseTasks.forEach(t => {
+                    if (!groupMap[t.group_name]) groupMap[t.group_name] = [];
+                    groupMap[t.group_name].push(t);
+                });
+
+                const groups = Object.keys(groupMap).map((gn, index) => ({
+                    id: index + 1,
+                    name: gn,
+                    tasks: groupMap[gn]
+                }));
+
+                cases.push({
+                    ...c,
+                    owner: userMap[c.owner_id] || { username: 'System', role: '' },
+                    groups: groups
+                });
+            });
+
+            return JSON.parse(JSON.stringify(cases));
+        }
+
+        // Show/Hide spinner
+        function showLoading(show) {
+            const el = document.getElementById('view-loading');
+            if (show) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        // Fetch Users
+        async function loadUsers() {
+            allUsers = await apiRequest('getUsers') || [];
+            
+            const switcher = document.getElementById('user-switcher');
+            switcher.innerHTML = '';
+            allUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.username} [${u.role}]`;
+                switcher.appendChild(opt);
+            });
+        }
+
+        // Switch active user & update i18n
+        async function switchUser(userId) {
+            currentUserId = parseInt(userId);
+            localStorage.setItem('activeUserId', currentUserId);
+            updateUserIndicatorAndLanguage();
+            await reloadAllViews();
+        }
+
+        function updateUserIndicatorAndLanguage() {
+            const user = allUsers.find(u => u.id === currentUserId);
+            const indicator = document.getElementById('user-avatar-indicator');
+            if (user) {
+                indicator.textContent = user.username.charAt(0);
+                indicator.style.backgroundColor = user.avatar_color;
+                
+                // Translate language
+                translateUI(user.language || 'zh-TW');
+            }
+        }
+
+        // Load active view data
+        async function reloadAllViews() {
+            if (!currentUserId) return;
+            
+            allCases = await apiRequest('getCases', { user_id: currentUserId }) || [];
+            
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+        }
+
+        // Tab views navigation
+        function switchView(viewName) {
+            activeView = viewName;
+            
+            document.getElementById('view-calendar').classList.add('hidden');
+            document.getElementById('view-case').classList.add('hidden');
+            document.getElementById('view-gantt').classList.add('hidden');
+            
+            const tabs = ['calendar', 'case', 'gantt'];
+            tabs.forEach(t => {
+                const tabEl = document.getElementById(`tab-${t}`);
+                tabEl.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200";
+            });
+            
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            const activeTab = document.getElementById(`tab-${viewName}`);
+            activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
+            
+            if (viewName === 'calendar' && calendar) {
+                calendar.updateSize();
+            } else if (viewName === 'gantt') {
+                renderGantt();
+            }
+        }
+
+        // --- Calendar View Rendering ---
+        function renderCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            if (!calendarEl) return;
+
+            const events = [];
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        if (!t.due_date) return;
+                        
+                        let color = '#10B981'; // Completed (Green)
+                        if (!t.is_completed) {
+                            const now = new Date();
+                            const dueDate = new Date(t.due_date);
+                            const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
+                            
+                            if (hoursDiff < 0) {
+                                color = '#ef4444'; // Overdue (Red)
+                            } else if (hoursDiff <= 48) {
+                                color = '#f59e0b'; // Impending (Yellow)
+                            } else {
+                                color = '#6366f1'; // Safe (Indigo)
+                            }
+                        }
+
+                        events.push({
+                            id: t.id.toString(),
+                            title: `[${c.title.split(' ')[0]}] ${t.title}`,
+                            start: t.start_date || t.due_date,
+                            end: t.due_date,
+                            backgroundColor: color,
+                            borderColor: color,
+                            textColor: '#ffffff',
+                            extendedProps: { task: t }
+                        });
+                    });
+                });
+            });
+
+            if (calendar) {
+                calendar.destroy();
+            }
+
+            const activeUser = allUsers.find(u => u.id === currentUserId);
+            const calLocale = (activeUser && activeUser.language === 'vi-VN') ? 'vi' : 'zh-tw';
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: calLocale,
+                editable: false,
+                events: events,
+                eventClick: (info) => {
+                    openTaskDrawer(parseInt(info.event.id));
+                },
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                }
+            });
+            calendar.render();
+        }
+
+        // --- Case Tree View Rendering ---
+        function renderCaseTree() {
+            const container = document.getElementById('cases-tree-container');
+            container.innerHTML = '';
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            if (allCases.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 border border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
+                        <p class="text-slate-400">${tText.noPermissionCases}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            allCases.forEach(c => {
+                const caseCard = document.createElement('div');
+                caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
+                
+                // Card title & info
+                caseCard.innerHTML = `
+                    <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">📁</span>
+                            <div>
+                                <h3 class="font-bold text-slate-100 flex items-center gap-2">
+                                    ${c.title}
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">${c.description || ''}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 text-slate-400 text-sm">
+                            <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors">
+                                ${tText.driveBtn}
+                            </a>
+                            <span>${tText.caseOwner}: ${c.owner.username}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" id="accordion-arrow-${c.id}">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="case-body-${c.id}" class="p-5 space-y-6">
+                        <!-- Task groups -->
+                    </div>
+                `;
+                
+                const caseBody = caseCard.querySelector(`#case-body-${c.id}`);
+                
+                c.groups.forEach(g => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-4 space-y-4";
+                    groupDiv.innerHTML = `
+                        <div class="flex items-center justify-between border-b border-slate-850 pb-2">
+                            <h4 class="font-bold text-indigo-400 text-sm flex items-center gap-1.5">
+                                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                                ${g.name}
+                            </h4>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-semibold">${tText.taskGroup}</span>
+                        </div>
+                        <div class="space-y-2" id="group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}">
+                            <!-- Tasks list -->
+                        </div>
+                        <!-- Quick Add Task -->
+                        <div class="pt-2 flex gap-2">
+                            <input type="text" id="quick-task-title-${c.id}-${g.name.replace(/\s+/g, '')}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
+                            <input type="date" id="quick-task-due-${c.id}-${g.name.replace(/\s+/g, '')}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
+                            <button onclick="quickAddTask(${c.id}, '${g.name}')" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                ${tText.addBtn}
+                            </button>
+                        </div>
+                    `;
+                    
+                    const taskList = groupDiv.querySelector(`#group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}`);
+                    
+                    if (g.tasks.length === 0) {
+                        taskList.innerHTML = `<p class="text-xs text-slate-600 italic">No tasks</p>`;
+                    } else {
+                        g.tasks.forEach(t => {
+                            const taskItem = document.createElement('div');
+                            taskItem.className = "flex items-center justify-between p-3 rounded-lg border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150";
+                            
+                            const isCompletedClass = t.is_completed ? 'line-through text-slate-500 font-normal' : 'text-slate-200 font-medium';
+                            
+                            let dueBadge = '';
+                            if (t.due_date) {
+                                let badgeColor = 'bg-slate-800 text-slate-400';
+                                if (!t.is_completed) {
+                                    const now = new Date();
+                                    const dueDate = new Date(t.due_date);
+                                    const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
+                                    if (hoursDiff < 0) {
+                                        badgeColor = 'bg-red-950/80 border border-red-900 text-red-400';
+                                    } else if (hoursDiff <= 48) {
+                                        badgeColor = 'bg-yellow-950/80 border border-yellow-900 text-yellow-400';
+                                    } else {
+                                        badgeColor = 'bg-indigo-950/80 border border-indigo-900 text-indigo-400';
+                                    }
+                                } else {
+                                    badgeColor = 'bg-green-950/80 border border-green-900 text-green-400';
+                                }
+                                dueBadge = `<span class="text-[10px] px-2 py-0.5 rounded-md font-medium ${badgeColor}">${tText.overdueBadge}: ${t.due_date}</span>`;
+                            }
+
+                            // Avatar indicators
+                            let avatarsHtml = '';
+                            if (t.visible_users) {
+                                t.visible_users.forEach(u => {
+                                    avatarsHtml += `
+                                        <div class="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white uppercase shadow-sm border border-slate-900" style="background-color: ${u.avatar_color}" title="${u.username} (${u.role})">
+                                            ${u.username.charAt(0)}
+                                        </div>
+                                    `;
+                                });
+                            }
+
+                            taskItem.innerHTML = `
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                                    <span class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
+                                        ${t.title}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0">
+                                    ${dueBadge}
+                                    <div class="flex -space-x-1.5">
+                                        ${avatarsHtml}
+                                    </div>
+                                    <button onclick="openTaskDrawer(${t.id})" class="text-slate-500 hover:text-slate-300 p-1 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            `;
+                            taskList.appendChild(taskItem);
+                        });
+                    }
+                    
+                    caseBody.appendChild(groupDiv);
+                });
+                
+                container.appendChild(caseCard);
+            });
+        }
+
+        function toggleAccordion(id) {
+            const body = document.getElementById(id);
+            const arrow = document.getElementById(`accordion-arrow-${id.split('-').pop()}`);
+            if (body.classList.contains('hidden')) {
+                body.classList.remove('hidden');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            } else {
+                body.classList.add('hidden');
+                if (arrow) arrow.style.transform = 'rotate(-90deg)';
+            }
+        }
+
+        // --- Gantt Chart View Rendering ---
+        function renderGantt() {
+            const svg = document.getElementById('gantt-svg');
+            if (!svg) return;
+
+            const tasks = [];
+            allCases.forEach(c => {
+                // Find start & end date bounds
+                let minDate = null;
+                let maxDate = null;
+                
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        if (t.start_date || t.due_date) {
+                            const start = new Date(t.start_date || t.due_date);
+                            const end = new Date(t.due_date || t.start_date);
+                            if (!minDate || start < minDate) minDate = start;
+                            if (!maxDate || end > maxDate) maxDate = end;
+                        }
+                    });
+                });
+
+                if (!minDate) minDate = new Date();
+                if (!maxDate) maxDate = new Date(Date.now() + 86400000 * 7);
+
+                const formatDateStr = (d) => d.toISOString().split('T')[0];
+
+                // Parent summary bar
+                tasks.push({
+                    id: `case-${c.id}`,
+                    name: `📁 ${c.title.substring(0, 15)}...`,
+                    start: formatDateStr(minDate),
+                    end: formatDateStr(maxDate),
+                    progress: 50,
+                    dependencies: ''
+                });
+
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        tasks.push({
+                            id: `task-${t.id}`,
+                            name: `├─ ${t.title}`,
+                            start: t.start_date || formatDateStr(minDate),
+                            end: t.due_date || formatDateStr(maxDate),
+                            progress: t.is_completed ? 100 : 0,
+                            dependencies: '',
+                            custom_class: t.is_completed ? 'gantt-completed' : ''
+                        });
+                    });
+                });
+            });
+
+            if (tasks.length === 0) {
+                svg.innerHTML = '';
+                return;
+            }
+
+            try {
+                const user = allUsers.find(u => u.id === currentUserId);
+                const ganttLang = (user && user.language === 'vi-VN') ? 'en' : 'zh';
+
+                gantt = new Gantt("#gantt-svg", tasks, {
+                    view_mode: ganttViewMode,
+                    language: ganttLang,
+                    on_click: function (task) {
+                        if (task.id.startsWith('task-')) {
+                            const taskId = parseInt(task.id.replace('task-', ''));
+                            openTaskDrawer(taskId);
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("甘特圖渲染錯誤:", err);
+            }
+        }
+
+        function changeGanttMode(mode) {
+            ganttViewMode = mode;
+            renderGantt();
+        }
+
+        // --- Actions Processing API Wrapper ---
+
+        async function toggleTask(taskId) {
+            const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST');
+            if (res) {
+                await reloadAllViews();
+            }
+        }
+
+        async function quickAddTask(caseId, groupName) {
+            const key = `${caseId}-${groupName.replace(/\s+/g, '')}`;
+            const titleInput = document.getElementById(`quick-task-title-${key}`);
+            const dueInput = document.getElementById(`quick-task-due-${key}`);
+            
+            const title = titleInput.value.trim();
+            if (!title) return;
+
+            const dueDate = dueInput.value || null;
+            // set start date as 10 days before due date by default
+            const startDate = dueDate ? new Date(new Date(dueDate).getTime() - 86400000 * 10).toISOString().split('T')[0] : null;
+
+            const payload = {
+                case_id: caseId,
+                group_name: groupName,
+                title: title,
+                due_date: dueDate,
+                start_date: startDate,
+                visible_user_ids: allUsers.map(u => u.id) // visible to everyone by default
+            };
+
+            const res = await apiRequest('createTask', payload, 'POST');
+            if (res) {
+                titleInput.value = '';
+                dueInput.value = '';
+                await reloadAllViews();
+            }
+        }
+
+        // --- Task Drawer Handling ---
+        async function openTaskDrawer(taskId) {
+            selectedTaskId = taskId;
+            
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === taskId);
+                    if (found) taskObj = found;
+                });
+            });
+
+            if (!taskObj) return;
+
+            document.getElementById('drawer-task-title').textContent = taskObj.title;
+            document.getElementById('drawer-task-notes').value = taskObj.notes || '';
+            
+            // Build visible users checklist
+            const visContainer = document.getElementById('drawer-task-visibility');
+            visContainer.innerHTML = '';
+            
+            const visibleUserIds = taskObj.visible_user_ids || [];
+            allUsers.forEach(u => {
+                const checked = visibleUserIds.includes(u.id) ? 'checked' : '';
+                visContainer.innerHTML += `
+                    <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-xs cursor-pointer hover:bg-slate-800">
+                        <input type="checkbox" value="${u.id}" ${checked} class="task-vis-chk rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                        <span class="h-2 w-2 rounded-full" style="background-color: ${u.avatar_color}"></span>
+                        <span>${u.username} (${u.role})</span>
+                    </label>
+                `;
+            });
+
+            renderDrawerComments(taskObj.comments || []);
+
+            // animation open
+            document.getElementById('task-drawer').classList.remove('translate-x-full');
+            document.getElementById('drawer-backdrop').classList.remove('hidden');
+        }
+
+        function closeTaskDrawer() {
+            selectedTaskId = null;
+            document.getElementById('task-drawer').classList.add('translate-x-full');
+            document.getElementById('drawer-backdrop').classList.add('hidden');
+        }
+
+        function renderDrawerComments(comments) {
+            const list = document.getElementById('drawer-comments-list');
+            list.innerHTML = '';
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            if (comments.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-655 italic">${tText.noComments}</p>`;
+                return;
+            }
+
+            comments.forEach(c => {
+                const userObj = allUsers.find(u => u.id === c.user_id) || { username: 'Unknown', role: '', avatar_color: '#94a3b8' };
+                list.innerHTML += `
+                    <div class="bg-slate-950/60 border border-slate-850 p-3 rounded-xl space-y-1">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <span class="h-4.5 w-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase" style="background-color: ${userObj.avatar_color}">
+                                    ${userObj.username.charAt(0)}
+                                </span>
+                                <span class="text-xs font-bold text-slate-200">${userObj.username}</span>
+                                <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-normal">${userObj.role}</span>
+                            </div>
+                            <span class="text-[9px] text-slate-500">${c.created_at}</span>
+                        </div>
+                        <p class="text-xs text-slate-350 leading-relaxed">${c.content}</p>
+                    </div>
+                `;
+            });
+        }
+
+        async function saveTaskNotes() {
+            if (!selectedTaskId) return;
+            const notes = document.getElementById('drawer-task-notes').value.trim();
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST');
+            if (res) {
+                await reloadAllViews();
+                alert(tText.successSaveNotes);
+            }
+        }
+
+        async function saveTaskVisibility() {
+            if (!selectedTaskId) return;
+            const checkedBoxes = document.querySelectorAll('.task-vis-chk:checked');
+            const visible_user_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            const res = await apiRequest('updateTask', { taskId: selectedTaskId, visible_user_ids: visible_user_ids }, 'POST');
+            if (res) {
+                await reloadAllViews();
+                alert(tText.successSaveVis);
+            }
+        }
+
+        async function submitComment() {
+            if (!selectedTaskId) return;
+            const input = document.getElementById('new-comment-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            const payload = {
+                taskId: selectedTaskId,
+                user_id: currentUserId,
+                content: content
+            };
+
+            const res = await apiRequest('addComment', payload, 'POST');
+            if (res) {
+                input.value = '';
+                await reloadAllViews();
+                
+                // Refresh comments thread in drawer
+                let updatedTask = null;
+                allCases.forEach(c => {
+                    c.groups.forEach(g => {
+                        const found = g.tasks.find(t => t.id === selectedTaskId);
+                        if (found) updatedTask = found;
+                    });
+                });
+                if (updatedTask) {
+                    renderDrawerComments(updatedTask.comments || []);
+                }
+            }
+        }
+
+        // --- New Case Modal Dialog Handling ---
+        function openNewCaseModal() {
+            document.getElementById('new-case-modal').classList.remove('hidden');
+        }
+
+        function closeNewCaseModal() {
+            document.getElementById('new-case-modal').classList.add('hidden');
+        }
+
+        async function submitNewCase() {
+            const titleInput = document.getElementById('new-case-title');
+            const descInput = document.getElementById('new-case-desc');
+            const groupsInput = document.getElementById('new-case-groups');
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            const title = titleInput.value.trim();
+            if (!title) {
+                alert(tText.alertFillCaseName);
+                return;
+            }
+
+            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            const payload = {
+                title: title,
+                description: descInput.value.trim(),
+                owner_id: currentUserId,
+                groups: groups
+            };
+
+            const res = await apiRequest('createCase', payload, 'POST');
+            if (res) {
+                titleInput.value = '';
+                descInput.value = '';
+                closeNewCaseModal();
+                await reloadAllViews();
+            }
+        }
+    </script>
+</body>
+</html>
