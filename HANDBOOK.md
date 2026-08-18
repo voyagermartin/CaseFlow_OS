@@ -9,6 +9,9 @@
 ### 💡 核心定位與設計理念
 **CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層雲端資料庫、並以 **GitHub Pages** 為前端介面的「事件驅動作業系統 (Event-Driven OS)」。
 
+> 🛠️ **技術與架構規格 (Phase 3 Checkpoint)**
+> 本系統採用 **Google Apps Script (GAS)** 作為後端核心 API 框架，底層使用 **Google Sheets (試算表)** 進行雲端資料儲存與權限隔離設計。前端架構採用 **Tailwind CSS**，並深度整合 **FullCalendar v6** (日曆模式) 與 **Frappe Gantt** (甘特圖模式)，可直接部署於 **GitHub Pages** 提供無伺服器 (Serverless) 的流暢單頁應用 (SPA) 體驗。
+
 我們不用傳統的 LINE 群組或紙本流水帳，因為 LINE 容易洗版、文件會過期、責任歸屬模糊；而流水帳缺乏結構，無法一眼看出優先順序。CaseFlow OS 透過自動化的網頁視圖，將所有資料與進度即時呈現在你的眼前，並嚴格遵循以下三大鐵律：
 
 | 鐵律名稱 | 核心精神 | 具體表現 |
@@ -98,3 +101,21 @@
 2. 在網頁頂端的「GAS API URL」輸入框中，貼上剛剛複製的網頁應用程式 URL。
 3. 系統將會自動將連線切換至您真實的 Google Sheets，開始即時同步資料。
 4. *註：若輸入框留空，系統將會自動運作於「內建 Demo 模式」，使用本機記憶體進行測試模擬。*
+
+---
+
+## 🛠️ 開發日誌 (Development Log)
+
+### 📅 2026-08-17 - 核心 MVP 基礎建設與三視圖實作
+- **專案骨架與環境搭建**：初始化 Git 儲存庫並配置 Python 3.12 虛擬環境 (`.venv`) 與 `requirements.txt`。
+- **資料庫與 ORM 模型設計**：建置 `database.py` 及定義 `User`、`Case`、`TaskGroup`、`TaskItem`、`TaskComment` 及權限關聯表。
+- **資料過濾與安全查詢 (CRUD)**：實作 `get_user_cases` 查詢，確保未授權成員無法讀取特定任務、備註與留言，避免資訊洩漏與超載。
+- **示範資料生成器 (Seed)**：實作 `seed.py` 自動建立專案管理員 (Martin)、作業 (OP_Ning)、銷售 (Sales_Yang)、實習生 (Intern_A) 角色，並自動寫入包含 3 大任務分組與 4 項待辦細項的怡保專案出團示範資料。
+- **全視圖儀表板與 API 串接**：完成 templates/index.html 的實作，整合 FullCalendar v6 與 Frappe Gantt，並透過網頁頂端「使用者切換下拉選單」動態刷新 API，達成無縫權限展示與任務狀態勾選更新。
+
+### 📅 2026-08-18 - 無伺服器試算表資料庫移轉與多國語言 (i18n) 實作
+- **後端架構移轉**：將後端 API 完全遷移至 **Google Apps Script (Code.gs)**，使用 **Google Sheets** 作為雲端資料庫，並將舊的 Python/SQLite MVP 移入 `archive_python_mvp/`。
+- **資料庫初始化**：在 `Code.gs` 中實作 `initDatabase()`，自動在試算表中建立 `Users`, `Cases`, `Tasks`, `Comments` 四張工作表並寫入示範資料。
+- **前端 SPA 介面現代化**：在根目錄重寫 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)，支援輸入 GAS Web App URL 進行連線，並實作完整的**本機 Mock 測試引擎**（無 URL 時自動切換為本機模擬運行）。
+- **多國語言 (i18n) 與身份切換**：新增繁體中文 (zh-TW) 與越南文 (vi-VN) 翻譯字典。當人員選單切換至跨國夥伴 `Local_Nguyen` 時，介面與提示自動翻譯為越南文。
+- **GitHub Pages 部署優化**：移除非必要目錄，使專案可以直接透過 GitHub Pages 發佈，達成零伺服器維護成本之專案管理系統。
