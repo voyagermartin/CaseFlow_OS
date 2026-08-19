@@ -1166,6 +1166,9 @@
             if (res && res.status === 'success') {
                 // Update tempId to real ID returned by server
                 newTask.id = res.taskId;
+                if (selectedTaskId === tempId) {
+                    selectedTaskId = res.taskId;
+                }
                 // Silent full reload in background to make sure everything is in sync
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
                 renderCalendar();
@@ -1264,6 +1267,10 @@
 
         async function saveTaskNotes() {
             if (!selectedTaskId) return;
+            if (selectedTaskId > 1000000000000) {
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                return;
+            }
             const notes = document.getElementById('drawer-task-notes').value.trim();
             
             const user = allUsers.find(u => u.id === currentUserId);
@@ -1291,6 +1298,10 @@
 
         async function saveTaskVisibility() {
             if (!selectedTaskId) return;
+            if (selectedTaskId > 1000000000000) {
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                return;
+            }
             const checkedBoxes = document.querySelectorAll('.task-vis-chk:checked');
             const visible_user_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
 
@@ -1324,6 +1335,10 @@
 
         async function submitComment() {
             if (!selectedTaskId) return;
+            if (selectedTaskId > 1000000000000) {
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                return;
+            }
             const input = document.getElementById('new-comment-input');
             const content = input.value.trim();
             if (!content) return;
