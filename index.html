@@ -524,7 +524,7 @@
                                 url += `&${k}=${encodeURIComponent(payload[k])}`;
                             });
                         }
-                        const res = await fetch(url, { redirect: 'follow' });
+                        const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
                         const json = await res.json();
                         if (json.status === 'error') throw new Error(json.message);
                         return json;
@@ -533,7 +533,8 @@
                         const res = await fetch(GAS_API_URL, {
                             method: 'POST',
                             body: JSON.stringify(bodyPayload),
-                            redirect: 'follow'
+                            redirect: 'follow',
+                            credentials: 'omit'
                         });
                         const json = await res.json();
                         if (json.status === 'error') throw new Error(json.message);
