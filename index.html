@@ -503,8 +503,8 @@
         }
 
         // Global Request Wrapper
-        async function apiRequest(action, payload = null, method = 'GET') {
-            showLoading(true);
+        async function apiRequest(action, payload = null, method = 'GET', silent = false) {
+            if (!silent) showLoading(true);
             
             try {
                 if (GAS_API_URL) {
@@ -542,14 +542,16 @@
                 }
             } catch (err) {
                 console.error("API 請求錯誤:", err);
-                if (err.message.includes("Unexpected token") || err.message.includes("is not valid JSON")) {
-                    alert(`API 連線失敗！\n\n這通常是因為您的 GAS 部署設定中「誰有權限存取 (Who has access)」未設定為「所有人 (Anyone)」，導致 Google 要求登入並回傳了 HTML 格式的登入頁面而非 JSON。\n\n詳細錯誤資訊：${err.message}`);
-                } else {
-                    alert(`API Error: ${err.message}`);
+                if (!silent) {
+                    if (err.message.includes("Unexpected token") || err.message.includes("is not valid JSON")) {
+                        alert(`API 連線失敗！\n\n這通常是因為您的 GAS 部署設定中「誰有權限存取 (Who has access)」未設定為「所有人 (Anyone)」，導致 Google 要求登入並回傳了 HTML 格式的登入頁面而非 JSON。\n\n詳細錯誤資訊：${err.message}`);
+                    } else {
+                        alert(`API Error: ${err.message}`);
+                    }
                 }
                 return null;
             } finally {
-                showLoading(false);
+                if (!silent) showLoading(false);
             }
         }
 
@@ -1067,10 +1069,37 @@
 
         // --- Actions Processing API Wrapper ---
 
+        // --- Actions Processing API Wrapper ---
+
         async function toggleTask(taskId) {
-            const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST');
-            if (res) {
-                await reloadAllViews();
+            // Find task in local memory
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === taskId);
+                    if (found) taskObj = found;
+                });
+            });
+
+            if (!taskObj) return;
+
+            // Optimistic update
+            taskObj.is_completed = !taskObj.is_completed;
+            
+            // Re-render UI immediately
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            // Background API call (silent)
+            const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST', true);
+            if (!res) {
+                // Rollback if failed
+                taskObj.is_completed = !taskObj.is_completed;
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                alert("切換任務狀態失敗，已恢復原狀態。");
             }
         }
 
@@ -1083,23 +1112,71 @@
             if (!title) return;
 
             const dueDate = dueInput.value || null;
-            // set start date as 10 days before due date by default
             const startDate = dueDate ? new Date(new Date(dueDate).getTime() - 86400000 * 10).toISOString().split('T')[0] : null;
 
+            const tempId = Date.now();
+            const newTask = {
+                id: tempId,
+                case_id: caseId,
+                group_name: groupName,
+                title: title,
+                due_date: dueDate,
+                start_date: startDate,
+                is_completed: false,
+                notes: '',
+                visible_user_ids: allUsers.map(u => u.id),
+                visible_users: [...allUsers],
+                comments: []
+            };
+
+            // Find group in local memory and push
+            let targetGroup = null;
+            allCases.forEach(c => {
+                if (c.id === caseId) {
+                    const group = c.groups.find(g => g.name === groupName);
+                    if (group) targetGroup = group;
+                }
+            });
+
+            if (targetGroup) {
+                targetGroup.tasks.push(newTask);
+            }
+
+            // Clear inputs and re-render UI immediately
+            titleInput.value = '';
+            dueInput.value = '';
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            // Background API call
             const payload = {
                 case_id: caseId,
                 group_name: groupName,
                 title: title,
                 due_date: dueDate,
                 start_date: startDate,
-                visible_user_ids: allUsers.map(u => u.id) // visible to everyone by default
+                visible_user_ids: allUsers.map(u => u.id)
             };
 
-            const res = await apiRequest('createTask', payload, 'POST');
-            if (res) {
-                titleInput.value = '';
-                dueInput.value = '';
-                await reloadAllViews();
+            const res = await apiRequest('createTask', payload, 'POST', true);
+            if (res && res.status === 'success') {
+                // Update tempId to real ID returned by server
+                newTask.id = res.taskId;
+                // Silent full reload in background to make sure everything is in sync
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            } else {
+                // Rollback if failed
+                if (targetGroup) {
+                    targetGroup.tasks = targetGroup.tasks.filter(t => t.id !== tempId);
+                }
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                alert("新增待辦事項失敗，已恢復原狀態。");
             }
         }
 
@@ -1190,10 +1267,22 @@
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
             const tText = i18n[lang];
 
+            // Local update
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    if (found) taskObj = found;
+                });
+            });
+            if (taskObj) taskObj.notes = notes;
+
             const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST');
             if (res) {
-                await reloadAllViews();
                 alert(tText.successSaveNotes);
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             }
         }
 
@@ -1206,10 +1295,27 @@
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
             const tText = i18n[lang];
 
+            // Local update
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    if (found) taskObj = found;
+                });
+            });
+            if (taskObj) {
+                taskObj.visible_user_ids = visible_user_ids;
+                taskObj.visible_users = visible_user_ids.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
+            }
+
             const res = await apiRequest('updateTask', { taskId: selectedTaskId, visible_user_ids: visible_user_ids }, 'POST');
             if (res) {
-                await reloadAllViews();
                 alert(tText.successSaveVis);
+                // Silent full reload in background because visibility changes what this user can see
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             }
         }
 
@@ -1219,28 +1325,51 @@
             const content = input.value.trim();
             if (!content) return;
 
+            const userObj = allUsers.find(u => u.id === currentUserId) || { username: 'System', role: '', avatar_color: '#4f46e5' };
+            const tempCommentId = Date.now();
+            const now = new Date();
+            const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            
+            const newComment = {
+                id: tempCommentId,
+                task_id: selectedTaskId,
+                user_id: currentUserId,
+                content: content,
+                created_at: nowStr
+            };
+
+            // Find task in local memory and push comment
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    if (found) taskObj = found;
+                });
+            });
+
+            if (taskObj) {
+                if (!taskObj.comments) taskObj.comments = [];
+                taskObj.comments.push(newComment);
+                renderDrawerComments(taskObj.comments);
+            }
+
+            input.value = '';
+
             const payload = {
                 taskId: selectedTaskId,
                 user_id: currentUserId,
                 content: content
             };
 
-            const res = await apiRequest('addComment', payload, 'POST');
-            if (res) {
-                input.value = '';
-                await reloadAllViews();
-                
-                // Refresh comments thread in drawer
-                let updatedTask = null;
-                allCases.forEach(c => {
-                    c.groups.forEach(g => {
-                        const found = g.tasks.find(t => t.id === selectedTaskId);
-                        if (found) updatedTask = found;
-                    });
-                });
-                if (updatedTask) {
-                    renderDrawerComments(updatedTask.comments || []);
+            const res = await apiRequest('addComment', payload, 'POST', true);
+            if (res && res.status === 'success') {
+                newComment.id = res.commentId;
+            } else {
+                if (taskObj && taskObj.comments) {
+                    taskObj.comments = taskObj.comments.filter(c => c.id !== tempCommentId);
+                    renderDrawerComments(taskObj.comments);
                 }
+                alert("新增留言失敗。");
             }
         }
 
