@@ -1097,11 +1097,6 @@
             renderGroupColorEditorList();
             reloadAllViews();
         }
-            map[groupName] = colorHex;
-            saveGroupColorMap(map);
-            renderGroupColorEditorList();
-            reloadAllViews();
-        }
 
         function resetGroupColorsToDefault() {
             saveGroupColorMap({ ...DEFAULT_GROUP_COLORS });
