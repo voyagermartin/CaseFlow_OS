@@ -252,6 +252,24 @@
                 <div id="drawer-task-title" class="text-lg font-bold text-slate-200"></div>
             </div>
 
+            <!-- Dates Section -->
+            <div class="space-y-2">
+                <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <span class="text-[10px] text-slate-400">開始日期 (Start Date)</span>
+                        <input type="date" id="drawer-task-start-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                    </div>
+                    <div class="space-y-1">
+                        <span class="text-[10px] text-slate-400">截止日期 (Due Date)</span>
+                        <input type="date" id="drawer-task-due-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+                <button onclick="saveTaskDates()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                    儲存時程與日期
+                </button>
+            </div>
+
             <!-- Notes Section -->
             <div class="space-y-2">
                 <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="notesLabel">執行備註 (Notes)</label>
@@ -1203,6 +1221,8 @@
 
             document.getElementById('drawer-task-title').textContent = taskObj.title;
             document.getElementById('drawer-task-notes').value = taskObj.notes || '';
+            document.getElementById('drawer-task-start-date').value = taskObj.start_date || '';
+            document.getElementById('drawer-task-due-date').value = taskObj.due_date || '';
             
             // Build visible users checklist
             const visContainer = document.getElementById('drawer-task-visibility');
@@ -1291,6 +1311,46 @@
             const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST');
             if (res) {
                 alert(tText.successSaveNotes);
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            }
+        }
+
+        async function saveTaskDates() {
+            if (!selectedTaskId) return;
+            if (selectedTaskId > 1000000000000) {
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                return;
+            }
+            const startDate = document.getElementById('drawer-task-start-date').value || null;
+            const dueDate = document.getElementById('drawer-task-due-date').value || null;
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+
+            // Local update
+            let taskObj = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    if (found) taskObj = found;
+                });
+            });
+            if (taskObj) {
+                taskObj.start_date = startDate;
+                taskObj.due_date = dueDate;
+            }
+
+            const res = await apiRequest('updateTask', { 
+                taskId: selectedTaskId, 
+                start_date: startDate, 
+                due_date: dueDate 
+            }, 'POST');
+            
+            if (res) {
+                alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();

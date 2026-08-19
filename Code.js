@@ -108,7 +108,9 @@ function doPost(e) {
       responseData = updateTask(
         parseInt(postData.taskId),
         postData.notes,
-        postData.visible_user_ids
+        postData.visible_user_ids,
+        postData.due_date,
+        postData.start_date
       );
     } else if (action === "addComment") {
       responseData = addComment(
@@ -356,7 +358,7 @@ function createTask(caseId, groupName, title, dueDate, startDate, visibleUserIds
   return { status: "success", taskId: nextId };
 }
 
-function updateTask(taskId, notes, visibleUserIds) {
+function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Tasks");
   if (!sheet) throw new Error("Tasks sheet not initialized");
@@ -370,6 +372,12 @@ function updateTask(taskId, notes, visibleUserIds) {
       if (visibleUserIds !== undefined) {
         const visIdsStr = Array.isArray(visibleUserIds) ? visibleUserIds.join(",") : visibleUserIds;
         sheet.getRange(i + 1, 9).setValue(visIdsStr);
+      }
+      if (dueDate !== undefined) {
+        sheet.getRange(i + 1, 5).setValue(dueDate || "");
+      }
+      if (startDate !== undefined) {
+        sheet.getRange(i + 1, 6).setValue(startDate || "");
       }
       return { status: "success", taskId: taskId };
     }
