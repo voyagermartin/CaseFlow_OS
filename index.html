@@ -402,11 +402,23 @@
                     </div>
                 </div>
 
+                <!-- Add New Group Form -->
+                <div class="space-y-2 p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                    <label class="text-xs text-slate-300 font-semibold block" data-i18n="addNewGroupTitle">➕ 新增自訂任務組</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="new-group-name-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500" data-i18n="newGroupPlaceholder" placeholder="輸入任務組名稱 (如: 簽證, 財務)..." onkeydown="if(event.key==='Enter') handleAddNewGroup()">
+                        <input type="color" id="new-group-color-picker" value="#3b82f6" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded overflow-hidden shrink-0">
+                        <button onclick="handleAddNewGroup()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0" data-i18n="addGroupBtn">
+                            新增
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Group Color List -->
                 <div class="space-y-3 pt-4 border-t border-slate-800">
                     <div class="flex justify-between items-center">
                         <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="groupColorListTitle">各任務組指定顏色</label>
-                        <button onclick="resetGroupColorsToDefault()" class="text-[11px] text-slate-400 hover:text-indigo-400 underline transition-colors" data-i18n="resetColorsBtn">恢復預設值</button>
+                        <button onclick="clearAllGroupColors()" class="text-[11px] text-red-400 hover:text-red-300 underline transition-colors" data-i18n="clearAllGroupsBtn">🗑️ 清空所有任務組</button>
                     </div>
                     <div id="group-colors-editor-list" class="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
                         <!-- Dynamically generated list of task groups and color pickers -->
@@ -486,8 +498,16 @@
                 modeStatusFirst: "死線狀態優先",
                 modeStatusFirstDesc: "維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。",
                 groupColorListTitle: "各任務組指定顏色",
-                resetColorsBtn: "恢復預設值",
+                resetColorsBtn: "重置色彩",
                 saveAndCloseBtn: "套用並關閉",
+                addNewGroupTitle: "➕ 新增自訂任務組",
+                newGroupPlaceholder: "輸入任務組名稱 (如: 簽證, 財務)...",
+                addGroupBtn: "新增",
+                renameGroupPrompt: "請輸入新的任務組名稱：",
+                confirmDeleteGroup: "確定要刪除任務組「{name}」的專屬色彩設定嗎？",
+                emptyGroupListHint: "目前尚未新增任何自訂任務組，請在上方輸入名稱新增！",
+                clearAllGroupsBtn: "🗑️ 清空所有任務組",
+                confirmClearAll: "確定要清空所有自訂任務組設定嗎？",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -546,8 +566,16 @@
                 modeStatusFirst: "Ưu tiên trạng thái thời hạn",
                 modeStatusFirstDesc: "Giữ chế độ truyền thống (Đỏ/Vàng/Xanh), tiêu đề giữ tên nhóm công việc.",
                 groupColorListTitle: "Màu chỉ định cho từng nhóm",
-                resetColorsBtn: "Khôi phục mặc định",
+                resetColorsBtn: "Đặt lại màu",
                 saveAndCloseBtn: "Áp dụng & Đóng",
+                addNewGroupTitle: "➕ Thêm nhóm công việc mới",
+                newGroupPlaceholder: "Nhập tên nhóm (VD: Visa, Tài chính)...",
+                addGroupBtn: "Thêm",
+                renameGroupPrompt: "Vui lòng nhập tên nhóm công việc mới:",
+                confirmDeleteGroup: "Bạn có chắc muốn xóa cài đặt màu nhóm \"{name}\" không?",
+                emptyGroupListHint: "Chưa có nhóm công việc nào, hãy nhập tên ở trên để thêm!",
+                clearAllGroupsBtn: "🗑️ Xóa tất cả nhóm",
+                confirmClearAll: "Bạn có chắc muốn xóa tất cả cài đặt nhóm không?",
             }
         };
 
@@ -886,19 +914,7 @@
         }
 
         // --- Group Color Mapping & Settings Logic ---
-        const DEFAULT_GROUP_COLORS = {
-            "票務": "#3b82f6",          // Blue
-            "TKT": "#3b82f6",
-            "票務與交通": "#3b82f6",
-            "住宿": "#a855f7",          // Purple
-            "HOTEL": "#a855f7",
-            "LOCAL 與 住宿": "#a855f7",
-            "交通": "#f97316",          // Orange
-            "TRANS": "#f97316",
-            "導遊": "#06b6d4",          // Cyan
-            "名單與證件": "#ec4899",     // Pink
-            "行政": "#64748b"           // Slate
-        };
+        const DEFAULT_GROUP_COLORS = {}; // Empty default as requested
 
         const COLOR_PALETTE = [
             { name: "Blue", hex: "#3b82f6" },
@@ -916,9 +932,9 @@
         function getGroupColorMap() {
             try {
                 const saved = localStorage.getItem('caseflow_group_colors');
-                if (saved) return JSON.parse(saved);
+                if (saved !== null) return JSON.parse(saved);
             } catch(e) {}
-            return { ...DEFAULT_GROUP_COLORS };
+            return {};
         }
 
         function saveGroupColorMap(map) {
@@ -943,6 +959,65 @@
             }
             const index = Math.abs(hash) % COLOR_PALETTE.length;
             return COLOR_PALETTE[index].hex;
+        }
+
+        function handleAddNewGroup() {
+            const nameInput = document.getElementById('new-group-name-input');
+            const colorPicker = document.getElementById('new-group-color-picker');
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (!name) return;
+            
+            const color = colorPicker ? colorPicker.value : '#3b82f6';
+            const map = getGroupColorMap();
+            map[name] = color;
+            saveGroupColorMap(map);
+            if (nameInput) nameInput.value = '';
+            renderGroupColorEditorList();
+            reloadAllViews();
+        }
+
+        function handleDeleteGroup(groupName) {
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+            const msg = (tText.confirmDeleteGroup || "確定要刪除任務組「{name}」嗎？").replace('{name}', groupName);
+            
+            if (confirm(msg)) {
+                const map = getGroupColorMap();
+                delete map[groupName];
+                saveGroupColorMap(map);
+                renderGroupColorEditorList();
+                reloadAllViews();
+            }
+        }
+
+        function handleRenameGroup(oldName) {
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+            
+            const newName = prompt(tText.renameGroupPrompt || "請輸入新的任務組名稱：", oldName);
+            if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+            
+            const map = getGroupColorMap();
+            const color = map[oldName] || getGroupColor(oldName);
+            delete map[oldName];
+            map[newName.trim()] = color;
+            saveGroupColorMap(map);
+            renderGroupColorEditorList();
+            reloadAllViews();
+        }
+
+        function clearAllGroupColors() {
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
+            
+            if (confirm(tText.confirmClearAll || "確定要清空所有任務組嗎？")) {
+                saveGroupColorMap({});
+                renderGroupColorEditorList();
+                reloadAllViews();
+            }
         }
 
         function openGroupColorModal() {
@@ -972,34 +1047,43 @@
             const listEl = document.getElementById('group-colors-editor-list');
             if (!listEl) return;
             
-            const groupNamesSet = new Set(Object.keys(DEFAULT_GROUP_COLORS));
-            allCases.forEach(c => {
-                if (c.groups) {
-                    c.groups.forEach(g => groupNamesSet.add(g.name));
-                }
-            });
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            const tText = i18n[lang];
 
             const currentMap = getGroupColorMap();
+            const groupNames = Object.keys(currentMap);
             listEl.innerHTML = '';
 
-            groupNamesSet.forEach(gn => {
+            if (groupNames.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
+                        ${tText.emptyGroupListHint || '目前尚未新增任何自訂任務組，請在上方輸入名稱新增！'}
+                    </div>
+                `;
+                return;
+            }
+
+            groupNames.forEach(gn => {
                 const colorHex = currentMap[gn] || getGroupColor(gn);
                 
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-3 rounded-xl border border-slate-850 bg-slate-950/60 gap-3";
+                row.className = "flex items-center justify-between p-2.5 rounded-xl border border-slate-850 bg-slate-950/60 gap-2";
                 
                 row.innerHTML = `
-                    <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
                         <span class="h-3.5 w-3.5 rounded-full border border-slate-700 shrink-0" style="background-color: ${colorHex}"></span>
-                        <span class="text-xs font-semibold text-slate-200">${gn}</span>
+                        <span class="text-xs font-semibold text-slate-200 truncate">${gn}</span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 shrink-0">
                         <div class="flex items-center gap-1">
                             ${COLOR_PALETTE.map(p => `
                                 <button onclick="updateSingleGroupColor('${gn}', '${p.hex}')" title="${p.name}" class="h-4 w-4 rounded-full border ${p.hex.toLowerCase() === colorHex.toLowerCase() ? 'border-white scale-125 shadow-sm' : 'border-transparent hover:scale-110'} transition-all" style="background-color: ${p.hex}"></button>
                             `).join('')}
                         </div>
                         <input type="color" value="${colorHex}" onchange="updateSingleGroupColor('${gn}', this.value)" class="w-5 h-5 bg-transparent border-0 cursor-pointer rounded overflow-hidden">
+                        <button onclick="handleRenameGroup('${gn}')" title="重命名" class="text-slate-400 hover:text-indigo-400 text-xs px-1 py-0.5 rounded hover:bg-slate-800 transition-colors">✏️</button>
+                        <button onclick="handleDeleteGroup('${gn}')" title="刪除" class="text-slate-400 hover:text-red-400 text-xs px-1 py-0.5 rounded hover:bg-slate-800 transition-colors">🗑️</button>
                     </div>
                 `;
                 listEl.appendChild(row);
@@ -1008,6 +1092,11 @@
 
         function updateSingleGroupColor(groupName, colorHex) {
             const map = getGroupColorMap();
+            map[groupName] = colorHex;
+            saveGroupColorMap(map);
+            renderGroupColorEditorList();
+            reloadAllViews();
+        }
             map[groupName] = colorHex;
             saveGroupColorMap(map);
             renderGroupColorEditorList();
@@ -1786,7 +1875,16 @@
 
         // --- New Case Modal Dialog Handling ---
         function openNewCaseModal() {
-            document.getElementById('new-case-modal').classList.remove('hidden');
+            const modal = document.getElementById('new-case-modal');
+            if (!modal) return;
+            
+            const map = getGroupColorMap();
+            const existingKeys = Object.keys(map);
+            const defaultGroupsStr = existingKeys.length > 0 ? existingKeys.join(', ') : '票務與交通, LOCAL 與 住宿, 名單與證件';
+            const groupsInput = document.getElementById('new-case-groups');
+            if (groupsInput) groupsInput.value = defaultGroupsStr;
+
+            modal.classList.remove('hidden');
         }
 
         function closeNewCaseModal() {
