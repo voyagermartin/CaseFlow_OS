@@ -914,12 +914,25 @@
                             <!-- Tasks list -->
                         </div>
                         <!-- Quick Add Task -->
-                        <div class="pt-2 flex gap-2">
-                            <input type="text" id="quick-task-title-${c.id}-${g.name.replace(/\s+/g, '')}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
-                            <input type="date" id="quick-task-due-${c.id}-${g.name.replace(/\s+/g, '')}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
-                            <button onclick="quickAddTask(${c.id}, '${g.name}')" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                                ${tText.addBtn}
-                            </button>
+                        <div class="pt-2 border-t border-slate-800/40 space-y-2">
+                            <div class="flex gap-2">
+                                <input type="text" id="quick-task-title-${c.id}-${g.name.replace(/\s+/g, '')}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
+                                <input type="date" id="quick-task-due-${c.id}-${g.name.replace(/\s+/g, '')}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
+                                <button onclick="quickAddTask(${c.id}, '${g.name}')" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                    ${tText.addBtn}
+                                </button>
+                            </div>
+                            <!-- User visibility checkboxes -->
+                            <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
+                                <span>🔒 可見成員：</span>
+                                ${allUsers.map(u => `
+                                    <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
+                                        <input type="checkbox" value="${u.id}" checked class="quick-task-vis-${c.id}-${g.name.replace(/\s+/g, '')} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
+                                        <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
+                                        <span class="text-slate-300">${u.username}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
                         </div>
                     `;
                     
@@ -1136,6 +1149,14 @@
             const dueDate = dueInput.value || null;
             const startDate = dueDate ? new Date(new Date(dueDate).getTime() - 86400000 * 10).toISOString().split('T')[0] : null;
 
+            // Get selected user IDs for visibility
+            const checkedBoxes = document.querySelectorAll(`.quick-task-vis-${key}:checked`);
+            let visible_user_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+            if (visible_user_ids.length === 0) {
+                // Default to at least the current user if none selected to prevent orphaned tasks
+                visible_user_ids.push(currentUserId);
+            }
+
             const tempId = Date.now();
             const newTask = {
                 id: tempId,
@@ -1146,8 +1167,8 @@
                 start_date: startDate,
                 is_completed: false,
                 notes: '',
-                visible_user_ids: allUsers.map(u => u.id),
-                visible_users: [...allUsers],
+                visible_user_ids: visible_user_ids,
+                visible_users: visible_user_ids.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined),
                 comments: []
             };
 
@@ -1178,7 +1199,7 @@
                 title: title,
                 due_date: dueDate,
                 start_date: startDate,
-                visible_user_ids: allUsers.map(u => u.id)
+                visible_user_ids: visible_user_ids
             };
 
             const res = await apiRequest('createTask', payload, 'POST', true);
