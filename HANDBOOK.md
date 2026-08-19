@@ -137,3 +137,9 @@
 - **多帳號 Google 登入連線 Bug 排除**：在前端所有 API `fetch` 請求中加入 `credentials: 'omit'`，避免瀏覽器在發送請求時夾帶 Google 的 Session Cookies，完美解決使用者多個 Google 帳號登入時 GAS Web App 導向 HTML 驗證頁面導致的 302 衝突與 API 連線超時問題。
 - **原生深色日曆微調**：頂層 CSS 置入 `:root { color-scheme: dark; }`，徹底修復原生 `<input type="date">` 在 Dark Mode 下日曆小圖示隱形與點開為白底的視覺缺陷。
 - **後端 API 自動化測試建置**：建立自動化測試腳本（`test_delete.py`、`test_case_operations.py`），完成對 deleteTask、updateTask（時程更新）、createCase、updateCase、deleteCase 與 getCases 等端點的全面功能性與 Relational 完整性驗證。
+
+### 📅 2026-08-19 - 任務組日曆指定色與多模式顯示設定功能開發
+- **任務組色彩設定介面 (`#group-color-modal`)**：於側邊欄新增「🎨 任務組配色設定」入口彈窗，支援預設 10 色極簡質感色盤選擇與自訂 HEX 色碼輸入。
+- **三種日曆顯示模式**：支援「組別色彩優先」（標題附帶 🔴/🟡/🟢 死線狀態燈號）、「雙色混合模式」（背景呈現組別色彩，邊框呈現死線警告色）與「死線狀態優先」（維持傳統紅黃綠藍配色）彈性切換。
+- **視圖連貫性與本機持久化**：全數設定自動於 `localStorage`（`caseflow_group_colors` 與 `caseflow_color_mode`）進行持久化儲存；並同步將組別指定色渲染至案件樹狀視圖的任務組標頭圓點與標籤上，達成跨視圖風格連貫。
+
