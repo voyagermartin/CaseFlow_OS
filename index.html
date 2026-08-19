@@ -95,10 +95,23 @@
             background-color: #1e1b4b;
             border-color: #1e1b4b;
         }
-        /* Frappe Gantt Custom dark tweaks */
+        /* Frappe Gantt Custom dark tweaks & High Contrast Text */
         .gantt .grid-header {
             fill: #0f172a;
-            stroke: #1e293b;
+            stroke: #334155;
+        }
+        .gantt text {
+            fill: #f8fafc !important;
+        }
+        .gantt .lower-text {
+            fill: #e2e8f0 !important; /* High contrast date text */
+            font-weight: 600 !important;
+            font-size: 12px !important;
+        }
+        .gantt .upper-text {
+            fill: #818cf8 !important; /* Indigo accent for Month Header */
+            font-weight: 700 !important;
+            font-size: 13px !important;
         }
         .gantt .grid-row {
             fill: #020617;
@@ -110,7 +123,7 @@
             stroke: #1e293b;
         }
         .gantt .tick {
-            stroke: #1e293b;
+            stroke: #334155;
         }
         .gantt .bar {
             fill: #818cf8;
@@ -119,7 +132,7 @@
             fill: #4f46e5;
         }
         .gantt .bar-label {
-            fill: #ffffff;
+            fill: #ffffff !important;
             font-weight: 600;
             font-size: 11px;
         }
