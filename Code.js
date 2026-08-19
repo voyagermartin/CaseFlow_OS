@@ -112,6 +112,8 @@ function doPost(e) {
         postData.due_date,
         postData.start_date
       );
+    } else if (action === "deleteTask") {
+      responseData = deleteTask(parseInt(postData.taskId));
     } else if (action === "addComment") {
       responseData = addComment(
         parseInt(postData.taskId),
@@ -394,4 +396,33 @@ function addComment(taskId, userId, content) {
   const nowStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
   sheet.appendRow([nextId, taskId, userId, content, nowStr]);
   return { status: "success", commentId: nextId };
+}
+
+function deleteTask(taskId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet) throw new Error("Tasks sheet not initialized");
+  
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === taskId) {
+      sheet.deleteRow(i + 1);
+      deleteTaskComments(taskId);
+      return { status: "success", taskId: taskId };
+    }
+  }
+  throw new Error("Task with ID " + taskId + " not found");
+}
+
+function deleteTaskComments(taskId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Comments");
+  if (!sheet) return;
+  
+  const values = sheet.getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (parseInt(values[i][1]) === taskId) {
+      sheet.deleteRow(i + 1);
+    }
+  }
 }

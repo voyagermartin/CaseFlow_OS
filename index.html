@@ -238,11 +238,18 @@
             <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2" data-i18n="taskDetailTitle">
                 📋 任務詳情
             </h3>
-            <button onclick="closeTaskDrawer()" class="text-slate-400 hover:text-slate-200">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="deleteTask(selectedTaskId)" class="text-rose-500 hover:text-rose-400 p-1.5 rounded hover:bg-rose-500/10 transition-colors" title="刪除待辦事項">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5.5 h-5.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.34 9m-4.72 0-.34-9m9.96-3.243a2.25 2.25 0 0 0-1.242 0L21.5 7.5m-18 0 .864 5.76c.073.487.466.864.956.864h12.36c.49 0 .883-.377.956-.864L18 7.5m-15 0a2.25 2.25 0 0 1-1.242 0L3 7.5m5.338-1.5h7.324" />
+                    </svg>
+                </button>
+                <button onclick="closeTaskDrawer()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
         
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
@@ -1135,6 +1142,49 @@
                 renderCaseTree();
                 renderGantt();
                 alert("切換任務狀態失敗，已恢復原狀態。");
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!taskId) return;
+            if (taskId > 1000000000000) {
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                return;
+            }
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            
+            const confirmMsg = lang === 'vi-VN' ? "Bạn có chắc chắn muốn xóa nhiệm vụ này?" : "您確定要刪除此待辦事項嗎？";
+            if (!confirm(confirmMsg)) return;
+
+            // Optimistic update: Remove from in-memory array allCases
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    const foundIndex = g.tasks.findIndex(t => t.id === taskId);
+                    if (foundIndex !== -1) {
+                        g.tasks.splice(foundIndex, 1);
+                    }
+                });
+            });
+
+            // Close the drawer immediately since the task is deleted
+            closeTaskDrawer();
+
+            // Re-render UI immediately
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            // Background API call (silent)
+            const res = await apiRequest('deleteTask', { taskId: taskId }, 'POST', true);
+            if (!res) {
+                // Rollback if failed
+                alert(lang === 'vi-VN' ? "Xóa nhiệm vụ thất bại!" : "刪除待辦事項失敗，已重整頁面。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             }
         }
 
