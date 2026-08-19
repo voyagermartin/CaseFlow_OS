@@ -114,6 +114,16 @@ function doPost(e) {
       );
     } else if (action === "deleteTask") {
       responseData = deleteTask(parseInt(postData.taskId));
+    } else if (action === "updateCase") {
+      responseData = updateCase(
+        parseInt(postData.caseId),
+        postData.title,
+        postData.description,
+        postData.driveUrl,
+        postData.groups
+      );
+    } else if (action === "deleteCase") {
+      responseData = deleteCase(parseInt(postData.caseId));
     } else if (action === "addComment") {
       responseData = addComment(
         parseInt(postData.taskId),
@@ -425,4 +435,59 @@ function deleteTaskComments(taskId) {
       sheet.deleteRow(i + 1);
     }
   }
+}
+
+function updateCase(caseId, title, description, driveUrl, groups) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Cases");
+  if (!sheet) throw new Error("Cases sheet not initialized");
+  
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === caseId) {
+      if (title !== undefined) sheet.getRange(i + 1, 2).setValue(title);
+      if (description !== undefined) sheet.getRange(i + 1, 3).setValue(description);
+      if (driveUrl !== undefined) sheet.getRange(i + 1, 5).setValue(driveUrl);
+      if (groups !== undefined) {
+        const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+        sheet.getRange(i + 1, 6).setValue(groupsStr);
+      }
+      return { status: "success", caseId: caseId };
+    }
+  }
+  throw new Error("Case with ID " + caseId + " not found");
+}
+
+function deleteCase(caseId) {
+  const ss = getSpreadsheet();
+  
+  // 1. Delete Case Row
+  const caseSheet = ss.getSheetByName("Cases");
+  if (!caseSheet) throw new Error("Cases sheet not initialized");
+  
+  let caseFound = false;
+  const caseValues = caseSheet.getDataRange().getValues();
+  for (let i = 1; i < caseValues.length; i++) {
+    if (parseInt(caseValues[i][0]) === caseId) {
+      caseSheet.deleteRow(i + 1);
+      caseFound = true;
+      break;
+    }
+  }
+  if (!caseFound) throw new Error("Case with ID " + caseId + " not found");
+  
+  // 2. Find and delete all Tasks and associated Comments
+  const taskSheet = ss.getSheetByName("Tasks");
+  if (taskSheet) {
+    const taskValues = taskSheet.getDataRange().getValues();
+    for (let j = taskValues.length - 1; j >= 1; j--) {
+      if (parseInt(taskValues[j][1]) === caseId) {
+        const taskId = parseInt(taskValues[j][0]);
+        taskSheet.deleteRow(j + 1);
+        deleteTaskComments(taskId);
+      }
+    }
+  }
+  
+  return { status: "success", caseId: caseId };
 }

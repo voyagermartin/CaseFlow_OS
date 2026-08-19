@@ -353,6 +353,47 @@
         </div>
     </div>
 
+    <!-- Edit Case Modal -->
+    <div id="edit-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeEditCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
+                <button onclick="closeEditCaseModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-case-id">
+            
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">案件名稱 / 團號</label>
+                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">案件描述</label>
+                    <textarea id="edit-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="請填寫專案背景簡介..."></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">雲端硬碟連結 (Drive URL)</label>
+                    <input type="text" id="edit-case-drive-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="https://drive.google.com/drive/folders/...">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
+                    <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeEditCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
+                <button onclick="submitEditCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存修改</button>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Frontend Scripting Logic -->
@@ -877,6 +918,16 @@
                 const caseCard = document.createElement('div');
                 caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
                 
+                const canManage = (c.owner_id === currentUserId || currentUserId === 1);
+                const manageButtons = canManage ? `
+                    <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 p-1.5 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
+                        ✏️
+                    </button>
+                    <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 p-1.5 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
+                        🗑️
+                    </button>
+                ` : '';
+
                 // Card title & info
                 caseCard.innerHTML = `
                     <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
@@ -893,6 +944,7 @@
                             <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors">
                                 ${tText.driveBtn}
                             </a>
+                            ${manageButtons}
                             <span>${tText.caseOwner}: ${c.owner.username}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" id="accordion-arrow-${c.id}">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -1562,6 +1614,120 @@
                 descInput.value = '';
                 closeNewCaseModal();
                 await reloadAllViews();
+            }
+        }
+
+        function openEditCaseModal(caseId) {
+            const caseObj = allCases.find(c => c.id === caseId);
+            if (!caseObj) return;
+
+            document.getElementById('edit-case-id').value = caseObj.id;
+            document.getElementById('edit-case-title').value = caseObj.title;
+            document.getElementById('edit-case-desc').value = caseObj.description || '';
+            document.getElementById('edit-case-drive-url').value = caseObj.drive_url || '';
+            document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
+
+            document.getElementById('edit-case-modal').classList.remove('hidden');
+        }
+
+        function closeEditCaseModal() {
+            document.getElementById('edit-case-modal').classList.add('hidden');
+        }
+
+        async function submitEditCase() {
+            const idInput = document.getElementById('edit-case-id');
+            const titleInput = document.getElementById('edit-case-title');
+            const descInput = document.getElementById('edit-case-desc');
+            const driveUrlInput = document.getElementById('edit-case-drive-url');
+            const groupsInput = document.getElementById('edit-case-groups');
+
+            const caseId = parseInt(idInput.value);
+            const title = titleInput.value.trim();
+            if (!title) {
+                alert("請填寫案件名稱！");
+                return;
+            }
+
+            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            // Optimistic update
+            let caseObj = allCases.find(c => c.id === caseId);
+            if (caseObj) {
+                caseObj.title = title;
+                caseObj.description = descInput.value.trim();
+                caseObj.drive_url = driveUrlInput.value.trim();
+                
+                const oldGroups = [...caseObj.groups];
+                caseObj.groups = groups.map((gn, index) => {
+                    const existingGroup = oldGroups.find(g => g.name === gn);
+                    return {
+                        id: index + 1,
+                        name: gn,
+                        tasks: existingGroup ? existingGroup.tasks : []
+                    };
+                });
+            }
+
+            // Close modal & re-render UI immediately
+            closeEditCaseModal();
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            // Background API call (silent)
+            const payload = {
+                caseId: caseId,
+                title: title,
+                description: descInput.value.trim(),
+                driveUrl: driveUrlInput.value.trim(),
+                groups: groups
+            };
+
+            const res = await apiRequest('updateCase', payload, 'POST', true);
+            if (res) {
+                // Silent full reload in background
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            } else {
+                alert("修改案件失敗，已重整頁面。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            }
+        }
+
+        async function deleteCaseAction(caseId) {
+            const caseObj = allCases.find(c => c.id === caseId);
+            if (!caseObj) return;
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            
+            const confirmMsg = lang === 'vi-VN' 
+                ? `Bạn có chắc chắn muốn xóa dự án "${caseObj.title}"?\nTất cả công việc và thảo luận liên quan sẽ bị xóa vĩnh viễn!` 
+                : `您確定要刪除案件「${caseObj.title}」嗎？\n該案件底下的所有待辦事項與留言討論將會被永久刪除！此操作無法復原。`;
+            
+            if (!confirm(confirmMsg)) return;
+
+            // Optimistic update: remove case from in-memory array
+            allCases = allCases.filter(c => c.id !== caseId);
+
+            // Re-render UI immediately
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            // Background API call (silent)
+            const res = await apiRequest('deleteCase', { caseId: caseId }, 'POST', true);
+            if (!res) {
+                alert(lang === 'vi-VN' ? "Xóa dự án thất bại!" : "刪除案件失敗，已重整頁面。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             }
         }
     </script>
