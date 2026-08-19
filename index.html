@@ -183,6 +183,9 @@
                 <button onclick="switchView('gantt')" id="tab-gantt" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="ganttTab">📊 甘特圖模式</span>
                 </button>
+                <button onclick="openGroupColorModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
+                    <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
+                </button>
             </nav>
             <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
                 <div class="font-bold text-slate-300" data-i18n="guideTitle">💡 每日檢視指引</div>
@@ -353,43 +356,69 @@
         </div>
     </div>
 
-    <!-- Edit Case Modal -->
-    <div id="edit-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div onclick="closeEditCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-lg font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
-                <button onclick="closeEditCaseModal()" class="text-slate-400 hover:text-slate-200">
+    <!-- Group Color Settings Modal -->
+    <div id="group-color-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeGroupColorModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[540px] max-h-[85vh] flex flex-col relative z-10 shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2" data-i18n="groupColorModalTitle">
+                    🎨 任務組顏色與顯示設定
+                </h3>
+                <button onclick="closeGroupColorModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
             
-            <input type="hidden" id="edit-case-id">
-            
-            <div class="space-y-4">
-                <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">案件名稱 / 團號</label>
-                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 space-y-6 overflow-y-auto">
+                <!-- Mode Selection -->
+                <div class="space-y-3">
+                    <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="colorModeLabel">日曆色彩顯示模式</label>
+                    <div class="grid grid-cols-1 gap-2 text-xs">
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
+                            <input type="radio" name="color-mode-choice" value="group" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
+                            <div>
+                                <span class="font-bold text-slate-200 block" data-i18n="modeGroupFirst">組別色彩優先</span>
+                                <span class="text-slate-400 text-[11px]" data-i18n="modeGroupFirstDesc">日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。</span>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
+                            <input type="radio" name="color-mode-choice" value="hybrid" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
+                            <div>
+                                <span class="font-bold text-slate-200 block" data-i18n="modeHybrid">雙色混合模式</span>
+                                <span class="text-slate-400 text-[11px]" data-i18n="modeHybridDesc">日曆事件背景為任務組專屬顏色，左側邊框呈現死線狀態警告色（紅/黃/綠/藍）。</span>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
+                            <input type="radio" name="color-mode-choice" value="status" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
+                            <div>
+                                <span class="font-bold text-slate-200 block" data-i18n="modeStatusFirst">死線狀態優先</span>
+                                <span class="text-slate-400 text-[11px]" data-i18n="modeStatusFirstDesc">維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">案件描述</label>
-                    <textarea id="edit-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="請填寫專案背景簡介..."></textarea>
-                </div>
-                <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">雲端硬碟連結 (Drive URL)</label>
-                    <input type="text" id="edit-case-drive-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="https://drive.google.com/drive/folders/...">
-                </div>
-                <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
-                    <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
+
+                <!-- Group Color List -->
+                <div class="space-y-3 pt-4 border-t border-slate-800">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="groupColorListTitle">各任務組指定顏色</label>
+                        <button onclick="resetGroupColorsToDefault()" class="text-[11px] text-slate-400 hover:text-indigo-400 underline transition-colors" data-i18n="resetColorsBtn">恢復預設值</button>
+                    </div>
+                    <div id="group-colors-editor-list" class="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
+                        <!-- Dynamically generated list of task groups and color pickers -->
+                    </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
-                <button onclick="closeEditCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
-                <button onclick="submitEditCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存修改</button>
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900">
+                <button onclick="closeGroupColorModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="saveAndCloseBtn">
+                    套用並關閉
+                </button>
             </div>
         </div>
     </div>
@@ -447,6 +476,18 @@
                 alertFillCaseName: "請填寫案件名稱！",
                 overdueBadge: "截止",
                 driveBtn: "📂 雲端資料夾",
+                groupColorSettingsBtn: "🎨 任務組配色設定",
+                groupColorModalTitle: "🎨 任務組顏色與顯示設定",
+                colorModeLabel: "日曆色彩顯示模式",
+                modeGroupFirst: "組別色彩優先",
+                modeGroupFirstDesc: "日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。",
+                modeHybrid: "雙色混合模式",
+                modeHybridDesc: "日曆事件背景為任務組專屬顏色，邊框呈現死線狀態警告色（紅/黃/綠/藍）。",
+                modeStatusFirst: "死線狀態優先",
+                modeStatusFirstDesc: "維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。",
+                groupColorListTitle: "各任務組指定顏色",
+                resetColorsBtn: "恢復預設值",
+                saveAndCloseBtn: "套用並關閉",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -495,6 +536,18 @@
                 alertFillCaseName: "Vui lòng điền tên dự án!",
                 overdueBadge: "Hạn chót",
                 driveBtn: "📂 Thư mục Drive",
+                groupColorSettingsBtn: "🎨 Cài đặt màu nhóm công việc",
+                groupColorModalTitle: "🎨 Thiết lập màu sắc & hiển thị nhóm",
+                colorModeLabel: "Chế độ hiển thị màu lịch",
+                modeGroupFirst: "Ưu tiên màu nhóm công việc",
+                modeGroupFirstDesc: "Nền sự kiện theo màu nhóm, tiêu đề có biểu tượng trạng thái 🔴/🟡/🟢.",
+                modeHybrid: "Chế độ kết hợp hai màu",
+                modeHybridDesc: "Nền sự kiện theo màu nhóm, viền hiện màu cảnh báo thời hạn (Đỏ/Vàng/Xanh).",
+                modeStatusFirst: "Ưu tiên trạng thái thời hạn",
+                modeStatusFirstDesc: "Giữ chế độ truyền thống (Đỏ/Vàng/Xanh), tiêu đề giữ tên nhóm công việc.",
+                groupColorListTitle: "Màu chỉ định cho từng nhóm",
+                resetColorsBtn: "Khôi phục mặc định",
+                saveAndCloseBtn: "Áp dụng & Đóng",
             }
         };
 
@@ -832,41 +885,207 @@
             }
         }
 
+        // --- Group Color Mapping & Settings Logic ---
+        const DEFAULT_GROUP_COLORS = {
+            "票務": "#3b82f6",          // Blue
+            "TKT": "#3b82f6",
+            "票務與交通": "#3b82f6",
+            "住宿": "#a855f7",          // Purple
+            "HOTEL": "#a855f7",
+            "LOCAL 與 住宿": "#a855f7",
+            "交通": "#f97316",          // Orange
+            "TRANS": "#f97316",
+            "導遊": "#06b6d4",          // Cyan
+            "名單與證件": "#ec4899",     // Pink
+            "行政": "#64748b"           // Slate
+        };
+
+        const COLOR_PALETTE = [
+            { name: "Blue", hex: "#3b82f6" },
+            { name: "Indigo", hex: "#6366f1" },
+            { name: "Purple", hex: "#a855f7" },
+            { name: "Pink", hex: "#ec4899" },
+            { name: "Rose", hex: "#f43f5e" },
+            { name: "Orange", hex: "#f97316" },
+            { name: "Amber", hex: "#f59e0b" },
+            { name: "Emerald", hex: "#10b981" },
+            { name: "Cyan", hex: "#06b6d4" },
+            { name: "Slate", hex: "#64748b" }
+        ];
+
+        function getGroupColorMap() {
+            try {
+                const saved = localStorage.getItem('caseflow_group_colors');
+                if (saved) return JSON.parse(saved);
+            } catch(e) {}
+            return { ...DEFAULT_GROUP_COLORS };
+        }
+
+        function saveGroupColorMap(map) {
+            localStorage.setItem('caseflow_group_colors', JSON.stringify(map));
+        }
+
+        function getColorMode() {
+            return localStorage.getItem('caseflow_color_mode') || 'group';
+        }
+
+        function saveColorMode(mode) {
+            localStorage.setItem('caseflow_color_mode', mode);
+        }
+
+        function getGroupColor(groupName) {
+            if (!groupName) return "#6366f1";
+            const map = getGroupColorMap();
+            if (map[groupName]) return map[groupName];
+            let hash = 0;
+            for (let i = 0; i < groupName.length; i++) {
+                hash = groupName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % COLOR_PALETTE.length;
+            return COLOR_PALETTE[index].hex;
+        }
+
+        function openGroupColorModal() {
+            const modal = document.getElementById('group-color-modal');
+            if (!modal) return;
+            
+            const mode = getColorMode();
+            const radios = document.getElementsByName('color-mode-choice');
+            for (let r of radios) {
+                r.checked = (r.value === mode);
+                r.onchange = function() {
+                    saveColorMode(this.value);
+                    reloadAllViews();
+                };
+            }
+            
+            renderGroupColorEditorList();
+            modal.classList.remove('hidden');
+        }
+
+        function closeGroupColorModal() {
+            const modal = document.getElementById('group-color-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function renderGroupColorEditorList() {
+            const listEl = document.getElementById('group-colors-editor-list');
+            if (!listEl) return;
+            
+            const groupNamesSet = new Set(Object.keys(DEFAULT_GROUP_COLORS));
+            allCases.forEach(c => {
+                if (c.groups) {
+                    c.groups.forEach(g => groupNamesSet.add(g.name));
+                }
+            });
+
+            const currentMap = getGroupColorMap();
+            listEl.innerHTML = '';
+
+            groupNamesSet.forEach(gn => {
+                const colorHex = currentMap[gn] || getGroupColor(gn);
+                
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 rounded-xl border border-slate-850 bg-slate-950/60 gap-3";
+                
+                row.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="h-3.5 w-3.5 rounded-full border border-slate-700 shrink-0" style="background-color: ${colorHex}"></span>
+                        <span class="text-xs font-semibold text-slate-200">${gn}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1">
+                            ${COLOR_PALETTE.map(p => `
+                                <button onclick="updateSingleGroupColor('${gn}', '${p.hex}')" title="${p.name}" class="h-4 w-4 rounded-full border ${p.hex.toLowerCase() === colorHex.toLowerCase() ? 'border-white scale-125 shadow-sm' : 'border-transparent hover:scale-110'} transition-all" style="background-color: ${p.hex}"></button>
+                            `).join('')}
+                        </div>
+                        <input type="color" value="${colorHex}" onchange="updateSingleGroupColor('${gn}', this.value)" class="w-5 h-5 bg-transparent border-0 cursor-pointer rounded overflow-hidden">
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function updateSingleGroupColor(groupName, colorHex) {
+            const map = getGroupColorMap();
+            map[groupName] = colorHex;
+            saveGroupColorMap(map);
+            renderGroupColorEditorList();
+            reloadAllViews();
+        }
+
+        function resetGroupColorsToDefault() {
+            saveGroupColorMap({ ...DEFAULT_GROUP_COLORS });
+            saveColorMode('group');
+            const radios = document.getElementsByName('color-mode-choice');
+            for (let r of radios) {
+                r.checked = (r.value === 'group');
+            }
+            renderGroupColorEditorList();
+            reloadAllViews();
+        }
+
         // --- Calendar View Rendering ---
         function renderCalendar() {
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
+            const mode = getColorMode();
             const events = [];
+            
             allCases.forEach(c => {
                 c.groups.forEach(g => {
+                    const groupColor = getGroupColor(g.name);
+
                     g.tasks.forEach(t => {
                         if (!t.due_date) return;
                         
-                        let color = '#10B981'; // Completed (Green)
+                        let statusColor = '#10B981'; // Green
+                        let statusIcon = '🟢';
                         if (!t.is_completed) {
                             const now = new Date();
                             const dueDate = new Date(t.due_date);
                             const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
                             
                             if (hoursDiff < 0) {
-                                color = '#ef4444'; // Overdue (Red)
+                                statusColor = '#ef4444'; // Red
+                                statusIcon = '🔴';
                             } else if (hoursDiff <= 48) {
-                                color = '#f59e0b'; // Impending (Yellow)
+                                statusColor = '#f59e0b'; // Yellow
+                                statusIcon = '🟡';
                             } else {
-                                color = '#6366f1'; // Safe (Indigo)
+                                statusColor = '#6366f1'; // Blue
+                                statusIcon = '🔵';
                             }
+                        }
+
+                        let bgColor = groupColor;
+                        let borderColor = groupColor;
+                        let eventTitle = `[${c.title.split(' ')[0]}] ${t.title}`;
+
+                        if (mode === 'group') {
+                            bgColor = groupColor;
+                            borderColor = groupColor;
+                            eventTitle = `${statusIcon} [${g.name}] ${t.title}`;
+                        } else if (mode === 'hybrid') {
+                            bgColor = groupColor;
+                            borderColor = statusColor;
+                            eventTitle = `${statusIcon} [${g.name}] ${t.title}`;
+                        } else {
+                            bgColor = statusColor;
+                            borderColor = statusColor;
+                            eventTitle = `[${g.name}] ${t.title}`;
                         }
 
                         events.push({
                             id: t.id.toString(),
-                            title: `[${c.title.split(' ')[0]}] ${t.title}`,
+                            title: eventTitle,
                             start: t.start_date || t.due_date,
                             end: t.due_date,
-                            backgroundColor: color,
-                            borderColor: color,
+                            backgroundColor: bgColor,
+                            borderColor: borderColor,
                             textColor: '#ffffff',
-                            extendedProps: { task: t }
+                            extendedProps: { task: t, groupName: g.name }
                         });
                     });
                 });
@@ -918,16 +1137,6 @@
                 const caseCard = document.createElement('div');
                 caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
                 
-                const canManage = (c.owner_id === currentUserId || currentUserId === 1);
-                const manageButtons = canManage ? `
-                    <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 p-1.5 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
-                        ✏️
-                    </button>
-                    <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 p-1.5 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
-                        🗑️
-                    </button>
-                ` : '';
-
                 // Card title & info
                 caseCard.innerHTML = `
                     <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
@@ -944,7 +1153,6 @@
                             <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors">
                                 ${tText.driveBtn}
                             </a>
-                            ${manageButtons}
                             <span>${tText.caseOwner}: ${c.owner.username}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" id="accordion-arrow-${c.id}">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -959,15 +1167,16 @@
                 const caseBody = caseCard.querySelector(`#case-body-${c.id}`);
                 
                 c.groups.forEach(g => {
+                    const groupColor = getGroupColor(g.name);
                     const groupDiv = document.createElement('div');
                     groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-4 space-y-4";
                     groupDiv.innerHTML = `
                         <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                            <h4 class="font-bold text-indigo-400 text-sm flex items-center gap-1.5">
-                                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                            <h4 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                                <span class="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${groupColor}"></span>
                                 ${g.name}
                             </h4>
-                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-semibold">${tText.taskGroup}</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-semibold border border-slate-700/60" style="border-left: 3px solid ${groupColor}">${tText.taskGroup}</span>
                         </div>
                         <div class="space-y-2" id="group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}">
                             <!-- Tasks list -->
@@ -1614,120 +1823,6 @@
                 descInput.value = '';
                 closeNewCaseModal();
                 await reloadAllViews();
-            }
-        }
-
-        function openEditCaseModal(caseId) {
-            const caseObj = allCases.find(c => c.id === caseId);
-            if (!caseObj) return;
-
-            document.getElementById('edit-case-id').value = caseObj.id;
-            document.getElementById('edit-case-title').value = caseObj.title;
-            document.getElementById('edit-case-desc').value = caseObj.description || '';
-            document.getElementById('edit-case-drive-url').value = caseObj.drive_url || '';
-            document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
-
-            document.getElementById('edit-case-modal').classList.remove('hidden');
-        }
-
-        function closeEditCaseModal() {
-            document.getElementById('edit-case-modal').classList.add('hidden');
-        }
-
-        async function submitEditCase() {
-            const idInput = document.getElementById('edit-case-id');
-            const titleInput = document.getElementById('edit-case-title');
-            const descInput = document.getElementById('edit-case-desc');
-            const driveUrlInput = document.getElementById('edit-case-drive-url');
-            const groupsInput = document.getElementById('edit-case-groups');
-
-            const caseId = parseInt(idInput.value);
-            const title = titleInput.value.trim();
-            if (!title) {
-                alert("請填寫案件名稱！");
-                return;
-            }
-
-            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-            // Optimistic update
-            let caseObj = allCases.find(c => c.id === caseId);
-            if (caseObj) {
-                caseObj.title = title;
-                caseObj.description = descInput.value.trim();
-                caseObj.drive_url = driveUrlInput.value.trim();
-                
-                const oldGroups = [...caseObj.groups];
-                caseObj.groups = groups.map((gn, index) => {
-                    const existingGroup = oldGroups.find(g => g.name === gn);
-                    return {
-                        id: index + 1,
-                        name: gn,
-                        tasks: existingGroup ? existingGroup.tasks : []
-                    };
-                });
-            }
-
-            // Close modal & re-render UI immediately
-            closeEditCaseModal();
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-
-            // Background API call (silent)
-            const payload = {
-                caseId: caseId,
-                title: title,
-                description: descInput.value.trim(),
-                driveUrl: driveUrlInput.value.trim(),
-                groups: groups
-            };
-
-            const res = await apiRequest('updateCase', payload, 'POST', true);
-            if (res) {
-                // Silent full reload in background
-                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-            } else {
-                alert("修改案件失敗，已重整頁面。");
-                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-            }
-        }
-
-        async function deleteCaseAction(caseId) {
-            const caseObj = allCases.find(c => c.id === caseId);
-            if (!caseObj) return;
-
-            const user = allUsers.find(u => u.id === currentUserId);
-            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
-            
-            const confirmMsg = lang === 'vi-VN' 
-                ? `Bạn có chắc chắn muốn xóa dự án "${caseObj.title}"?\nTất cả công việc và thảo luận liên quan sẽ bị xóa vĩnh viễn!` 
-                : `您確定要刪除案件「${caseObj.title}」嗎？\n該案件底下的所有待辦事項與留言討論將會被永久刪除！此操作無法復原。`;
-            
-            if (!confirm(confirmMsg)) return;
-
-            // Optimistic update: remove case from in-memory array
-            allCases = allCases.filter(c => c.id !== caseId);
-
-            // Re-render UI immediately
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-
-            // Background API call (silent)
-            const res = await apiRequest('deleteCase', { caseId: caseId }, 'POST', true);
-            if (!res) {
-                alert(lang === 'vi-VN' ? "Xóa dự án thất bại!" : "刪除案件失敗，已重整頁面。");
-                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
             }
         }
     </script>
