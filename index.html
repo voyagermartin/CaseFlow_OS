@@ -95,23 +95,10 @@
             background-color: #1e1b4b;
             border-color: #1e1b4b;
         }
-        /* Frappe Gantt Custom dark tweaks & High Contrast Text */
+        /* Frappe Gantt Custom dark tweaks */
         .gantt .grid-header {
             fill: #0f172a;
-            stroke: #334155;
-        }
-        .gantt text {
-            fill: #f8fafc !important;
-        }
-        .gantt .lower-text {
-            fill: #e2e8f0 !important; /* High contrast date text */
-            font-weight: 600 !important;
-            font-size: 12px !important;
-        }
-        .gantt .upper-text {
-            fill: #818cf8 !important; /* Indigo accent for Month Header */
-            font-weight: 700 !important;
-            font-size: 13px !important;
+            stroke: #1e293b;
         }
         .gantt .grid-row {
             fill: #020617;
@@ -123,7 +110,7 @@
             stroke: #1e293b;
         }
         .gantt .tick {
-            stroke: #334155;
+            stroke: #1e293b;
         }
         .gantt .bar {
             fill: #818cf8;
@@ -132,7 +119,7 @@
             fill: #4f46e5;
         }
         .gantt .bar-label {
-            fill: #ffffff !important;
+            fill: #ffffff;
             font-weight: 600;
             font-size: 11px;
         }
@@ -195,9 +182,6 @@
                 </button>
                 <button onclick="switchView('gantt')" id="tab-gantt" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="ganttTab">📊 甘特圖模式</span>
-                </button>
-                <button onclick="openGroupColorModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
-                    <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
                 </button>
             </nav>
             <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
@@ -369,85 +353,6 @@
         </div>
     </div>
 
-    <!-- Group Color Settings Modal -->
-    <div id="group-color-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div onclick="closeGroupColorModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[540px] max-h-[85vh] flex flex-col relative z-10 shadow-2xl overflow-hidden">
-            <!-- Modal Header -->
-            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2" data-i18n="groupColorModalTitle">
-                    🎨 任務組顏色與顯示設定
-                </h3>
-                <button onclick="closeGroupColorModal()" class="text-slate-400 hover:text-slate-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            
-            <!-- Modal Body (Scrollable) -->
-            <div class="p-6 space-y-6 overflow-y-auto">
-                <!-- Mode Selection -->
-                <div class="space-y-3">
-                    <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="colorModeLabel">日曆色彩顯示模式</label>
-                    <div class="grid grid-cols-1 gap-2 text-xs">
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
-                            <input type="radio" name="color-mode-choice" value="group" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
-                            <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeGroupFirst">組別色彩優先</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeGroupFirstDesc">日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。</span>
-                            </div>
-                        </label>
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
-                            <input type="radio" name="color-mode-choice" value="hybrid" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
-                            <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeHybrid">雙色混合模式</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeHybridDesc">日曆事件背景為任務組專屬顏色，左側邊框呈現死線狀態警告色（紅/黃/綠/藍）。</span>
-                            </div>
-                        </label>
-                        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
-                            <input type="radio" name="color-mode-choice" value="status" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
-                            <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeStatusFirst">死線狀態優先</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeStatusFirstDesc">維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Add New Group Form -->
-                <div class="space-y-2 p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
-                    <label class="text-xs text-slate-300 font-semibold block" data-i18n="addNewGroupTitle">➕ 新增自訂任務組</label>
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="new-group-name-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500" data-i18n="newGroupPlaceholder" placeholder="輸入任務組名稱 (如: 簽證, 財務)..." onkeydown="if(event.key==='Enter') handleAddNewGroup()">
-                        <input type="color" id="new-group-color-picker" value="#3b82f6" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded overflow-hidden shrink-0">
-                        <button onclick="handleAddNewGroup()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0" data-i18n="addGroupBtn">
-                            新增
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Group Color List -->
-                <div class="space-y-3 pt-4 border-t border-slate-800">
-                    <div class="flex justify-between items-center">
-                        <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="groupColorListTitle">各任務組指定顏色</label>
-                        <button onclick="clearAllGroupColors()" class="text-[11px] text-red-400 hover:text-red-300 underline transition-colors" data-i18n="clearAllGroupsBtn">🗑️ 清空所有任務組</button>
-                    </div>
-                    <div id="group-colors-editor-list" class="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
-                        <!-- Dynamically generated list of task groups and color pickers -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="p-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900">
-                <button onclick="closeGroupColorModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="saveAndCloseBtn">
-                    套用並關閉
-                </button>
-            </div>
-        </div>
-    </div>
-
 
 
     <!-- Frontend Scripting Logic -->
@@ -501,26 +406,6 @@
                 alertFillCaseName: "請填寫案件名稱！",
                 overdueBadge: "截止",
                 driveBtn: "📂 雲端資料夾",
-                groupColorSettingsBtn: "🎨 任務組配色設定",
-                groupColorModalTitle: "🎨 任務組顏色與顯示設定",
-                colorModeLabel: "日曆色彩顯示模式",
-                modeGroupFirst: "組別色彩優先",
-                modeGroupFirstDesc: "日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。",
-                modeHybrid: "雙色混合模式",
-                modeHybridDesc: "日曆事件背景為任務組專屬顏色，邊框呈現死線狀態警告色（紅/黃/綠/藍）。",
-                modeStatusFirst: "死線狀態優先",
-                modeStatusFirstDesc: "維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。",
-                groupColorListTitle: "各任務組指定顏色",
-                resetColorsBtn: "重置色彩",
-                saveAndCloseBtn: "套用並關閉",
-                addNewGroupTitle: "➕ 新增自訂任務組",
-                newGroupPlaceholder: "輸入任務組名稱 (如: 簽證, 財務)...",
-                addGroupBtn: "新增",
-                renameGroupPrompt: "請輸入新的任務組名稱：",
-                confirmDeleteGroup: "確定要刪除任務組「{name}」的專屬色彩設定嗎？",
-                emptyGroupListHint: "目前尚未新增任何自訂任務組，請在上方輸入名稱新增！",
-                clearAllGroupsBtn: "🗑️ 清空所有任務組",
-                confirmClearAll: "確定要清空所有自訂任務組設定嗎？",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -569,26 +454,6 @@
                 alertFillCaseName: "Vui lòng điền tên dự án!",
                 overdueBadge: "Hạn chót",
                 driveBtn: "📂 Thư mục Drive",
-                groupColorSettingsBtn: "🎨 Cài đặt màu nhóm công việc",
-                groupColorModalTitle: "🎨 Thiết lập màu sắc & hiển thị nhóm",
-                colorModeLabel: "Chế độ hiển thị màu lịch",
-                modeGroupFirst: "Ưu tiên màu nhóm công việc",
-                modeGroupFirstDesc: "Nền sự kiện theo màu nhóm, tiêu đề có biểu tượng trạng thái 🔴/🟡/🟢.",
-                modeHybrid: "Chế độ kết hợp hai màu",
-                modeHybridDesc: "Nền sự kiện theo màu nhóm, viền hiện màu cảnh báo thời hạn (Đỏ/Vàng/Xanh).",
-                modeStatusFirst: "Ưu tiên trạng thái thời hạn",
-                modeStatusFirstDesc: "Giữ chế độ truyền thống (Đỏ/Vàng/Xanh), tiêu đề giữ tên nhóm công việc.",
-                groupColorListTitle: "Màu chỉ định cho từng nhóm",
-                resetColorsBtn: "Đặt lại màu",
-                saveAndCloseBtn: "Áp dụng & Đóng",
-                addNewGroupTitle: "➕ Thêm nhóm công việc mới",
-                newGroupPlaceholder: "Nhập tên nhóm (VD: Visa, Tài chính)...",
-                addGroupBtn: "Thêm",
-                renameGroupPrompt: "Vui lòng nhập tên nhóm công việc mới:",
-                confirmDeleteGroup: "Bạn có chắc muốn xóa cài đặt màu nhóm \"{name}\" không?",
-                emptyGroupListHint: "Chưa có nhóm công việc nào, hãy nhập tên ở trên để thêm!",
-                clearAllGroupsBtn: "🗑️ Xóa tất cả nhóm",
-                confirmClearAll: "Bạn có chắc muốn xóa tất cả cài đặt nhóm không?",
             }
         };
 
@@ -849,6 +714,109 @@
             return JSON.parse(JSON.stringify(cases));
         }
 
+        // --- Taiwan Working Days Calculation Utilities ---
+        function getTaiwanHolidays() {
+            return new Set([
+                // 2025 Holidays
+                "2025-01-01",
+                "2025-01-27", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31", "2025-02-03",
+                "2025-02-28",
+                "2025-04-03", "2025-04-04",
+                "2025-05-01",
+                "2025-05-30",
+                "2025-10-06",
+                "2025-10-10",
+                
+                // 2026 Holidays (民國115年)
+                "2026-01-01",
+                "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20",
+                "2026-02-27",
+                "2026-04-03", "2026-04-06",
+                "2026-05-01",
+                "2026-06-19",
+                "2026-09-25", "2026-09-28",
+                "2026-10-09",
+                "2026-10-26",
+                "2026-12-25",
+
+                // 2027 Holidays
+                "2027-01-01",
+                "2027-02-05", "2027-02-08", "2027-02-09", "2027-02-10", "2027-02-11", "2027-02-12",
+                "2027-02-26",
+                "2027-04-02", "2027-04-05",
+                "2027-05-01",
+                "2027-06-11",
+                "2027-09-15",
+                "2027-10-08"
+            ]);
+        }
+
+        // Taiwan makeup workdays (Saturday office days)
+        function getTaiwanMakeupWorkdays() {
+            return new Set([
+                "2025-02-08" // 2025年唯一補班日
+            ]);
+        }
+
+        function calculateWorkingDays(startDateStr, endDateStr) {
+            const startParts = startDateStr.split('-');
+            const endParts = endDateStr.split('-');
+            
+            const start = new Date(Date.UTC(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2])));
+            const end = new Date(Date.UTC(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2])));
+            
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+            if (start.getTime() === end.getTime()) return 0;
+            
+            const holidays = getTaiwanHolidays();
+            const makeupWorkdays = getTaiwanMakeupWorkdays();
+            let count = 0;
+            
+            const isForward = start < end;
+            let current = new Date(start.getTime());
+            
+            while (current.getTime() !== end.getTime()) {
+                if (isForward) {
+                    current.setUTCDate(current.getUTCDate() + 1);
+                } else {
+                    current.setUTCDate(current.getUTCDate() - 1);
+                }
+                
+                const dayOfWeek = current.getUTCDay(); // 0 is Sunday, 6 is Saturday
+                const dateStr = current.toISOString().split('T')[0];
+                
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidays.has(dateStr);
+                const isMakeup = makeupWorkdays.has(dateStr);
+                
+                if ((!isWeekend && !isHoliday) || (isWeekend && isMakeup)) {
+                    count++;
+                }
+            }
+            
+            return isForward ? count : -count;
+        }
+
+        function getWorkingDaysLeftSpan(task) {
+            if (task.is_completed || !task.due_date) return "";
+            
+            // Get today's date in local timezone YYYY-MM-DD
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            
+            const days = calculateWorkingDays(todayStr, task.due_date);
+            if (days === null) return "";
+            
+            if (days > 0) {
+                const colorClass = (days <= 2) ? "text-yellow-500 font-semibold" : "text-slate-400";
+                return ` <span class="text-xs font-normal ${colorClass} ml-1.5">(剩 ${days} 工作天)</span>`;
+            } else if (days === 0) {
+                return ` <span class="text-xs font-semibold text-yellow-500 ml-1.5">(今日到期)</span>`;
+            } else {
+                return ` <span class="text-xs font-semibold text-red-500 ml-1.5">(逾期 ${Math.abs(days)} 工作天)</span>`;
+            }
+        }
+
         // Show/Hide spinner
         function showLoading(show) {
             const el = document.getElementById('view-loading');
@@ -926,263 +894,41 @@
             }
         }
 
-        // --- Group Color Mapping & Settings Logic ---
-        const DEFAULT_GROUP_COLORS = {}; // Empty default as requested
-
-        const COLOR_PALETTE = [
-            { name: "Blue", hex: "#3b82f6" },
-            { name: "Indigo", hex: "#6366f1" },
-            { name: "Purple", hex: "#a855f7" },
-            { name: "Pink", hex: "#ec4899" },
-            { name: "Rose", hex: "#f43f5e" },
-            { name: "Orange", hex: "#f97316" },
-            { name: "Amber", hex: "#f59e0b" },
-            { name: "Emerald", hex: "#10b981" },
-            { name: "Cyan", hex: "#06b6d4" },
-            { name: "Slate", hex: "#64748b" }
-        ];
-
-        function getGroupColorMap() {
-            try {
-                const saved = localStorage.getItem('caseflow_group_colors');
-                if (saved !== null) return JSON.parse(saved);
-            } catch(e) {}
-            return {};
-        }
-
-        function saveGroupColorMap(map) {
-            localStorage.setItem('caseflow_group_colors', JSON.stringify(map));
-        }
-
-        function getColorMode() {
-            return localStorage.getItem('caseflow_color_mode') || 'group';
-        }
-
-        function saveColorMode(mode) {
-            localStorage.setItem('caseflow_color_mode', mode);
-        }
-
-        function getGroupColor(groupName) {
-            if (!groupName) return "#6366f1";
-            const map = getGroupColorMap();
-            if (map[groupName]) return map[groupName];
-            let hash = 0;
-            for (let i = 0; i < groupName.length; i++) {
-                hash = groupName.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const index = Math.abs(hash) % COLOR_PALETTE.length;
-            return COLOR_PALETTE[index].hex;
-        }
-
-        function handleAddNewGroup() {
-            const nameInput = document.getElementById('new-group-name-input');
-            const colorPicker = document.getElementById('new-group-color-picker');
-            const name = nameInput ? nameInput.value.trim() : '';
-            if (!name) return;
-            
-            const color = colorPicker ? colorPicker.value : '#3b82f6';
-            const map = getGroupColorMap();
-            map[name] = color;
-            saveGroupColorMap(map);
-            if (nameInput) nameInput.value = '';
-            renderGroupColorEditorList();
-            reloadAllViews();
-        }
-
-        function handleDeleteGroup(groupName) {
-            const user = allUsers.find(u => u.id === currentUserId);
-            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
-            const tText = i18n[lang];
-            const msg = (tText.confirmDeleteGroup || "確定要刪除任務組「{name}」嗎？").replace('{name}', groupName);
-            
-            if (confirm(msg)) {
-                const map = getGroupColorMap();
-                delete map[groupName];
-                saveGroupColorMap(map);
-                renderGroupColorEditorList();
-                reloadAllViews();
-            }
-        }
-
-        function handleRenameGroup(oldName) {
-            const user = allUsers.find(u => u.id === currentUserId);
-            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
-            const tText = i18n[lang];
-            
-            const newName = prompt(tText.renameGroupPrompt || "請輸入新的任務組名稱：", oldName);
-            if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
-            
-            const map = getGroupColorMap();
-            const color = map[oldName] || getGroupColor(oldName);
-            delete map[oldName];
-            map[newName.trim()] = color;
-            saveGroupColorMap(map);
-            renderGroupColorEditorList();
-            reloadAllViews();
-        }
-
-        function clearAllGroupColors() {
-            const user = allUsers.find(u => u.id === currentUserId);
-            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
-            const tText = i18n[lang];
-            
-            if (confirm(tText.confirmClearAll || "確定要清空所有任務組嗎？")) {
-                saveGroupColorMap({});
-                renderGroupColorEditorList();
-                reloadAllViews();
-            }
-        }
-
-        function openGroupColorModal() {
-            const modal = document.getElementById('group-color-modal');
-            if (!modal) return;
-            
-            const mode = getColorMode();
-            const radios = document.getElementsByName('color-mode-choice');
-            for (let r of radios) {
-                r.checked = (r.value === mode);
-                r.onchange = function() {
-                    saveColorMode(this.value);
-                    reloadAllViews();
-                };
-            }
-            
-            renderGroupColorEditorList();
-            modal.classList.remove('hidden');
-        }
-
-        function closeGroupColorModal() {
-            const modal = document.getElementById('group-color-modal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function renderGroupColorEditorList() {
-            const listEl = document.getElementById('group-colors-editor-list');
-            if (!listEl) return;
-            
-            const user = allUsers.find(u => u.id === currentUserId);
-            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
-            const tText = i18n[lang];
-
-            const currentMap = getGroupColorMap();
-            const groupNames = Object.keys(currentMap);
-            listEl.innerHTML = '';
-
-            if (groupNames.length === 0) {
-                listEl.innerHTML = `
-                    <div class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
-                        ${tText.emptyGroupListHint || '目前尚未新增任何自訂任務組，請在上方輸入名稱新增！'}
-                    </div>
-                `;
-                return;
-            }
-
-            groupNames.forEach(gn => {
-                const colorHex = currentMap[gn] || getGroupColor(gn);
-                
-                const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-2.5 rounded-xl border border-slate-850 bg-slate-950/60 gap-2";
-                
-                row.innerHTML = `
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                        <span class="h-3.5 w-3.5 rounded-full border border-slate-700 shrink-0" style="background-color: ${colorHex}"></span>
-                        <span class="text-xs font-semibold text-slate-200 truncate">${gn}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <div class="flex items-center gap-1">
-                            ${COLOR_PALETTE.map(p => `
-                                <button onclick="updateSingleGroupColor('${gn}', '${p.hex}')" title="${p.name}" class="h-4 w-4 rounded-full border ${p.hex.toLowerCase() === colorHex.toLowerCase() ? 'border-white scale-125 shadow-sm' : 'border-transparent hover:scale-110'} transition-all" style="background-color: ${p.hex}"></button>
-                            `).join('')}
-                        </div>
-                        <input type="color" value="${colorHex}" onchange="updateSingleGroupColor('${gn}', this.value)" class="w-5 h-5 bg-transparent border-0 cursor-pointer rounded overflow-hidden">
-                        <button onclick="handleRenameGroup('${gn}')" title="重命名" class="text-slate-400 hover:text-indigo-400 text-xs px-1 py-0.5 rounded hover:bg-slate-800 transition-colors">✏️</button>
-                        <button onclick="handleDeleteGroup('${gn}')" title="刪除" class="text-slate-400 hover:text-red-400 text-xs px-1 py-0.5 rounded hover:bg-slate-800 transition-colors">🗑️</button>
-                    </div>
-                `;
-                listEl.appendChild(row);
-            });
-        }
-
-        function updateSingleGroupColor(groupName, colorHex) {
-            const map = getGroupColorMap();
-            map[groupName] = colorHex;
-            saveGroupColorMap(map);
-            renderGroupColorEditorList();
-            reloadAllViews();
-        }
-
-        function resetGroupColorsToDefault() {
-            saveGroupColorMap({ ...DEFAULT_GROUP_COLORS });
-            saveColorMode('group');
-            const radios = document.getElementsByName('color-mode-choice');
-            for (let r of radios) {
-                r.checked = (r.value === 'group');
-            }
-            renderGroupColorEditorList();
-            reloadAllViews();
-        }
-
         // --- Calendar View Rendering ---
         function renderCalendar() {
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
-            const mode = getColorMode();
             const events = [];
-            
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const groupColor = getGroupColor(g.name);
-
                     g.tasks.forEach(t => {
                         if (!t.due_date) return;
                         
-                        let statusColor = '#10B981'; // Green
-                        let statusIcon = '🟢';
+                        let color = '#10B981'; // Completed (Green)
                         if (!t.is_completed) {
                             const now = new Date();
                             const dueDate = new Date(t.due_date);
                             const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
                             
                             if (hoursDiff < 0) {
-                                statusColor = '#ef4444'; // Red
-                                statusIcon = '🔴';
+                                color = '#ef4444'; // Overdue (Red)
                             } else if (hoursDiff <= 48) {
-                                statusColor = '#f59e0b'; // Yellow
-                                statusIcon = '🟡';
+                                color = '#f59e0b'; // Impending (Yellow)
                             } else {
-                                statusColor = '#6366f1'; // Blue
-                                statusIcon = '🔵';
+                                color = '#6366f1'; // Safe (Indigo)
                             }
-                        }
-
-                        let bgColor = groupColor;
-                        let borderColor = groupColor;
-                        let eventTitle = `[${c.title.split(' ')[0]}] ${t.title}`;
-
-                        if (mode === 'group') {
-                            bgColor = groupColor;
-                            borderColor = groupColor;
-                            eventTitle = `${statusIcon} [${g.name}] ${t.title}`;
-                        } else if (mode === 'hybrid') {
-                            bgColor = groupColor;
-                            borderColor = statusColor;
-                            eventTitle = `${statusIcon} [${g.name}] ${t.title}`;
-                        } else {
-                            bgColor = statusColor;
-                            borderColor = statusColor;
-                            eventTitle = `[${g.name}] ${t.title}`;
                         }
 
                         events.push({
                             id: t.id.toString(),
-                            title: eventTitle,
+                            title: `[${c.title.split(' ')[0]}] ${t.title}`,
                             start: t.start_date || t.due_date,
                             end: t.due_date,
-                            backgroundColor: bgColor,
-                            borderColor: borderColor,
+                            backgroundColor: color,
+                            borderColor: color,
                             textColor: '#ffffff',
-                            extendedProps: { task: t, groupName: g.name }
+                            extendedProps: { task: t }
                         });
                     });
                 });
@@ -1264,16 +1010,15 @@
                 const caseBody = caseCard.querySelector(`#case-body-${c.id}`);
                 
                 c.groups.forEach(g => {
-                    const groupColor = getGroupColor(g.name);
                     const groupDiv = document.createElement('div');
                     groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-4 space-y-4";
                     groupDiv.innerHTML = `
                         <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                            <h4 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                                <span class="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${groupColor}"></span>
+                            <h4 class="font-bold text-indigo-400 text-sm flex items-center gap-1.5">
+                                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
                                 ${g.name}
                             </h4>
-                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-semibold border border-slate-700/60" style="border-left: 3px solid ${groupColor}">${tText.taskGroup}</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-semibold">${tText.taskGroup}</span>
                         </div>
                         <div class="space-y-2" id="group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}">
                             <!-- Tasks list -->
@@ -1344,11 +1089,12 @@
                                 });
                             }
 
+                            const workingDaysHtml = getWorkingDaysLeftSpan(t);
                             taskItem.innerHTML = `
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">
                                     <span class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
-                                        ${t.title}
+                                        ${t.title}${workingDaysHtml}
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0">
@@ -1883,16 +1629,7 @@
 
         // --- New Case Modal Dialog Handling ---
         function openNewCaseModal() {
-            const modal = document.getElementById('new-case-modal');
-            if (!modal) return;
-            
-            const map = getGroupColorMap();
-            const existingKeys = Object.keys(map);
-            const defaultGroupsStr = existingKeys.length > 0 ? existingKeys.join(', ') : '票務與交通, LOCAL 與 住宿, 名單與證件';
-            const groupsInput = document.getElementById('new-case-groups');
-            if (groupsInput) groupsInput.value = defaultGroupsStr;
-
-            modal.classList.remove('hidden');
+            document.getElementById('new-case-modal').classList.remove('hidden');
         }
 
         function closeNewCaseModal() {
