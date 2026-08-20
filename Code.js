@@ -26,20 +26,28 @@ function initDatabase() {
     return sheet;
   }
   
-  // 1. Users Sheet
-  const userHeaders = ["id", "username", "role", "avatar_color", "language"];
-  const userSheet = setupSheet("Users", userHeaders);
-  userSheet.appendRow([1, "Martin", "Owner/Admin", "#4f46e5", "zh-TW"]);
-  userSheet.appendRow([2, "OP_Ning", "Operation", "#0ea5e9", "zh-TW"]);
-  userSheet.appendRow([3, "Sales_Yang", "Sales", "#f59e0b", "zh-TW"]);
-  userSheet.appendRow([4, "Local_Nguyen", "Local Agent", "#10b981", "vi-VN"]);
+  // 1. Roles Sheet
+  const roleHeaders = ["id", "role_name", "can_create_case"];
+  const roleSheet = setupSheet("Roles", roleHeaders);
+  roleSheet.appendRow([1, "Owner/Admin", true]);
+  roleSheet.appendRow([2, "Operation", true]);
+  roleSheet.appendRow([3, "Sales", true]);
+  roleSheet.appendRow([4, "Local Agent", false]);
 
-  // 2. Cases Sheet
+  // 2. Users Sheet
+  const userHeaders = ["id", "username", "role_id", "avatar_color", "language", "google_email", "is_super_master"];
+  const userSheet = setupSheet("Users", userHeaders);
+  userSheet.appendRow([1, "Martin", 1, "#4f46e5", "zh-TW", "martin@example.com", true]);
+  userSheet.appendRow([2, "OP_Ning", 2, "#0ea5e9", "zh-TW", "", false]);
+  userSheet.appendRow([3, "Sales_Yang", 3, "#f59e0b", "zh-TW", "", false]);
+  userSheet.appendRow([4, "Local_Nguyen", 4, "#10b981", "vi-VN", "", false]);
+
+  // 3. Cases Sheet
   const caseHeaders = ["id", "title", "description", "owner_id", "drive_url", "group_names"];
   const caseSheet = setupSheet("Cases", caseHeaders);
   caseSheet.appendRow([1, "2026/09/15 馬航怡保專案", "本次怡保出團之完整追蹤與住宿協調工作", 1, "https://drive.google.com/drive/folders/mock-id", "票務與交通, LOCAL 與 住宿, 名單與證件"]);
 
-  // 3. Tasks Sheet
+  // 4. Tasks Sheet
   const taskHeaders = ["id", "case_id", "group_name", "title", "due_date", "start_date", "is_completed", "notes", "visible_user_ids"];
   const taskSheet = setupSheet("Tasks", taskHeaders);
   taskSheet.appendRow([1, 1, "票務與交通", "【票務組】收取訂金與開票確認", "2026-08-30", "2026-08-01", false, "記得確認開票代號與退改簽規則", "1,2,3"]);
@@ -47,7 +55,7 @@ function initDatabase() {
   taskSheet.appendRow([3, 1, "LOCAL 與 住宿", "確認遊覽車車號", "2026-09-10", "2026-08-20", false, "車型要求3年內新車，含司機電話", "1,2"]);
   taskSheet.appendRow([4, 1, "名單與證件", "收集護照影本與辦理簽證", "2026-08-15", "2026-08-01", false, "逾期警報！請業務儘速追回護照正本", "1,3,4"]);
 
-  // 4. Comments Sheet
+  // 5. Comments Sheet
   const commentHeaders = ["id", "task_id", "user_id", "content", "created_at"];
   const commentSheet = setupSheet("Comments", commentHeaders);
   commentSheet.appendRow([1, 2, 2, "飯店確認信已收到，確認號：#12345", "2026-08-15 14:00:00"]);
@@ -64,6 +72,8 @@ function doGet(e) {
   try {
     if (action === "getUsers") {
       responseData = getUsers();
+    } else if (action === "getRoles") {
+      responseData = getRoles();
     } else if (action === "getCases") {
       const userId = parseInt(e.parameter.user_id);
       if (isNaN(userId)) {
@@ -130,6 +140,18 @@ function doPost(e) {
         parseInt(postData.user_id),
         postData.content
       );
+    } else if (action === "createRole") {
+      responseData = createRole(postData.role_name, postData.can_create_case);
+    } else if (action === "updateRole") {
+      responseData = updateRole(parseInt(postData.roleId), postData.role_name, postData.can_create_case);
+    } else if (action === "deleteRole") {
+      responseData = deleteRole(parseInt(postData.roleId));
+    } else if (action === "createUser") {
+      responseData = createUser(postData.username, parseInt(postData.roleId), postData.avatar_color, postData.language, postData.google_email);
+    } else if (action === "updateUser") {
+      responseData = updateUser(parseInt(postData.userId), postData.username, postData.roleId !== undefined ? parseInt(postData.roleId) : undefined, postData.avatar_color, postData.language, postData.google_email);
+    } else if (action === "deleteUser") {
+      responseData = deleteUser(parseInt(postData.userId));
     } else {
       throw new Error("Unknown action: " + action);
     }
@@ -147,18 +169,41 @@ function doPost(e) {
  */
 function getUsers() {
   const ss = getSpreadsheet();
+  
+  // First load all roles into a map
+  const rolesSheet = ss.getSheetByName("Roles");
+  const rolesMap = {};
+  if (rolesSheet) {
+    const roleValues = rolesSheet.getDataRange().getValues();
+    for (let i = 1; i < roleValues.length; i++) {
+      const rId = parseInt(roleValues[i][0]);
+      rolesMap[rId] = {
+        id: rId,
+        role_name: roleValues[i][1],
+        can_create_case: roleValues[i][2] === true || roleValues[i][2] === "TRUE"
+      };
+    }
+  }
+
   const sheet = ss.getSheetByName("Users");
   if (!sheet) return [];
   
   const values = sheet.getDataRange().getValues();
   const users = [];
   for (let i = 1; i < values.length; i++) {
+    const roleId = parseInt(values[i][2]);
+    const roleObj = rolesMap[roleId] || { id: roleId, role_name: "Unknown", can_create_case: false };
+    
     users.push({
       id: parseInt(values[i][0]),
       username: values[i][1],
-      role: values[i][2],
+      role_id: roleId,
+      role_name: roleObj.role_name,
+      can_create_case: roleObj.can_create_case,
       avatar_color: values[i][3],
-      language: values[i][4]
+      language: values[i][4],
+      google_email: values[i][5] || "",
+      is_super_master: values[i][6] === true || values[i][6] === "TRUE"
     });
   }
   return users;
@@ -348,6 +393,14 @@ function toggleTask(taskId) {
 
 function createCase(title, description, ownerId, groups) {
   const ss = getSpreadsheet();
+  
+  // Permission check
+  const users = getUsers();
+  const user = users.find(u => u.id === ownerId);
+  if (!user || (!user.can_create_case && !user.is_super_master)) {
+    throw new Error("您無權限建立案件！");
+  }
+
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
   
@@ -490,4 +543,126 @@ function deleteCase(caseId) {
   }
   
   return { status: "success", caseId: caseId };
+}
+
+function getRoles() {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Roles");
+  if (!sheet) return [];
+  const values = sheet.getDataRange().getValues();
+  const roles = [];
+  for (let i = 1; i < values.length; i++) {
+    roles.push({
+      id: parseInt(values[i][0]),
+      role_name: values[i][1],
+      can_create_case: values[i][2] === true || values[i][2] === "TRUE"
+    });
+  }
+  return roles;
+}
+
+function createRole(roleName, canCreateCase) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Roles");
+  if (!sheet) throw new Error("Roles sheet not initialized");
+  const nextId = getNextId(sheet);
+  sheet.appendRow([nextId, roleName, canCreateCase === true || canCreateCase === "true"]);
+  return { status: "success", roleId: nextId };
+}
+
+function updateRole(roleId, roleName, canCreateCase) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Roles");
+  if (!sheet) throw new Error("Roles sheet not initialized");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === roleId) {
+      if (roleName !== undefined) sheet.getRange(i + 1, 2).setValue(roleName);
+      if (canCreateCase !== undefined) sheet.getRange(i + 1, 3).setValue(canCreateCase === true || canCreateCase === "true");
+      return { status: "success", roleId: roleId };
+    }
+  }
+  throw new Error("Role with ID " + roleId + " not found");
+}
+
+function deleteRole(roleId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Roles");
+  if (!sheet) throw new Error("Roles sheet not initialized");
+  
+  // Check if any user is using this role
+  const usersSheet = ss.getSheetByName("Users");
+  if (usersSheet) {
+    const userValues = usersSheet.getDataRange().getValues();
+    for (let i = 1; i < userValues.length; i++) {
+      if (parseInt(userValues[i][2]) === roleId) {
+        throw new Error("無法刪除此職位，因為仍有成員指派在此職位下。");
+      }
+    }
+  }
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === roleId) {
+      sheet.deleteRow(i + 1);
+      return { status: "success", roleId: roleId };
+    }
+  }
+  throw new Error("Role with ID " + roleId + " not found");
+}
+
+function createUser(username, roleId, avatarColor, language, googleEmail) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Users");
+  if (!sheet) throw new Error("Users sheet not initialized");
+  const nextId = getNextId(sheet);
+  sheet.appendRow([nextId, username, roleId, avatarColor || "#4f46e5", language || "zh-TW", googleEmail || "", false]);
+  return { status: "success", userId: nextId };
+}
+
+function updateUser(userId, username, roleId, avatarColor, language, googleEmail) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Users");
+  if (!sheet) throw new Error("Users sheet not initialized");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === userId) {
+      // Super Master protections: Martin (id = 1) must remain super master
+      const isSuper = values[i][6] === true || values[i][6] === "TRUE";
+      
+      if (username !== undefined) sheet.getRange(i + 1, 2).setValue(username);
+      if (roleId !== undefined) {
+        // If they are super master, keep role_id as Owner/Admin (1)
+        if (isSuper) {
+          sheet.getRange(i + 1, 3).setValue(1);
+        } else {
+          sheet.getRange(i + 1, 3).setValue(roleId);
+        }
+      }
+      if (avatarColor !== undefined) sheet.getRange(i + 1, 4).setValue(avatarColor);
+      if (language !== undefined) sheet.getRange(i + 1, 5).setValue(language);
+      if (googleEmail !== undefined) sheet.getRange(i + 1, 6).setValue(googleEmail);
+      
+      return { status: "success", userId: userId };
+    }
+  }
+  throw new Error("User with ID " + userId + " not found");
+}
+
+function deleteUser(userId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Users");
+  if (!sheet) throw new Error("Users sheet not initialized");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === userId) {
+      const isSuper = values[i][6] === true || values[i][6] === "TRUE";
+      if (isSuper || userId === 1) {
+        throw new Error("無法刪除超級管理員 Super Master (Martin)！");
+      }
+      sheet.deleteRow(i + 1);
+      return { status: "success", userId: userId };
+    }
+  }
+  throw new Error("User with ID " + userId + " not found");
 }

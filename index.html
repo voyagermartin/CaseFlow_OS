@@ -196,6 +196,9 @@
                 <button onclick="switchView('gantt')" id="tab-gantt" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="ganttTab">📊 甘特圖模式</span>
                 </button>
+                <button onclick="switchView('user-control')" id="tab-user-control" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <span data-i18n="userControlTab">👥 人員控管</span>
+                </button>
                 <button onclick="openGroupColorModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
                     <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
                 </button>
@@ -243,6 +246,80 @@
                 </div>
                 <div class="gantt-target overflow-x-auto">
                     <svg id="gantt-svg"></svg>
+                </div>
+            </div>
+
+            <!-- User Control View Container -->
+            <div id="view-user-control" class="w-full hidden space-y-8">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                            👥 人員與職位控管中心 (User & Role Control)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">此頁面為系統最高權限管理頁面，僅超級管理員 (Super Master) 可檢視。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Column A: User Management -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-200 text-sm">成員帳號管理 (Users)</h3>
+                            <button onclick="openNewUserModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                ➕ 新增成員
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-slate-400">
+                                        <th class="py-2.5 font-semibold">姓名</th>
+                                        <th class="py-2.5 font-semibold">指派職位</th>
+                                        <th class="py-2.5 font-semibold">Google 信箱 (未來登入)</th>
+                                        <th class="py-2.5 font-semibold text-right">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-list-tbody" class="divide-y divide-slate-850 text-slate-300">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Column B: Role Management -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-200 text-sm">職位與權限設定 (Roles)</h3>
+                            <button onclick="openNewRoleModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                ➕ 新增職位
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-slate-400">
+                                        <th class="py-2.5 font-semibold">職位名稱</th>
+                                        <th class="py-2.5 font-semibold">可否新增案件</th>
+                                        <th class="py-2.5 font-semibold text-right">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="role-list-tbody" class="divide-y divide-slate-850 text-slate-300">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Google Integration Info Box -->
+                <div class="bg-indigo-950/20 border border-indigo-900/60 p-5 rounded-2xl flex items-start gap-4">
+                    <span class="text-xl">🔗</span>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-indigo-300 text-sm">未來 Google 帳號綁定註冊登入說明</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            本系統已在成員表（Users）中預留了 <code>google_email</code> 欄位，並實作了職位權限。未來當您決定導入真實登入時，只需要在頂層 Header 載入 Google Identity Services SDK 庫，並調用 <code>google.accounts.id.initialize</code> 獲取登入使用者的 Email，即可直接在前端查詢對應的使用者並登入，無需重構任何權限或資料表架構，達成了完美的無縫擴充性。
+                        </p>
+                    </div>
                 </div>
             </div>
         </main>
@@ -308,7 +385,7 @@
                 <div id="drawer-task-visibility" class="grid grid-cols-2 gap-2">
                     <!-- Checkboxes of users -->
                 </div>
-                <button onclick="saveTaskVisibility()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="updateVisBtn">
+                <button id="drawer-save-vis-btn" onclick="saveTaskVisibility()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="updateVisBtn">
                     更新可見權限
                 </button>
             </div>
@@ -444,6 +521,136 @@
                 <button onclick="closeGroupColorModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="saveAndCloseBtn">
                     套用並關閉
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Case Modal -->
+    <div id="edit-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeEditCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
+                <button onclick="closeEditCaseModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-case-id">
+            
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">案件名稱 / 團號</label>
+                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">案件描述</label>
+                    <textarea id="edit-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="請填寫專案背景簡介..."></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">雲端硬碟連結 (Drive URL)</label>
+                    <input type="text" id="edit-case-drive-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="https://drive.google.com/drive/folders/...">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
+                    <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeEditCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
+                <button onclick="submitEditCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Create/Edit Modal -->
+    <div id="user-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeUserModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[480px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="user-modal-title" class="text-lg font-bold text-slate-100">👤 新增成員 (New User)</h3>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-user-id">
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">成員姓名 / 代號</label>
+                    <input type="text" id="user-username-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：OP_Ning">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">指派職位 (Role)</label>
+                    <select id="user-role-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                        <!-- Loaded dynamically -->
+                    </select>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">Google 電子信箱 (未來帳號綁定)</label>
+                    <input type="email" id="user-email-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：ning@gmail.com (選填)">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-semibold uppercase">頭像顏色</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" id="user-color-input" value="#4f46e5" class="w-10 h-10 bg-transparent border-0 cursor-pointer rounded overflow-hidden">
+                            <span class="text-xs text-slate-500">點擊挑選顏色</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-semibold uppercase">偏好語系</label>
+                        <select id="user-lang-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                            <option value="zh-TW">繁體中文 (zh-TW)</option>
+                            <option value="vi-VN">越南文 (vi-VN)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeUserModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
+                <button onclick="submitUserForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Create/Edit Modal -->
+    <div id="role-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeRoleModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[400px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="role-modal-title" class="text-lg font-bold text-slate-100">👥 新增職位 (New Role)</h3>
+                <button onclick="closeRoleModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-role-id">
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">職位名稱</label>
+                    <input type="text" id="role-name-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：實習生">
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer">
+                    <input type="checkbox" id="role-can-create-case-chk" class="text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700 rounded w-4 h-4">
+                    <div>
+                        <span class="font-bold text-slate-200 text-xs block">可新增案件與指派成員</span>
+                        <span class="text-slate-500 text-[10px]">打勾代表此職位成員可新增專案案件，並可自由設定任務的可見成員。</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeRoleModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
+                <button onclick="submitRoleForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
             </div>
         </div>
     </div>
@@ -593,11 +800,18 @@
         };
 
         // --- Mock In-Memory Database ---
+        let mockRoles = [
+            { id: 1, role_name: "Owner/Admin", can_create_case: true },
+            { id: 2, role_name: "Operation", can_create_case: true },
+            { id: 3, role_name: "Sales", can_create_case: true },
+            { id: 4, role_name: "Local Agent", can_create_case: false }
+        ];
+
         let mockUsers = [
-            { id: 1, username: "Martin", role: "Owner/Admin", avatar_color: "#4f46e5", language: "zh-TW" },
-            { id: 2, username: "OP_Ning", role: "Operation", avatar_color: "#0ea5e9", language: "zh-TW" },
-            { id: 3, username: "Sales_Yang", role: "Sales", avatar_color: "#f59e0b", language: "zh-TW" },
-            { id: 4, username: "Local_Nguyen", role: "Local Agent", avatar_color: "#10b981", language: "vi-VN" }
+            { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "martin@example.com", is_super_master: true },
+            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "", is_super_master: false },
+            { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "", is_super_master: false },
+            { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "", is_super_master: false }
         ];
 
         let mockCases = [
@@ -621,6 +835,7 @@
 
         let currentUserId = null;
         let allUsers = [];
+        let allRoles = [];
         let allCases = [];
         let activeView = 'calendar';
         let calendar = null;
@@ -708,7 +923,7 @@
                 console.error("API 請求錯誤:", err);
                 if (!silent) {
                     if (err.message.includes("Unexpected token") || err.message.includes("is not valid JSON")) {
-                        alert(`API 連線失敗！\n\n這通常是因為您的 GAS 部署設定中「誰有權限存取 (Who has access)」未設定為「所有人 (Anyone)」，導致 Google 要求登入並回傳了 HTML 格式的登入頁面而非 JSON。\n\n詳細錯誤資訊：${err.message}`);
+                        alert(`API 連線失敗！\n\n這通常是因為您的 GAS 部署設定中「誰有權限存取 (Who has access)」未設定為「所有人 (Anyone)」，導致 Google 要求登入並回傳了 HTML 格式 of 登入頁面而非 JSON。\n\n詳細錯誤資訊：${err.message}`);
                     } else {
                         alert(`API Error: ${err.message}`);
                     }
@@ -726,6 +941,8 @@
                     if (method === 'GET') {
                         if (action === 'getUsers') {
                             resolve(JSON.parse(JSON.stringify(mockUsers)));
+                        } else if (action === 'getRoles') {
+                            resolve(JSON.parse(JSON.stringify(mockRoles)));
                         } else if (action === 'getCases') {
                             const userId = parseInt(payload.user_id);
                             resolve(getMockCasesForUser(userId));
@@ -785,6 +1002,77 @@
                                 created_at: nowStr
                             });
                             resolve({ status: 'success', commentId: nextId });
+                        } else if (action === 'createRole') {
+                            const nextId = mockRoles.length > 0 ? Math.max(...mockRoles.map(x => x.id)) + 1 : 1;
+                            mockRoles.push({
+                                id: nextId,
+                                role_name: payload.role_name,
+                                can_create_case: payload.can_create_case === true || payload.can_create_case === "true"
+                            });
+                            resolve({ status: 'success', roleId: nextId });
+                        } else if (action === 'updateRole') {
+                            const r = mockRoles.find(x => x.id === payload.roleId);
+                            if (r) {
+                                if (payload.role_name !== undefined) r.role_name = payload.role_name;
+                                if (payload.can_create_case !== undefined) r.can_create_case = payload.can_create_case === true || payload.can_create_case === "true";
+                                mockUsers.forEach(u => {
+                                    if (u.role_id === r.id) {
+                                        u.role_name = r.role_name;
+                                        u.can_create_case = r.can_create_case;
+                                    }
+                                });
+                                resolve({ status: 'success', roleId: r.id });
+                            } else {
+                                resolve({ status: 'error', message: 'Role not found' });
+                            }
+                        } else if (action === 'deleteRole') {
+                            const inUse = mockUsers.some(u => u.role_id === payload.roleId);
+                            if (inUse) {
+                                resolve({ status: 'error', message: '無法刪除此職位，因為仍有成員指派在此職位下。' });
+                            } else {
+                                mockRoles = mockRoles.filter(x => x.id !== payload.roleId);
+                                resolve({ status: 'success', roleId: payload.roleId });
+                            }
+                        } else if (action === 'createUser') {
+                            const nextId = mockUsers.length > 0 ? Math.max(...mockUsers.map(x => x.id)) + 1 : 1;
+                            const r = mockRoles.find(x => x.id === payload.roleId) || { role_name: 'Unknown', can_create_case: false };
+                            mockUsers.push({
+                                id: nextId,
+                                username: payload.username,
+                                role_id: payload.roleId,
+                                role_name: r.role_name,
+                                can_create_case: r.can_create_case,
+                                avatar_color: payload.avatar_color,
+                                language: payload.language,
+                                google_email: payload.google_email || '',
+                                is_super_master: false
+                            });
+                            resolve({ status: 'success', userId: nextId });
+                        } else if (action === 'updateUser') {
+                            const u = mockUsers.find(x => x.id === payload.userId);
+                            if (u) {
+                                if (payload.username !== undefined) u.username = payload.username;
+                                if (payload.roleId !== undefined && !u.is_super_master) {
+                                    u.role_id = payload.roleId;
+                                    const r = mockRoles.find(x => x.id === payload.roleId) || { role_name: 'Unknown', can_create_case: false };
+                                    u.role_name = r.role_name;
+                                    u.can_create_case = r.can_create_case;
+                                }
+                                if (payload.avatar_color !== undefined) u.avatar_color = payload.avatar_color;
+                                if (payload.language !== undefined) u.language = payload.language;
+                                if (payload.google_email !== undefined) u.google_email = payload.google_email;
+                                resolve({ status: 'success', userId: u.id });
+                            } else {
+                                resolve({ status: 'error', message: 'User not found' });
+                            }
+                        } else if (action === 'deleteUser') {
+                            const u = mockUsers.find(x => x.id === payload.userId);
+                            if (u && (u.is_super_master || u.id === 1)) {
+                                resolve({ status: 'error', message: '無法刪除超級管理員 Super Master (Martin)！' });
+                            } else {
+                                mockUsers = mockUsers.filter(x => x.id !== payload.userId);
+                                resolve({ status: 'success', userId: payload.userId });
+                            }
                         }
                     }
                 }, 50);
@@ -968,7 +1256,7 @@
             allUsers.forEach(u => {
                 const opt = document.createElement('option');
                 opt.value = u.id;
-                opt.textContent = `${u.username} [${u.role}]`;
+                opt.textContent = `${u.username} [${u.role_name}]`;
                 switcher.appendChild(opt);
             });
         }
@@ -990,6 +1278,29 @@
                 
                 // Translate language
                 translateUI(user.language || 'zh-TW');
+
+                // Dynamic display of User Control tab based on is_super_master
+                const tabUserControl = document.getElementById('tab-user-control');
+                if (tabUserControl) {
+                    if (user.is_super_master) {
+                        tabUserControl.classList.remove('hidden');
+                    } else {
+                        tabUserControl.classList.add('hidden');
+                        if (activeView === 'user-control') {
+                            switchView('calendar');
+                        }
+                    }
+                }
+
+                // Show or hide Add Case buttons based on permissions
+                const addCaseBtns = document.querySelectorAll('button[onclick="openNewCaseModal()"]');
+                addCaseBtns.forEach(btn => {
+                    if (user.can_create_case || user.is_super_master) {
+                        btn.classList.remove('hidden');
+                    } else {
+                        btn.classList.add('hidden');
+                    }
+                });
             }
         }
 
@@ -997,11 +1308,17 @@
         async function reloadAllViews() {
             if (!currentUserId) return;
             
+            allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
+            allRoles = await apiRequest('getRoles', null, 'GET', true) || [];
             allCases = await apiRequest('getCases', { user_id: currentUserId }) || [];
             
+            updateUserIndicatorAndLanguage();
             renderCalendar();
             renderCaseTree();
             renderGantt();
+            if (activeView === 'user-control') {
+                renderUserControl();
+            }
         }
 
         // Tab views navigation
@@ -1011,21 +1328,29 @@
             document.getElementById('view-calendar').classList.add('hidden');
             document.getElementById('view-case').classList.add('hidden');
             document.getElementById('view-gantt').classList.add('hidden');
+            document.getElementById('view-user-control').classList.add('hidden');
             
-            const tabs = ['calendar', 'case', 'gantt'];
+            const tabs = ['calendar', 'case', 'gantt', 'user-control'];
             tabs.forEach(t => {
                 const tabEl = document.getElementById(`tab-${t}`);
-                tabEl.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200";
+                if (tabEl) {
+                    tabEl.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200";
+                }
             });
             
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            const viewEl = document.getElementById(`view-${viewName}`);
+            if (viewEl) viewEl.classList.remove('hidden');
             const activeTab = document.getElementById(`tab-${viewName}`);
-            activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
+            if (activeTab) {
+                activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
+            }
             
             if (viewName === 'calendar' && calendar) {
                 calendar.updateSize();
             } else if (viewName === 'gantt') {
                 renderGantt();
+            } else if (viewName === 'user-control') {
+                renderUserControl();
             }
         }
 
@@ -1337,6 +1662,17 @@
                 const caseCard = document.createElement('div');
                 caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
                 
+                const currentUser = allUsers.find(u => u.id === currentUserId);
+                const canManage = currentUser && (currentUser.is_super_master || (c.owner_id === currentUserId && currentUser.can_create_case));
+                const manageButtons = canManage ? `
+                    <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
+                        ✏️ 編輯
+                    </button>
+                    <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
+                        🗑️ 刪除
+                    </button>
+                ` : '';
+
                 // Card title & info
                 caseCard.innerHTML = `
                     <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
@@ -1353,6 +1689,7 @@
                             <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors">
                                 ${tText.driveBtn}
                             </a>
+                            ${manageButtons}
                             <span>${tText.caseOwner}: ${c.owner.username}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" id="accordion-arrow-${c.id}">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -1393,13 +1730,18 @@
                             <!-- User visibility checkboxes -->
                             <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
                                 <span>🔒 可見成員：</span>
-                                ${allUsers.map(u => `
-                                    <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
-                                        <input type="checkbox" value="${u.id}" checked class="quick-task-vis-${c.id}-${g.name.replace(/\s+/g, '')} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
-                                        <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
-                                        <span class="text-slate-300">${u.username}</span>
-                                    </label>
-                                `).join('')}
+                                ${allUsers.map(u => {
+                                    const currentUser = allUsers.find(cu => cu.id === currentUserId);
+                                    const hasPerm = currentUser && (currentUser.can_create_case || currentUser.is_super_master);
+                                    const disabledAttr = hasPerm ? '' : 'disabled';
+                                    return `
+                                        <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
+                                            <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${c.id}-${g.name.replace(/\s+/g, '')} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
+                                            <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
+                                            <span class="text-slate-300">${u.username}</span>
+                                        </label>
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `;
@@ -1762,16 +2104,29 @@
             visContainer.innerHTML = '';
             
             const visibleUserIds = taskObj.visible_user_ids || [];
+            const currentUser = allUsers.find(cu => cu.id === currentUserId);
+            const hasPerm = currentUser && (currentUser.can_create_case || currentUser.is_super_master);
+            const disabledAttr = hasPerm ? '' : 'disabled';
+
             allUsers.forEach(u => {
                 const checked = visibleUserIds.includes(u.id) ? 'checked' : '';
                 visContainer.innerHTML += `
                     <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-xs cursor-pointer hover:bg-slate-800">
-                        <input type="checkbox" value="${u.id}" ${checked} class="task-vis-chk rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
+                        <input type="checkbox" value="${u.id}" ${checked} ${disabledAttr} class="task-vis-chk rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500">
                         <span class="h-2 w-2 rounded-full" style="background-color: ${u.avatar_color}"></span>
-                        <span>${u.username} (${u.role})</span>
+                        <span>${u.username} (${u.role_name})</span>
                     </label>
                 `;
             });
+
+            const saveVisBtn = document.getElementById('drawer-save-vis-btn');
+            if (saveVisBtn) {
+                if (hasPerm) {
+                    saveVisBtn.classList.remove('hidden');
+                } else {
+                    saveVisBtn.classList.add('hidden');
+                }
+            }
 
             renderDrawerComments(taskObj.comments || []);
 
@@ -2033,6 +2388,356 @@
                 descInput.value = '';
                 closeNewCaseModal();
                 await reloadAllViews();
+            }
+        }
+
+        // --- User Control Panel Rendering ---
+        function renderUserControl() {
+            const userListTbody = document.getElementById('user-list-tbody');
+            const roleListTbody = document.getElementById('role-list-tbody');
+            if (!userListTbody || !roleListTbody) return;
+
+            // Render Users
+            userListTbody.innerHTML = '';
+            allUsers.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-850 hover:bg-slate-900/40 transition-colors";
+                
+                const isSuper = u.is_super_master || u.id === 1;
+                const deleteBtn = isSuper ? 
+                    `<span class="text-slate-600 cursor-not-allowed text-xs">系統限制</span>` :
+                    `<button onclick="deleteUserAction(${u.id})" class="text-rose-500 hover:text-rose-400 font-semibold transition-colors">刪除</button>`;
+                
+                const editBtn = `<button onclick="openEditUserModal(${u.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold mr-3 transition-colors">編輯</button>`;
+
+                tr.innerHTML = `
+                    <td class="py-3 font-semibold flex items-center gap-2">
+                        <span class="h-2 w-2 rounded-full" style="background-color: ${u.avatar_color}"></span>
+                        ${u.username} ${isSuper ? '<span class="text-[10px] bg-indigo-950/80 border border-indigo-900/60 text-indigo-400 px-1.5 py-0.2 rounded font-normal ml-1">MASTER</span>' : ''}
+                    </td>
+                    <td class="py-3 text-slate-400">${u.role_name}</td>
+                    <td class="py-3 text-slate-400">${u.google_email || '<span class="italic text-slate-600">無</span>'}</td>
+                    <td class="py-3 text-right">${editBtn}${deleteBtn}</td>
+                `;
+                userListTbody.appendChild(tr);
+            });
+
+            // Render Roles
+            roleListTbody.innerHTML = '';
+            allRoles.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-850 hover:bg-slate-900/40 transition-colors";
+                
+                const isSystem = r.id === 1 || r.id === 2 || r.id === 3 || r.id === 4;
+                const deleteBtn = isSystem ? 
+                    `<span class="text-slate-600 cursor-not-allowed text-xs">系統預設</span>` :
+                    `<button onclick="deleteRoleAction(${r.id})" class="text-rose-500 hover:text-rose-400 font-semibold transition-colors">刪除</button>`;
+                
+                const editBtn = `<button onclick="openEditRoleModal(${r.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold mr-3 transition-colors">編輯</button>`;
+
+                tr.innerHTML = `
+                    <td class="py-3 font-semibold">${r.role_name}</td>
+                    <td class="py-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.can_create_case ? 'bg-green-950/60 border border-green-900 text-green-400' : 'bg-slate-850 border border-slate-700 text-slate-400'}">
+                            ${r.can_create_case ? '可新增' : '唯讀'}
+                        </span>
+                    </td>
+                    <td class="py-3 text-right">${editBtn}${deleteBtn}</td>
+                `;
+                roleListTbody.appendChild(tr);
+            });
+        }
+
+        // --- User Modal Action Handlers ---
+        function openNewUserModal() {
+            document.getElementById('user-modal-title').textContent = "👤 新增成員 (New User)";
+            document.getElementById('edit-user-id').value = "";
+            document.getElementById('user-username-input').value = "";
+            document.getElementById('user-email-input').value = "";
+            document.getElementById('user-color-input').value = "#4f46e5";
+            document.getElementById('user-lang-select').value = "zh-TW";
+
+            const select = document.getElementById('user-role-select');
+            select.innerHTML = '';
+            allRoles.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.role_name;
+                select.appendChild(opt);
+            });
+            select.disabled = false;
+
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function openEditUserModal(userId) {
+            const u = allUsers.find(x => x.id === userId);
+            if (!u) return;
+
+            document.getElementById('user-modal-title').textContent = "✏️ 編輯成員 (Edit User)";
+            document.getElementById('edit-user-id').value = u.id;
+            document.getElementById('user-username-input').value = u.username;
+            document.getElementById('user-email-input').value = u.google_email || '';
+            document.getElementById('user-color-input').value = u.avatar_color;
+            document.getElementById('user-lang-select').value = u.language || 'zh-TW';
+
+            const select = document.getElementById('user-role-select');
+            select.innerHTML = '';
+            allRoles.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.role_name;
+                if (r.id === u.role_id) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            if (u.is_super_master || u.id === 1) {
+                select.disabled = true;
+            } else {
+                select.disabled = false;
+            }
+
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+        }
+
+        async function submitUserForm() {
+            const id = document.getElementById('edit-user-id').value;
+            const username = document.getElementById('user-username-input').value.trim();
+            const roleId = parseInt(document.getElementById('user-role-select').value);
+            const googleEmail = document.getElementById('user-email-input').value.trim();
+            const avatarColor = document.getElementById('user-color-input').value;
+            const language = document.getElementById('user-lang-select').value;
+
+            if (!username) {
+                alert("請填寫姓名！");
+                return;
+            }
+
+            const isEdit = id !== "";
+            const payload = {
+                username,
+                roleId,
+                avatar_color: avatarColor,
+                language,
+                google_email: googleEmail
+            };
+
+            let res;
+            if (isEdit) {
+                res = await apiRequest('updateUser', { userId: parseInt(id), ...payload }, 'POST');
+            } else {
+                res = await apiRequest('createUser', payload, 'POST');
+            }
+
+            if (res) {
+                closeUserModal();
+                await reloadAllViews();
+                
+                if (isEdit && parseInt(id) === currentUserId) {
+                    await loadUsers();
+                    document.getElementById('user-switcher').value = currentUserId;
+                    updateUserIndicatorAndLanguage();
+                }
+            }
+        }
+
+        async function deleteUserAction(userId) {
+            if (!confirm("確定要刪除此成員帳號嗎？此操作將永久清除此使用者在系統的關聯設定！")) return;
+            const res = await apiRequest('deleteUser', { userId: userId }, 'POST');
+            if (res) {
+                await reloadAllViews();
+                await loadUsers();
+                if (currentUserId === userId) {
+                    currentUserId = 1;
+                    document.getElementById('user-switcher').value = 1;
+                    updateUserIndicatorAndLanguage();
+                    await reloadAllViews();
+                }
+            }
+        }
+
+        // --- Role Modal Action Handlers ---
+        function openNewRoleModal() {
+            document.getElementById('role-modal-title').textContent = "👥 新增職位 (New Role)";
+            document.getElementById('edit-role-id').value = "";
+            document.getElementById('role-name-input').value = "";
+            document.getElementById('role-can-create-case-chk').checked = false;
+            
+            const nameInput = document.getElementById('role-name-input');
+            nameInput.disabled = false;
+
+            document.getElementById('role-modal').classList.remove('hidden');
+        }
+
+        function openEditRoleModal(roleId) {
+            const r = allRoles.find(x => x.id === roleId);
+            if (!r) return;
+
+            document.getElementById('role-modal-title').textContent = "✏️ 編輯職位 (Edit Role)";
+            document.getElementById('edit-role-id').value = r.id;
+            document.getElementById('role-name-input').value = r.role_name;
+            document.getElementById('role-can-create-case-chk').checked = r.can_create_case;
+
+            const nameInput = document.getElementById('role-name-input');
+            if (r.id === 1) {
+                nameInput.disabled = true;
+            } else {
+                nameInput.disabled = false;
+            }
+
+            document.getElementById('role-modal').classList.remove('hidden');
+        }
+
+        function closeRoleModal() {
+            document.getElementById('role-modal').classList.add('hidden');
+        }
+
+        async function submitRoleForm() {
+            const id = document.getElementById('edit-role-id').value;
+            const roleName = document.getElementById('role-name-input').value.trim();
+            const canCreateCase = document.getElementById('role-can-create-case-chk').checked;
+
+            if (!roleName) {
+                alert("請填寫職位名稱！");
+                return;
+            }
+
+            const isEdit = id !== "";
+            const payload = {
+                role_name: roleName,
+                can_create_case: canCreateCase
+            };
+
+            let res;
+            if (isEdit) {
+                res = await apiRequest('updateRole', { roleId: parseInt(id), ...payload }, 'POST');
+            } else {
+                res = await apiRequest('createRole', payload, 'POST');
+            }
+
+            if (res) {
+                closeRoleModal();
+                await reloadAllViews();
+            }
+        }
+
+        async function deleteRoleAction(roleId) {
+            if (!confirm("確定要刪除此職位權限嗎？")) return;
+            const res = await apiRequest('deleteRole', { roleId: roleId }, 'POST');
+            if (res) {
+                await reloadAllViews();
+            }
+        }
+
+        // --- Case Operations (Edit & Delete Case) ---
+        function openEditCaseModal(caseId) {
+            const caseObj = allCases.find(c => c.id === caseId);
+            if (!caseObj) return;
+
+            document.getElementById('edit-case-id').value = caseObj.id;
+            document.getElementById('edit-case-title').value = caseObj.title;
+            document.getElementById('edit-case-desc').value = caseObj.description || '';
+            document.getElementById('edit-case-drive-url').value = caseObj.drive_url || '';
+            document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
+
+            document.getElementById('edit-case-modal').classList.remove('hidden');
+        }
+
+        function closeEditCaseModal() {
+            document.getElementById('edit-case-modal').classList.add('hidden');
+        }
+
+        async function submitEditCase() {
+            const idInput = document.getElementById('edit-case-id');
+            const titleInput = document.getElementById('edit-case-title');
+            const descInput = document.getElementById('edit-case-desc');
+            const driveUrlInput = document.getElementById('edit-case-drive-url');
+            const groupsInput = document.getElementById('edit-case-groups');
+
+            const caseId = parseInt(idInput.value);
+            const title = titleInput.value.trim();
+            if (!title) {
+                alert("請填寫案件名稱！");
+                return;
+            }
+
+            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            let caseObj = allCases.find(c => c.id === caseId);
+            if (caseObj) {
+                caseObj.title = title;
+                caseObj.description = descInput.value.trim();
+                caseObj.drive_url = driveUrlInput.value.trim();
+                
+                const oldGroups = [...caseObj.groups];
+                caseObj.groups = groups.map((gn, index) => {
+                    const existingGroup = oldGroups.find(g => g.name === gn);
+                    return {
+                        id: index + 1,
+                        name: gn,
+                        tasks: existingGroup ? existingGroup.tasks : []
+                    };
+                });
+            }
+
+            closeEditCaseModal();
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            const payload = {
+                caseId: caseId,
+                title: title,
+                description: descInput.value.trim(),
+                driveUrl: driveUrlInput.value.trim(),
+                groups: groups
+            };
+
+            const res = await apiRequest('updateCase', payload, 'POST', true);
+            if (res) {
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            } else {
+                alert("更新案件失敗，已還原。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            }
+        }
+
+        async function deleteCaseAction(caseId) {
+            const caseObj = allCases.find(c => c.id === caseId);
+            if (!caseObj) return;
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+
+            const confirmMsg = lang === 'vi-VN' 
+                ? `Bạn có chắc chắn muốn xóa dự án "${caseObj.title}"?\nTất cả công việc và thảo luận liên quan sẽ bị xóa vĩnh viễn!` 
+                : `您確定要刪除案件「${caseObj.title}」嗎？\n該案件底下的所有待辦事項與留言討論將會被永久刪除！此操作無法復原。`;
+            
+            if (!confirm(confirmMsg)) return;
+
+            allCases = allCases.filter(c => c.id !== caseId);
+
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+
+            const res = await apiRequest('deleteCase', { caseId: caseId }, 'POST', true);
+            if (!res) {
+                alert(lang === 'vi-VN' ? "Xóa dự án thất bại!" : "刪除案件失敗，已重整頁面。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             }
         }
     </script>
