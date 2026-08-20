@@ -191,19 +191,36 @@ function getUsers() {
   const values = sheet.getDataRange().getValues();
   const users = [];
   for (let i = 1; i < values.length; i++) {
-    const roleId = parseInt(values[i][2]);
-    const roleObj = rolesMap[roleId] || { id: roleId, role_name: "Unknown", can_create_case: false };
-    
+    const uId = parseInt(values[i][0]);
+    const uName = values[i][1];
+    const roleVal = values[i][2];
+    let roleId = parseInt(roleVal);
+    let roleName = "Unknown";
+    let canCreateCase = false;
+
+    if (isNaN(roleId)) {
+      // Legacy fallback: roleVal is a string (e.g. "Owner/Admin")
+      roleName = String(roleVal || "Unknown");
+      canCreateCase = (roleName === "Owner/Admin" || roleName === "Operation" || roleName === "Sales");
+      roleId = (roleName === "Owner/Admin") ? 1 : (roleName === "Operation" ? 2 : (roleName === "Sales" ? 3 : 4));
+    } else {
+      const roleObj = rolesMap[roleId] || { id: roleId, role_name: "Unknown", can_create_case: false };
+      roleName = roleObj.role_name;
+      canCreateCase = roleObj.can_create_case;
+    }
+
+    const isSuper = (values[i][6] === true || values[i][6] === "TRUE" || uId === 1 || uName === "Martin");
+
     users.push({
-      id: parseInt(values[i][0]),
-      username: values[i][1],
+      id: uId,
+      username: uName,
       role_id: roleId,
-      role_name: roleObj.role_name,
-      can_create_case: roleObj.can_create_case,
+      role_name: roleName,
+      can_create_case: canCreateCase || isSuper,
       avatar_color: values[i][3],
       language: values[i][4],
       google_email: values[i][5] || "",
-      is_super_master: values[i][6] === true || values[i][6] === "TRUE"
+      is_super_master: isSuper
     });
   }
   return users;
@@ -397,7 +414,12 @@ function createCase(title, description, ownerId, groups) {
   // Permission check
   const users = getUsers();
   const user = users.find(u => u.id === ownerId);
-  if (!user || (!user.can_create_case && !user.is_super_master)) {
+  if (!user) {
+    throw new Error("找不到使用者！");
+  }
+  const isSuper = user.is_super_master === true || user.id === 1 || user.username === "Martin";
+  const hasPerm = user.can_create_case === true || user.role_name === "Owner/Admin" || user.role_name === "Operation" || user.role_name === "Sales";
+  if (!isSuper && !hasPerm) {
     throw new Error("您無權限建立案件！");
   }
 

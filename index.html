@@ -659,6 +659,20 @@
 
     <!-- Frontend Scripting Logic -->
     <script>
+        function isSuperMaster(user) {
+            if (!user) return false;
+            return user.is_super_master === true || user.id === 1 || user.username === 'Martin';
+        }
+
+        function hasCreateCasePermission(user) {
+            if (!user) return false;
+            if (isSuperMaster(user)) return true;
+            if (user.can_create_case === true) return true;
+            const rName = user.role_name;
+            if (rName === 'Owner/Admin' || rName === 'Operation' || rName === 'Sales') return true;
+            return false;
+        }
+
         // Multi-language UI Dictionary
         const i18n = {
             "zh-TW": {
@@ -1282,7 +1296,7 @@
                 // Dynamic display of User Control tab based on is_super_master
                 const tabUserControl = document.getElementById('tab-user-control');
                 if (tabUserControl) {
-                    if (user.is_super_master) {
+                    if (isSuperMaster(user)) {
                         tabUserControl.classList.remove('hidden');
                     } else {
                         tabUserControl.classList.add('hidden');
@@ -1295,7 +1309,7 @@
                 // Show or hide Add Case buttons based on permissions
                 const addCaseBtns = document.querySelectorAll('button[onclick="openNewCaseModal()"]');
                 addCaseBtns.forEach(btn => {
-                    if (user.can_create_case || user.is_super_master) {
+                    if (hasCreateCasePermission(user)) {
                         btn.classList.remove('hidden');
                     } else {
                         btn.classList.add('hidden');
@@ -1663,7 +1677,7 @@
                 caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
                 
                 const currentUser = allUsers.find(u => u.id === currentUserId);
-                const canManage = currentUser && (currentUser.is_super_master || (c.owner_id === currentUserId && currentUser.can_create_case));
+                const canManage = currentUser && (isSuperMaster(currentUser) || (c.owner_id === currentUserId && hasCreateCasePermission(currentUser)));
                 const manageButtons = canManage ? `
                     <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
                         ✏️ 編輯
@@ -1732,7 +1746,7 @@
                                 <span>🔒 可見成員：</span>
                                 ${allUsers.map(u => {
                                     const currentUser = allUsers.find(cu => cu.id === currentUserId);
-                                    const hasPerm = currentUser && (currentUser.can_create_case || currentUser.is_super_master);
+                                    const hasPerm = currentUser && hasCreateCasePermission(currentUser);
                                     const disabledAttr = hasPerm ? '' : 'disabled';
                                     return `
                                         <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
@@ -2105,7 +2119,7 @@
             
             const visibleUserIds = taskObj.visible_user_ids || [];
             const currentUser = allUsers.find(cu => cu.id === currentUserId);
-            const hasPerm = currentUser && (currentUser.can_create_case || currentUser.is_super_master);
+            const hasPerm = currentUser && hasCreateCasePermission(currentUser);
             const disabledAttr = hasPerm ? '' : 'disabled';
 
             allUsers.forEach(u => {
