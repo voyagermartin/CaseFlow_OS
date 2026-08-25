@@ -8,6 +8,19 @@ function getSpreadsheet() {
   }
 }
 
+function ensureRolesSheet(ss) {
+  let sheet = ss.getSheetByName("Roles");
+  if (!sheet) {
+    sheet = ss.insertSheet("Roles");
+    sheet.appendRow(["id", "role_name", "can_create_case"]);
+    sheet.appendRow([1, "Owner/Admin", true]);
+    sheet.appendRow([2, "Operation", true]);
+    sheet.appendRow([3, "Sales", true]);
+    sheet.appendRow([4, "Local Agent", false]);
+  }
+  return sheet;
+}
+
 /**
  * Initialize Google Sheets database with mock tables and data.
  */
@@ -171,7 +184,7 @@ function getUsers() {
   const ss = getSpreadsheet();
   
   // First load all roles into a map
-  const rolesSheet = ss.getSheetByName("Roles");
+  const rolesSheet = ensureRolesSheet(ss);
   const rolesMap = {};
   if (rolesSheet) {
     const roleValues = rolesSheet.getDataRange().getValues();
@@ -569,8 +582,7 @@ function deleteCase(caseId) {
 
 function getRoles() {
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Roles");
-  if (!sheet) return [];
+  const sheet = ensureRolesSheet(ss);
   const values = sheet.getDataRange().getValues();
   const roles = [];
   for (let i = 1; i < values.length; i++) {
@@ -585,8 +597,7 @@ function getRoles() {
 
 function createRole(roleName, canCreateCase) {
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Roles");
-  if (!sheet) throw new Error("Roles sheet not initialized");
+  const sheet = ensureRolesSheet(ss);
   const nextId = getNextId(sheet);
   sheet.appendRow([nextId, roleName, canCreateCase === true || canCreateCase === "true"]);
   return { status: "success", roleId: nextId };
@@ -594,8 +605,7 @@ function createRole(roleName, canCreateCase) {
 
 function updateRole(roleId, roleName, canCreateCase) {
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Roles");
-  if (!sheet) throw new Error("Roles sheet not initialized");
+  const sheet = ensureRolesSheet(ss);
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (parseInt(values[i][0]) === roleId) {
@@ -609,8 +619,7 @@ function updateRole(roleId, roleName, canCreateCase) {
 
 function deleteRole(roleId) {
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Roles");
-  if (!sheet) throw new Error("Roles sheet not initialized");
+  const sheet = ensureRolesSheet(ss);
   
   // Check if any user is using this role
   const usersSheet = ss.getSheetByName("Users");
