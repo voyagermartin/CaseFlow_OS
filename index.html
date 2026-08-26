@@ -1183,29 +1183,53 @@
         let allTemplates = [];
         let selectedTemplateId = null;
 
-        // On Document Ready
+        // On Document Ready - Optimized parallel batch initial load
         document.addEventListener('DOMContentLoaded', async () => {
             showLoading(true);
             try {
-                await loadUsers();
-                
-                // Set default active user
                 const savedUserId = localStorage.getItem('activeUserId');
+                let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
+
+                // Fire all initial GET APIs simultaneously in parallel!
+                const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
+                    apiRequest('getUsers', null, 'GET', true),
+                    apiRequest('getRoles', null, 'GET', true),
+                    apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
+                    apiRequest('getTemplates', null, 'GET', true)
+                ]);
+
+                allUsers = usersRes || [];
+                allRoles = rolesRes || [];
+                allCases = casesRes || [];
+                allTemplates = templatesRes || [];
+
+                // Populate switcher options
                 const switcher = document.getElementById('user-switcher');
-                if (savedUserId && Array.from(switcher.options).some(opt => opt.value == savedUserId)) {
-                    currentUserId = parseInt(savedUserId);
+                switcher.innerHTML = '';
+                allUsers.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = `${u.username} [${u.role_name}]`;
+                    switcher.appendChild(opt);
+                });
+
+                if (allUsers.some(u => u.id === targetUserId)) {
+                    currentUserId = targetUserId;
                 } else if (allUsers.length > 0) {
                     currentUserId = allUsers[0].id;
                 }
-                
+
                 if (currentUserId) {
                     switcher.value = currentUserId;
                     updateUserIndicatorAndLanguage();
                 }
 
-                await reloadAllViews();
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             } catch (e) {
                 console.error("初始化失敗:", e);
+            } finally {
                 showLoading(false);
             }
         });
@@ -2887,7 +2911,7 @@
                 visible_user_ids: visible_user_ids
             };
 
-            const res = await apiRequest('createTask', payload, 'POST', false);
+            const res = await apiRequest('createTask', payload, 'POST', true);
             if (res && res.status === 'success' && res.taskId) {
                 // Update tempId to real ID returned by server
                 newTask.id = res.taskId;
@@ -3115,7 +3139,7 @@
                 taskObj.visible_users = visible_user_ids.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
             }
 
-            const res = await apiRequest('updateTask', { taskId: selectedTaskId, visible_user_ids: visible_user_ids }, 'POST');
+            const res = await apiRequest('updateTask', { taskId: selectedTaskId, visible_user_ids: visible_user_ids }, 'POST', true);
             if (res) {
                 alert(tText.successSaveVis);
                 // Silent full reload in background because visibility changes what this user can see

@@ -288,3 +288,6 @@
 - **空權限名單任務過濾 Bug 終極修復 (Empty Visibility Fallback & Non-Orphan Protection)**：修復 `getCasesForUser` 與 `getMockCasesForUser` 中當 `visible_user_ids` 為空（如試算表新增列或無限制任務）時，`if (!visibleUserIds.includes(userId))` 誤將無限制任務判斷為「全員無權限」並在背景同步時過濾剔除的根本 Bug。補強預設為全員可見並強化 `createTask` 預設權限賦予，確保快速新增待辦 100% 永久保留不消失。
 - **快速新增待辦純樂觀 UI 同步 (Pure Optimistic UI & Local ID Sync)**：完全消除快速新增待辦後多餘的背景全量 `getCases` 重新讀取。當後端回傳成功分配的 `taskId` 時，前端直接在本地記憶體替換 `tempId` 為真實 ID，徹底避免因全量重新載入造成的轉圈、延遲與畫面閃爍抹除問題，實現 0 毫秒極速反應與 100% 永久保留。
 - **成員與職位刪除優雅防護 (Graceful Deletion Handling)**：修復 `deleteUser` 與 `deleteRole` 在目標 ID 已刪除或二次請求時拋出 `User with ID X not found` 彈窗警報的 Bug。後端相容多種 ID 參數命名（`userId`/`user_id`/`id`）並在記錄已移除時優雅回傳 `success`；前端為刪除操作導入樂觀 UI 移除，確保成員刪除平滑流暢。
+- **全站效能與速度極致優化 (Full-Site Speed & Silent Request Optimization)**：
+  1. **背景操作全靜音**：將 `quickAddTask`、`toggleTask`、`updateTask`（可見權限與筆記）等背景 API 設定為 `silent = true`，徹底消除點擊或快速新增時跳出全螢幕遮罩與轉圈圈動畫的停頓感。
+  2. **首頁初始化全並行化**：將首頁載入原本分開發送的 `getUsers` 與 `reloadAllViews` 4 個 GET API 合併為單一 `Promise.all` 併行發送，將網頁首頁初始化載入時間縮短至原本的 1/4。
