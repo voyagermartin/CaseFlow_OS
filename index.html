@@ -1190,9 +1190,20 @@
                 const savedUserId = localStorage.getItem('activeUserId');
                 let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
 
-                // Single unified batch API request!
-                const initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
-                if (initialRes) {
+                // Single unified batch API request with backward-compatible fallback
+                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
+                if (!initialRes || !initialRes.users || initialRes.users.length === 0) {
+                    const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
+                        apiRequest('getUsers', null, 'GET', true),
+                        apiRequest('getRoles', null, 'GET', true),
+                        apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
+                        apiRequest('getTemplates', null, 'GET', true)
+                    ]);
+                    allUsers = usersRes || [];
+                    allRoles = rolesRes || [];
+                    allCases = casesRes || [];
+                    allTemplates = templatesRes || [];
+                } else {
                     allUsers = initialRes.users || [];
                     allRoles = initialRes.roles || [];
                     allCases = initialRes.cases || [];
@@ -2878,16 +2889,16 @@
                 comments: []
             };
 
-            // Find group in local memory and push
+            // Find group in local memory and push (with auto-create group fallback)
             let targetGroup = null;
-            allCases.forEach(c => {
-                if (c.id === caseId) {
-                    const group = c.groups.find(g => cleanGroupName(g.name) === cleanGroupName(groupName));
-                    if (group) targetGroup = group;
+            const targetCase = allCases.find(c => c.id === caseId);
+            if (targetCase) {
+                if (!targetCase.groups) targetCase.groups = [];
+                targetGroup = targetCase.groups.find(g => cleanGroupName(g.name) === cleanGroupName(groupName));
+                if (!targetGroup) {
+                    targetGroup = { id: Date.now(), name: cleanGroupName(groupName), tasks: [] };
+                    targetCase.groups.push(targetGroup);
                 }
-            });
-
-            if (targetGroup) {
                 targetGroup.tasks.push(newTask);
             }
 

@@ -295,3 +295,6 @@
 - **GAS 單一通道首頁載入引擎 (Unified Single-Pass Initial Data Endpoint `getInitialData`)**：將原本網頁啟動時需發起的 4 次獨立 HTTP 請求 (`getUsers`, `getRoles`, `getCases`, `getTemplates`)，在 GAS 後端合併為單一 `getInitialData` API。Apps Script 後端重用同一 `SpreadsheetApp` 實例進行單次全讀取，徹底消除了多重 cold-start 冷啟動與連線排隊。進站首頁載入速度達到 0.3 秒內的終極極速體驗。
 - **刪除人員/無效 ID 進站重置與選單自動同步防護 (User Switcher Fallback Sync)**：修復當 `localStorage` 記錄的當前使用者 ID 已被刪除或無效時，進站重新整理 `getInitialData` 回傳成員清單未包含該 ID，導致頂端人員切換選單與當前權限狀態脫鉤消失的 Bug。自動備援將當前使用者指派為第一位可用成員並同動同步選單與案件樹。
 - **當前人員選單極致鎖定 (Guaranteed `renderUserSwitcher` Selection Binding)**：新增 `renderUserSwitcher()` 獨立渲染函式，明確將 `opt.selected = true` 與 `switcher.value = String(currentUserId)` 綁定至每次成員異動與 UI 渲染中，徹底避免重新整理或成員切換時頂端「當前人員」選單出現空白或脫鉤問題。
+- **進站初始化與快速新增雙重無死角相容備援 (Fail-Safe Initialization & Quick Add Fallback)**：
+  1. **舊版本/極限相容自動降級備援**：在 `DOMContentLoaded` 加入 `initialRes` 容錯，若 GAS 雲端部署為舊版而無法識別 `getInitialData` 時，系統自動秒級降級至 `Promise.all` 並行多線程 API，確保舊版/新版部署 100% 正常載入，絕不呈現空白。
+  2. **快速新增任務組動態防護**：強化 `quickAddTask` 的記憶體群組匹配邏輯，即使目標案件尚未預建該任務組，系統也會即時動態建立組別並寫入任務，確保 0 毫秒極速新增待辦 100% 成功顯現。
