@@ -195,7 +195,10 @@
         <!-- Sidebar Navigation -->
         <aside class="w-64 bg-slate-900/40 border-r border-slate-800/80 flex flex-col p-4 shrink-0">
             <nav class="space-y-1.5 flex-1">
-                <button onclick="switchView('calendar')" id="tab-calendar" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10">
+                <button onclick="switchView('dashboard')" id="tab-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10">
+                    <span data-i18n="dashboardTab">📊 個人儀表板</span>
+                </button>
+                <button onclick="switchView('calendar')" id="tab-calendar" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="calendarTab">📅 日曆模式</span>
                 </button>
                 <button onclick="switchView('case')" id="tab-case" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
@@ -226,8 +229,102 @@
         <!-- Dynamic Content Body -->
         <main class="flex-1 bg-slate-950 p-6 overflow-y-auto relative">
 
+            <!-- Dashboard View Container -->
+            <div id="view-dashboard" class="w-full space-y-6">
+                <!-- Welcome Title -->
+                <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 id="dashboard-welcome" class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                            👋 歡迎回來
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1" data-i18n="dashboardDesc">以下為您今日的待辦事項清單，依過期與即將到期時間排序。</p>
+                    </div>
+                </div>
+
+                <!-- Stats Widgets -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Overdue -->
+                    <div class="bg-red-950/30 border border-red-900/50 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-red-400 font-bold uppercase tracking-wider">🔴 已過期</span>
+                            <span class="text-[10px] bg-red-900/40 text-red-300 px-1.5 py-0.5 rounded font-mono">Overdue</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <span id="stat-overdue-count" class="text-3xl font-extrabold text-red-200">0</span>
+                            <span class="text-xs text-red-400">個任務</span>
+                        </div>
+                    </div>
+
+                    <!-- Expiring Soon -->
+                    <div class="bg-yellow-950/30 border border-yellow-900/50 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-yellow-400 font-bold uppercase tracking-wider">🟡 48H內到期</span>
+                            <span class="text-[10px] bg-yellow-900/40 text-yellow-300 px-1.5 py-0.5 rounded font-mono">Near Deadline</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <span id="stat-near-count" class="text-3xl font-extrabold text-yellow-200">0</span>
+                            <span class="text-xs text-yellow-400">個任務</span>
+                        </div>
+                    </div>
+
+                    <!-- In Progress -->
+                    <div class="bg-blue-950/30 border border-indigo-900/50 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider">🔵 進行中</span>
+                            <span class="text-[10px] bg-indigo-900/40 text-indigo-300 px-1.5 py-0.5 rounded font-mono">In Progress</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <span id="stat-progress-count" class="text-3xl font-extrabold text-indigo-200">0</span>
+                            <span class="text-xs text-indigo-400">個任務</span>
+                        </div>
+                    </div>
+
+                    <!-- Completed -->
+                    <div class="bg-green-950/20 border border-green-900/40 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between h-28">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-green-400 font-bold uppercase tracking-wider">🟢 今日已完成</span>
+                            <span class="text-[10px] bg-green-900/40 text-green-300 px-1.5 py-0.5 rounded font-mono">Completed</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <span id="stat-completed-count" class="text-3xl font-extrabold text-green-200">0</span>
+                            <span class="text-xs text-green-400">個任務</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Task List Card -->
+                <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                            📋 我的個人待辦清單 (My To-Do List)
+                        </h3>
+                        <span id="dashboard-todo-subtitle" class="text-xs text-slate-500 font-medium"></span>
+                    </div>
+
+                    <!-- Task List Body -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] text-slate-500 uppercase font-bold">
+                                    <th class="py-2.5 w-24">狀態</th>
+                                    <th class="py-2.5">任務內容</th>
+                                    <th class="py-2.5 w-48">所屬案件</th>
+                                    <th class="py-2.5 w-32">組別</th>
+                                    <th class="py-2.5 w-36">時程區間</th>
+                                    <th class="py-2.5 w-32">截止時間與狀態</th>
+                                    <th class="py-2.5 w-24 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-task-tbody" class="divide-y divide-slate-850 text-xs text-slate-300">
+                                <!-- Dynamic dashboard tasks go here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Calendar View Container -->
-            <div id="view-calendar" class="w-full h-full">
+            <div id="view-calendar" class="w-full h-full hidden">
                 <div id="calendar" class="h-full"></div>
             </div>
 
@@ -844,6 +941,7 @@
                 activeUser: "當前人員:",
                 addCaseBtn: "新增案件",
                 gasUrlPlaceholder: "輸入 GAS API 網頁應用程式 URL 進行雲端同步...",
+                dashboardTab: "📊 個人儀表板",
                 calendarTab: "📅 日曆模式",
                 caseTreeTab: "📋 案件樹狀",
                 ganttTab: "📊 甘特圖模式",
@@ -930,6 +1028,7 @@
                 activeUser: "Thành viên:",
                 addCaseBtn: "Thêm dự án",
                 gasUrlPlaceholder: "Nhập URL Web App GAS để đồng bộ đám mây...",
+                dashboardTab: "📊 Bảng điều khiển",
                 calendarTab: "📅 Chế độ Lịch",
                 caseTreeTab: "📋 Cấu trúc Dự án",
                 ganttTab: "📊 Biểu đồ Gantt",
@@ -1066,7 +1165,7 @@
         let allUsers = [];
         let allRoles = [];
         let allCases = [];
-        let activeView = 'calendar';
+        let activeView = 'dashboard';
         let calendar = null;
         let gantt = null;
         let ganttViewMode = 'Day';
@@ -1679,6 +1778,8 @@
                 renderUserControl();
             } else if (activeView === 'template-control') {
                 renderTemplateControl();
+            } else if (activeView === 'dashboard') {
+                renderDashboard();
             }
         }
 
@@ -1686,13 +1787,14 @@
         function switchView(viewName) {
             activeView = viewName;
             
+            document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-calendar').classList.add('hidden');
             document.getElementById('view-case').classList.add('hidden');
             document.getElementById('view-gantt').classList.add('hidden');
             document.getElementById('view-user-control').classList.add('hidden');
             document.getElementById('view-template-control').classList.add('hidden');
             
-            const tabs = ['calendar', 'case', 'gantt', 'user-control', 'template-control'];
+            const tabs = ['dashboard', 'calendar', 'case', 'gantt', 'user-control', 'template-control'];
             tabs.forEach(t => {
                 const tabEl = document.getElementById(`tab-${t}`);
                 if (tabEl) {
@@ -1715,6 +1817,8 @@
                 renderUserControl();
             } else if (viewName === 'template-control') {
                 renderTemplateControl();
+            } else if (viewName === 'dashboard') {
+                renderDashboard();
             }
         }
 
@@ -2277,6 +2381,193 @@
             renderGantt();
         }
 
+        // ==========================================
+        // --- Personal Dashboard Rendering Logic ---
+        // ==========================================
+
+        function renderDashboard() {
+            const tbody = document.getElementById('dashboard-task-tbody');
+            const overdueCountEl = document.getElementById('stat-overdue-count');
+            const nearCountEl = document.getElementById('stat-near-count');
+            const progressCountEl = document.getElementById('stat-progress-count');
+            const completedCountEl = document.getElementById('stat-completed-count');
+            const welcomeEl = document.getElementById('dashboard-welcome');
+            const subtitleEl = document.getElementById('dashboard-todo-subtitle');
+
+            if (!tbody || !overdueCountEl || !nearCountEl || !progressCountEl || !completedCountEl || !welcomeEl || !subtitleEl) return;
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            if (!user) return;
+
+            const lang = user.language || 'zh-TW';
+            const tText = i18n[lang];
+
+            welcomeEl.innerHTML = lang === 'vi-VN' 
+                ? `👋 Xin chào, ${user.username}!` 
+                : `👋 歡迎回來，${user.username}！`;
+
+            let overdueCount = 0;
+            let nearCount = 0;
+            let progressCount = 0;
+            let completedCount = 0;
+            
+            const myTasks = [];
+            const now = new Date();
+
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        if (t.visible_user_ids && t.visible_user_ids.includes(currentUserId)) {
+                            let status = 'blue';
+                            let hoursDiff = 0;
+                            if (t.is_completed) {
+                                status = 'green';
+                                completedCount++;
+                            } else {
+                                if (t.due_date) {
+                                    const dueDate = new Date(t.due_date);
+                                    hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
+                                    if (hoursDiff < 0) {
+                                        status = 'red';
+                                        overdueCount++;
+                                    } else if (hoursDiff <= 48) {
+                                        status = 'yellow';
+                                        nearCount++;
+                                    } else {
+                                        status = 'blue';
+                                        progressCount++;
+                                    }
+                                } else {
+                                    status = 'blue';
+                                    progressCount++;
+                                }
+                                
+                                myTasks.push({
+                                    task: t,
+                                    caseName: c.title,
+                                    caseId: c.id,
+                                    groupName: g.name,
+                                    status: status,
+                                    hoursDiff: hoursDiff
+                                });
+                            }
+                        }
+                    });
+                });
+            });
+
+            overdueCountEl.textContent = overdueCount;
+            nearCountEl.textContent = nearCount;
+            progressCountEl.textContent = progressCount;
+            completedCountEl.textContent = completedCount;
+
+            subtitleEl.textContent = lang === 'vi-VN'
+                ? `Tổng số công việc chưa hoàn thành: ${myTasks.length}`
+                : `未完成任務總數：${myTasks.length} 個`;
+
+            myTasks.sort((a, b) => {
+                const statusOrder = { 'red': 1, 'yellow': 2, 'blue': 3 };
+                const orderA = statusOrder[a.status];
+                const orderB = statusOrder[b.status];
+                if (orderA !== orderB) {
+                    return orderA - orderB;
+                }
+                const dateA = a.task.due_date ? new Date(a.task.due_date).getTime() : Infinity;
+                const dateB = b.task.due_date ? new Date(b.task.due_date).getTime() : Infinity;
+                return dateA - dateB;
+            });
+
+            tbody.innerHTML = '';
+            if (myTasks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 italic">🎉 恭喜！您目前沒有任何待辦事項。</td></tr>`;
+                return;
+            }
+
+            myTasks.forEach(item => {
+                const t = item.task;
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-850 hover:bg-slate-900/40 transition-colors text-xs text-slate-300";
+
+                let statusBadge = '';
+                let dueText = '';
+                if (item.status === 'red') {
+                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-950/60 border border-red-900/40 text-red-400">🔴 已過期</span>`;
+                    const days = Math.abs(Math.floor(item.hoursDiff / 24));
+                    dueText = lang === 'vi-VN' 
+                        ? `<span class="text-red-400 font-semibold">Trễ ${days} ngày</span>`
+                        : `<span class="text-red-400 font-semibold">已逾期 ${days} 天</span>`;
+                } else if (item.status === 'yellow') {
+                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-950/60 border border-yellow-900/40 text-yellow-400">🟡 急件</span>`;
+                    const hours = Math.floor(item.hoursDiff);
+                    dueText = lang === 'vi-VN'
+                        ? `<span class="text-yellow-400 font-semibold">Hạn trong ${hours} giờ</span>`
+                        : `<span class="text-yellow-400 font-semibold">${hours} 小時內到期</span>`;
+                } else {
+                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-950/60 border border-indigo-900/40 text-indigo-300">🔵 進行中</span>`;
+                    const days = Math.floor(item.hoursDiff / 24);
+                    dueText = lang === 'vi-VN'
+                        ? `<span class="text-slate-400">Còn ${days} ngày</span>`
+                        : `<span class="text-slate-400">還剩 ${days} 天</span>`;
+                }
+
+                const checkbox = `<input type="checkbox" onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">`;
+                const caseLink = `<button onclick="jumpToCase(${item.caseId})" class="text-indigo-400 hover:text-indigo-300 font-semibold text-left hover:underline truncate max-w-[180px] block">${item.caseName}</button>`;
+                
+                const groupColor = getGroupColor(item.groupName);
+                const groupStyle = groupColor ? `style="background-color: ${groupColor}20; border-color: ${groupColor}40; color: ${groupColor}"` : '';
+                const groupBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 border border-slate-700 text-slate-300" ${groupStyle}>${item.groupName}</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-3.5 pl-2">${statusBadge}</td>
+                    <td class="py-3.5 pr-2">
+                        <div class="flex items-start gap-2.5">
+                            ${checkbox}
+                            <div>
+                                <span class="font-bold text-slate-200 block">${t.title}</span>
+                                ${t.notes ? `<p class="text-[11px] text-slate-400 mt-0.5 italic max-w-[300px] truncate" title="${t.notes}">${t.notes}</p>` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3.5 pr-2">${caseLink}</td>
+                    <td class="py-3.5 pr-2">${groupBadge}</td>
+                    <td class="py-3.5 pr-2 font-mono text-[11px] text-slate-400">${t.start_date || 'N/A'} ~ ${t.due_date || 'N/A'}</td>
+                    <td class="py-3.5 pr-2 font-mono text-[11px]">${dueText}</td>
+                    <td class="py-3.5 text-right pr-2">
+                        <button onclick="jumpToCaseAndOpenTask(${item.caseId}, ${t.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold font-bold">查看與留言</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function jumpToCase(caseId) {
+            switchView('case');
+            const target = document.getElementById(`case-body-${caseId}`);
+            if (target) {
+                if (target.classList.contains('hidden')) {
+                    toggleAccordion(`case-body-${caseId}`);
+                }
+                target.parentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const card = target.parentElement;
+                card.classList.add('ring-2', 'ring-indigo-500', 'shadow-indigo-500/20');
+                setTimeout(() => {
+                    card.classList.remove('ring-2', 'ring-indigo-500', 'shadow-indigo-500/20');
+                }, 2000);
+            }
+        }
+
+        function jumpToCaseAndOpenTask(caseId, taskId) {
+            switchView('case');
+            const target = document.getElementById(`case-body-${caseId}`);
+            if (target) {
+                if (target.classList.contains('hidden')) {
+                    toggleAccordion(`case-body-${caseId}`);
+                }
+                target.parentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            openTaskDrawer(taskId);
+        }
+
         // --- Actions Processing API Wrapper ---
 
         // --- Actions Processing API Wrapper ---
@@ -2300,6 +2591,7 @@
             renderCalendar();
             renderCaseTree();
             renderGantt();
+            renderDashboard();
 
             // Background API call (silent)
             const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST', true);
@@ -2309,6 +2601,7 @@
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+                renderDashboard();
                 alert("切換任務狀態失敗，已恢復原狀態。");
             }
         }
