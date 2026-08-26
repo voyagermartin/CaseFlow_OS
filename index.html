@@ -81,6 +81,10 @@
             font-size: 1.25rem !important;
             font-weight: 700;
         }
+        .fc-event-title, .fc-event-main {
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+        }
         .fc .fc-button-primary {
             background-color: #4f46e5;
             border-color: #4f46e5;
@@ -354,7 +358,7 @@
             <div id="view-template-control" class="w-full hidden space-y-8">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-4">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2" data-i18n="templatesTitle">
+                        <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2" data-i18n="templatesTitle">
                             📋 案件範本設定與維護 (Templates)
                         </h2>
                         <p class="text-xs text-slate-400 mt-1" data-i18n="templateDesc">管理系統預設案件範本，包含其底下的子任務與相對偏移天數設定。</p>
@@ -380,7 +384,7 @@
                         <div>
                             <div class="flex items-center justify-between border-b border-slate-850 pb-3">
                                 <div>
-                                    <h3 id="selected-template-name" class="font-bold text-slate-100 text-base">請選擇範本</h3>
+                                    <h3 id="selected-template-name" class="font-bold text-slate-100 text-lg">請選擇範本</h3>
                                     <p id="selected-template-desc" class="text-xs text-slate-400 mt-1">選取左側範本以查看並編輯預設子任務。</p>
                                 </div>
                                 <button id="add-template-task-btn" onclick="openNewTemplateTaskModal()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
@@ -579,7 +583,7 @@
         <div onclick="closeNewCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
         <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-lg font-bold text-slate-100" data-i18n="newCaseModalTitle">🚀 發起新案件 (New Case)</h3>
+                <h3 class="text-xl font-bold text-slate-100" data-i18n="newCaseModalTitle">🚀 發起新案件 (New Case)</h3>
                 <button onclick="closeNewCaseModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -589,8 +593,8 @@
             
             <div class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseNameLabel">案件名稱 / 團號</label>
-                    <input type="text" id="new-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseNamePlaceholder" placeholder="例如：2026/09/15 馬航怡保專案">
+                    <label class="text-sm text-slate-300 font-bold uppercase" data-i18n="caseNameLabel">案件名稱 / 團號</label>
+                    <input type="text" id="new-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseNamePlaceholder" placeholder="例如：2026/09/15 馬航怡保專案">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseDescLabel">案件描述</label>
@@ -794,7 +798,7 @@
         <div onclick="closeEditCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
         <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-lg font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
+                <h3 class="text-xl font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
                 <button onclick="closeEditCaseModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -806,8 +810,8 @@
             
             <div class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">案件名稱 / 團號</label>
-                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
+                    <label class="text-sm text-slate-300 font-bold uppercase">案件名稱 / 團號</label>
+                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase">案件描述</label>
@@ -2265,12 +2269,12 @@
                 caseCard.innerHTML = `
                     <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
                         <div class="flex items-center gap-3">
-                            <span class="text-xl">📁</span>
+                            <span class="text-2xl">📁</span>
                             <div>
-                                <h3 class="font-bold text-slate-100 flex items-center gap-2">
+                                <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
                                     ${c.title}
                                 </h3>
-                                <p class="text-xs text-slate-400 mt-0.5">${c.description || ''}</p>
+                                <p class="text-sm text-slate-400 mt-0.5">${c.description || ''}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-3 text-slate-400 text-sm">
@@ -2631,7 +2635,7 @@
                 }
 
                 const checkbox = `<input type="checkbox" onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">`;
-                const caseLink = `<button onclick="jumpToCase(${item.caseId})" class="text-indigo-400 hover:text-indigo-300 font-semibold text-left hover:underline truncate max-w-[180px] block">${item.caseName}</button>`;
+                const caseLink = `<button onclick="jumpToCase(${item.caseId})" class="text-sm font-bold text-indigo-400 hover:text-indigo-300 text-left hover:underline truncate max-w-[200px] block">${item.caseName}</button>`;
                 
                 const groupColor = getGroupColor(item.groupName);
                 const groupStyle = groupColor ? `style="background-color: ${groupColor}20; border-color: ${groupColor}40; color: ${groupColor}"` : '';
