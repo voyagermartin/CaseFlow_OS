@@ -207,6 +207,9 @@
                 <button onclick="switchView('user-control')" id="tab-user-control" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="userControlTab">👥 人員控管</span>
                 </button>
+                <button onclick="switchView('template-control')" id="tab-template-control" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                    <span data-i18n="templateTab">⚙️ 範本控管</span>
+                </button>
                 <button onclick="openGroupColorModal()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
                     <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
                 </button>
@@ -247,6 +250,65 @@
                 </div>
                 <div class="gantt-target overflow-x-auto">
                     <svg id="gantt-svg"></svg>
+                </div>
+            </div>
+
+            <!-- Template Control View Container -->
+            <div id="view-template-control" class="w-full hidden space-y-8">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2" data-i18n="templatesTitle">
+                            📋 案件範本設定與維護 (Templates)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1" data-i18n="templateDesc">管理系統預設案件範本，包含其底下的子任務與相對偏移天數設定。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Column 1: Templates List -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-200 text-sm" data-i18n="templateList">範本列表</h3>
+                            <button onclick="openNewTemplateModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                <span data-i18n="addTemplateBtn">➕ 新增範本</span>
+                            </button>
+                        </div>
+                        <div id="template-list-container" class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                            <!-- Template list loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Column 2-3: Template Tasks Detail -->
+                    <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 flex flex-col justify-between min-h-[400px]">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-slate-850 pb-3">
+                                <div>
+                                    <h3 id="selected-template-name" class="font-bold text-slate-100 text-base">請選擇範本</h3>
+                                    <p id="selected-template-desc" class="text-xs text-slate-400 mt-1">選取左側範本以查看並編輯預設子任務。</p>
+                                </div>
+                                <button id="add-template-task-btn" onclick="openNewTemplateTaskModal()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                    <span data-i18n="addTemplateTaskBtn">➕ 新增預設任務</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto mt-4">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-800 text-slate-400">
+                                            <th class="py-2.5 font-semibold">任務群組</th>
+                                            <th class="py-2.5 font-semibold">任務標題</th>
+                                            <th class="py-2.5 font-semibold">開始偏移</th>
+                                            <th class="py-2.5 font-semibold">截止偏移</th>
+                                            <th class="py-2.5 font-semibold">備註 / SOP</th>
+                                            <th class="py-2.5 font-semibold text-right">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="template-task-tbody" class="divide-y divide-slate-850 text-slate-300">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -432,9 +494,24 @@
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseDescLabel">案件描述</label>
-                    <textarea id="new-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseDescPlaceholder" placeholder="請填寫專案背景簡介..."></textarea>
+                    <textarea id="new-case-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseDescPlaceholder" placeholder="請填寫專案背景簡介..."></textarea>
                 </div>
-                <div class="space-y-1.5">
+                
+                <!-- Template Selection -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="applyTemplate">套用案件範本</label>
+                        <select id="new-case-template" onchange="handleNewCaseTemplateChange(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                            <!-- Option value="" is handled dynamically or loaded in javascript -->
+                        </select>
+                    </div>
+                    <div id="new-case-ref-date-container" class="space-y-1.5 hidden">
+                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="referenceDate">出發日期 (基準日)</label>
+                        <input type="date" id="new-case-ref-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div id="new-case-groups-container" class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseGroupsLabel">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="new-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" value="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
@@ -522,6 +599,92 @@
                 <button onclick="closeGroupColorModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors" data-i18n="saveAndCloseBtn">
                     套用並關閉
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Create/Edit Modal -->
+    <div id="template-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeTemplateModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="template-modal-title" class="text-lg font-bold text-slate-100">🚀 新增範本</h3>
+                <button onclick="closeTemplateModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <input type="hidden" id="template-modal-id">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateNameLabel">範本名稱</label>
+                    <input type="text" id="template-modal-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：馬航怡保5天標準團範本">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateDescLabel">範本描述</label>
+                    <textarea id="template-modal-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本適用場景或簡要說明..."></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateGroupsLabel">預設任務群組 (以逗號分隔)</label>
+                    <input type="text" id="template-modal-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" value="票務與交通, LOCAL 與 住宿, 名單與證件">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeTemplateModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors" data-i18n="cancelBtn">取消</button>
+                <button onclick="submitTemplateForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Task Create/Edit Modal -->
+    <div id="template-task-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeTemplateTaskModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="template-task-modal-title" class="text-lg font-bold text-slate-100">🚀 新增預設任務</h3>
+                <button onclick="closeTemplateTaskModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <input type="hidden" id="template-task-modal-id">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">任務群組</label>
+                    <select id="template-task-modal-group" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                        <!-- Options loaded dynamically -->
+                    </select>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">任務名稱</label>
+                    <input type="text" id="template-task-modal-title-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：確認遊覽車車號">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="startOffsetLabel">開始偏移天數</label>
+                        <input type="number" id="template-task-modal-start-offset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" value="0">
+                        <span class="text-[10px] text-slate-500 block" data-i18n="startOffsetDesc">例：-30 代表出發前 30 天</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="dueOffsetLabel">截止偏移天數</label>
+                        <input type="number" id="template-task-modal-due-offset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" value="0">
+                        <span class="text-[10px] text-slate-500 block" data-i18n="dueOffsetDesc">例：-15 代表出發前 15 天</span>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">任務備註 / SOP</label>
+                    <textarea id="template-task-modal-notes" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="輸入此項目之 SOP、聯絡對象或應注意事項..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeTemplateTaskModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors" data-i18n="cancelBtn">取消</button>
+                <button onclick="submitTemplateTaskForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
             </div>
         </div>
     </div>
@@ -743,6 +906,24 @@
                 emptyGroupListHint: "目前尚未新增任何自訂任務組，請在上方輸入名稱新增！",
                 clearAllGroupsBtn: "🗑️ 清空所有任務組",
                 confirmClearAll: "確定要清空所有自訂任務組設定嗎？",
+                templateTab: "⚙️ 範本控管",
+                templatesTitle: "📋 案件範本設定與維護 (Templates)",
+                templateDesc: "管理系統預設案件範本，包含其底下的子任務與相對偏移天數設定。",
+                templateList: "範本列表 (Templates)",
+                templateTasks: "預設任務清單 (Default Tasks)",
+                addTemplateBtn: "➕ 新增範本",
+                addTemplateTaskBtn: "➕ 新增預設任務",
+                templateNameLabel: "範本名稱",
+                templateDescLabel: "範本描述",
+                templateGroupsLabel: "預設任務群組 (以逗號分隔)",
+                startOffsetLabel: "開始偏移天數 (相對於基準日)",
+                dueOffsetLabel: "截止偏移天數 (相對於基準日)",
+                startOffsetDesc: "例：-30 代表基準日前 30 天",
+                dueOffsetDesc: "例：-15 代表基準日前 15 天",
+                noTemplate: "無 (手動建立)",
+                applyTemplate: "套用案件範本",
+                referenceDate: "出發日期 (基準日)",
+                refDatePlaceholder: "請選取案件的起點/出發日期",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -811,6 +992,24 @@
                 emptyGroupListHint: "Chưa có nhóm công việc nào, hãy nhập tên ở trên để thêm!",
                 clearAllGroupsBtn: "🗑️ Xóa tất cả nhóm",
                 confirmClearAll: "Bạn có chắc muốn xóa tất cả cài đặt nhóm không?",
+                templateTab: "⚙️ Quản lý Mẫu",
+                templatesTitle: "📋 Thiết lập & Duy trì Mẫu Dự án (Templates)",
+                templateDesc: "Quản lý các mẫu dự án mặc định, bao gồm các công việc con và số ngày lệch tương đối.",
+                templateList: "Danh sách Mẫu (Templates)",
+                templateTasks: "Danh sách Công việc Mặc định",
+                addTemplateBtn: "➕ Thêm mẫu mới",
+                addTemplateTaskBtn: "➕ Thêm việc mặc định",
+                templateNameLabel: "Tên mẫu",
+                templateDescLabel: "Mô tả mẫu",
+                templateGroupsLabel: "Nhóm việc mặc định (cách nhau bằng dấu phẩy)",
+                startOffsetLabel: "Ngày bắt đầu lệch (so với ngày chuẩn)",
+                dueOffsetLabel: "Hạn chót lệch (so với ngày chuẩn)",
+                startOffsetDesc: "VD: -30 nghĩa là trước ngày xuất phát 30 ngày",
+                dueOffsetDesc: "VD: -15 nghĩa là trước ngày xuất phát 15 ngày",
+                noTemplate: "Không (Tự tạo thủ công)",
+                applyTemplate: "Áp dụng mẫu dự án",
+                referenceDate: "Ngày xuất phát (Ngày chuẩn)",
+                refDatePlaceholder: "Chọn ngày bắt đầu/xuất phát của dự án",
             }
         };
 
@@ -845,6 +1044,21 @@
             { id: 2, task_id: 2, user_id: 4, content: "Đã xác nhận phòng với khách sạn rồi nhé!", created_at: "2026-08-15 15:30:00" }
         ];
 
+        let mockTemplates = [
+            { id: 1, template_name: "馬航怡保 5 天團範本", description: "馬來西亞怡保 5 天團之標準作業流程模板", group_names: "票務與交通, LOCAL 與 住宿, 名單與證件" },
+            { id: 2, template_name: "日本賞櫻 5 天團範本", description: "日本賞櫻團之標準作業流程模板", group_names: "機票組, 飯店與行程, 簽證與保險" }
+        ];
+
+        let mockTemplateTasks = [
+            { id: 1, template_id: 1, group_name: "票務與交通", title: "【票務組】收取訂金與開票確認", start_day_offset: -45, due_day_offset: -30, notes: "記得確認開票代號與退改簽規則" },
+            { id: 2, template_id: 1, group_name: "LOCAL 與 住宿", title: "【LOCAL組】預定怡保當地飯店", start_day_offset: -30, due_day_offset: -15, notes: "訂單號收到後請與 Local 再次核對" },
+            { id: 3, template_id: 1, group_name: "LOCAL 與 住宿", title: "【LOCAL組】確認遊覽車與導遊資訊", start_day_offset: -15, due_day_offset: -5, notes: "車型要求3年內新車，含司機電話" },
+            { id: 4, template_id: 1, group_name: "名單與證件", title: "【證件組】收集護照與辦理簽證", start_day_offset: -40, due_day_offset: -20, notes: "逾期警報！請業務儘速追回護照正本" },
+            { id: 5, template_id: 2, group_name: "機票組", title: "機票開立與機位確認", start_day_offset: -60, due_day_offset: -45, notes: "確認名單拼音與機位" },
+            { id: 6, template_id: 2, group_name: "飯店與行程", title: "預訂東京/京都飯店", start_day_offset: -50, due_day_offset: -35, notes: "注意賞櫻季房位緊張" },
+            { id: 7, template_id: 2, group_name: "簽證與保險", title: "投保旅行平安險", start_day_offset: -20, due_day_offset: -7, notes: "需有名單身分證號" }
+        ];
+
         // --- Client State ---
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbztmY_ZY04Ir1Q3pgOB4Hi0hI_Hr3sbC6s70VTnO2yUeqPewCuG9vL2ZoWjBfEUVRCJHg/exec";
 
@@ -857,6 +1071,8 @@
         let gantt = null;
         let ganttViewMode = 'Day';
         let selectedTaskId = null;
+        let allTemplates = [];
+        let selectedTemplateId = null;
 
         // On Document Ready
         document.addEventListener('DOMContentLoaded', async () => {
@@ -961,6 +1177,8 @@
                         } else if (action === 'getCases') {
                             const userId = parseInt(payload.user_id);
                             resolve(getMockCasesForUser(userId));
+                        } else if (action === 'getTemplates') {
+                            resolve(JSON.parse(JSON.stringify(getMockTemplates())));
                         }
                     } else {
                         if (action === 'toggleTask') {
@@ -982,7 +1200,90 @@
                                 drive_url: "https://drive.google.com/drive/folders/mock-id",
                                 group_names: groupsStr
                             });
+                            
+                            // Generate template tasks if selected
+                            if (payload.template_id && payload.reference_date) {
+                                const refParts = payload.reference_date.split('-');
+                                const refDate = new Date(refParts[0], refParts[1] - 1, refParts[2]);
+                                const allUserIds = mockUsers.map(u => u.id);
+
+                                mockTemplateTasks.forEach(tt => {
+                                    if (tt.template_id === payload.template_id) {
+                                        const start = new Date(refDate);
+                                        start.setDate(refDate.getDate() + tt.start_day_offset);
+                                        const startStr = start.toISOString().split('T')[0];
+
+                                        const due = new Date(refDate);
+                                        due.setDate(refDate.getDate() + tt.due_day_offset);
+                                        const dueStr = due.toISOString().split('T')[0];
+
+                                        const nextTaskId = mockTasks.length > 0 ? Math.max(...mockTasks.map(x => x.id)) + 1 : 1;
+                                        mockTasks.push({
+                                            id: nextTaskId,
+                                            case_id: nextId,
+                                            group_name: tt.group_name,
+                                            title: tt.title,
+                                            due_date: dueStr,
+                                            start_date: startStr,
+                                            is_completed: false,
+                                            notes: tt.notes || '',
+                                            visible_user_ids: allUserIds
+                                        });
+                                    }
+                                });
+                            }
                             resolve({ status: 'success', caseId: nextId });
+                        } else if (action === 'createTemplate') {
+                            const nextId = mockTemplates.length > 0 ? Math.max(...mockTemplates.map(x => x.id)) + 1 : 1;
+                            const groupsStr = Array.isArray(payload.group_names) ? payload.group_names.join(', ') : payload.group_names;
+                            mockTemplates.push({
+                                id: nextId,
+                                template_name: payload.template_name,
+                                description: payload.description,
+                                group_names: groupsStr
+                            });
+                            resolve({ status: 'success', templateId: nextId });
+                        } else if (action === 'updateTemplate') {
+                            const t = mockTemplates.find(x => x.id === payload.templateId);
+                            if (t) {
+                                t.template_name = payload.template_name;
+                                t.description = payload.description;
+                                t.group_names = Array.isArray(payload.group_names) ? payload.group_names.join(', ') : payload.group_names;
+                                resolve({ status: 'success', templateId: t.id });
+                            } else {
+                                resolve({ status: 'error', message: 'Template not found' });
+                            }
+                        } else if (action === 'deleteTemplate') {
+                            mockTemplates = mockTemplates.filter(x => x.id !== payload.templateId);
+                            mockTemplateTasks = mockTemplateTasks.filter(x => x.template_id !== payload.templateId);
+                            resolve({ status: 'success', templateId: payload.templateId });
+                        } else if (action === 'createTemplateTask') {
+                            const nextId = mockTemplateTasks.length > 0 ? Math.max(...mockTemplateTasks.map(x => x.id)) + 1 : 1;
+                            mockTemplateTasks.push({
+                                id: nextId,
+                                template_id: payload.templateId,
+                                group_name: payload.group_name,
+                                title: payload.title,
+                                start_day_offset: parseInt(payload.start_day_offset) || 0,
+                                due_day_offset: parseInt(payload.due_day_offset) || 0,
+                                notes: payload.notes || ""
+                            });
+                            resolve({ status: 'success', taskId: nextId });
+                        } else if (action === 'updateTemplateTask') {
+                            const t = mockTemplateTasks.find(x => x.id === payload.taskId);
+                            if (t) {
+                                t.group_name = payload.group_name;
+                                t.title = payload.title;
+                                t.start_day_offset = parseInt(payload.start_day_offset) || 0;
+                                t.due_day_offset = parseInt(payload.due_day_offset) || 0;
+                                t.notes = payload.notes || "";
+                                resolve({ status: 'success', taskId: t.id });
+                            } else {
+                                resolve({ status: 'error', message: 'Template task not found' });
+                            }
+                        } else if (action === 'deleteTemplateTask') {
+                            mockTemplateTasks = mockTemplateTasks.filter(x => x.id !== payload.taskId);
+                            resolve({ status: 'success', taskId: payload.taskId });
                         } else if (action === 'createTask') {
                             const nextId = mockTasks.length > 0 ? Math.max(...mockTasks.map(x => x.id)) + 1 : 1;
                             mockTasks.push({
@@ -1091,6 +1392,35 @@
                         }
                     }
                 }, 50);
+            });
+        }
+
+        function getMockTemplates() {
+            const tasksByTemplateId = {};
+            mockTemplateTasks.forEach(t => {
+                if (!tasksByTemplateId[t.template_id]) {
+                    tasksByTemplateId[t.template_id] = [];
+                }
+                tasksByTemplateId[t.template_id].push({
+                    id: t.id,
+                    template_id: t.template_id,
+                    group_name: t.group_name,
+                    title: t.title,
+                    start_day_offset: t.start_day_offset,
+                    due_day_offset: t.due_day_offset,
+                    notes: t.notes
+                });
+            });
+            return mockTemplates.map(t => {
+                const groupsStr = t.group_names || "";
+                const groupNames = groupsStr ? groupsStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+                return {
+                    id: t.id,
+                    template_name: t.template_name,
+                    description: t.description || "",
+                    group_names: groupNames,
+                    tasks: tasksByTemplateId[t.id] || []
+                };
             });
         }
 
@@ -1307,6 +1637,19 @@
                     }
                 }
 
+                // Dynamic display of Template Control tab based on hasCreateCasePermission
+                const tabTemplateControl = document.getElementById('tab-template-control');
+                if (tabTemplateControl) {
+                    if (hasCreateCasePermission(user)) {
+                        tabTemplateControl.classList.remove('hidden');
+                    } else {
+                        tabTemplateControl.classList.add('hidden');
+                        if (activeView === 'template-control') {
+                            switchView('calendar');
+                        }
+                    }
+                }
+
                 // Show or hide Add Case buttons based on permissions
                 const addCaseBtns = document.querySelectorAll('button[onclick="openNewCaseModal()"]');
                 addCaseBtns.forEach(btn => {
@@ -1326,6 +1669,7 @@
             allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
             allRoles = await apiRequest('getRoles', null, 'GET', true) || [];
             allCases = await apiRequest('getCases', { user_id: currentUserId }) || [];
+            allTemplates = await apiRequest('getTemplates', null, 'GET', true) || [];
             
             updateUserIndicatorAndLanguage();
             renderCalendar();
@@ -1333,6 +1677,8 @@
             renderGantt();
             if (activeView === 'user-control') {
                 renderUserControl();
+            } else if (activeView === 'template-control') {
+                renderTemplateControl();
             }
         }
 
@@ -1344,8 +1690,9 @@
             document.getElementById('view-case').classList.add('hidden');
             document.getElementById('view-gantt').classList.add('hidden');
             document.getElementById('view-user-control').classList.add('hidden');
+            document.getElementById('view-template-control').classList.add('hidden');
             
-            const tabs = ['calendar', 'case', 'gantt', 'user-control'];
+            const tabs = ['calendar', 'case', 'gantt', 'user-control', 'template-control'];
             tabs.forEach(t => {
                 const tabEl = document.getElementById(`tab-${t}`);
                 if (tabEl) {
@@ -1366,6 +1713,8 @@
                 renderGantt();
             } else if (viewName === 'user-control') {
                 renderUserControl();
+            } else if (viewName === 'template-control') {
+                renderTemplateControl();
             }
         }
 
@@ -2366,6 +2715,26 @@
             const groupsInput = document.getElementById('new-case-groups');
             if (groupsInput) groupsInput.value = defaultGroupsStr;
 
+            // Load templates select options
+            const templateSelect = document.getElementById('new-case-template');
+            if (templateSelect) {
+                const user = allUsers.find(u => u.id === currentUserId);
+                const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+                const tText = i18n[lang];
+                
+                templateSelect.innerHTML = `<option value="">${tText.noTemplate}</option>`;
+                allTemplates.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.template_name;
+                    templateSelect.appendChild(opt);
+                });
+                templateSelect.value = "";
+            }
+
+            // Hide/Reset reference date and groups visibility
+            handleNewCaseTemplateChange("");
+
             modal.classList.remove('hidden');
         }
 
@@ -2373,10 +2742,43 @@
             document.getElementById('new-case-modal').classList.add('hidden');
         }
 
+        function handleNewCaseTemplateChange(templateId) {
+            const refDateContainer = document.getElementById('new-case-ref-date-container');
+            const groupsContainer = document.getElementById('new-case-groups-container');
+            const groupsInput = document.getElementById('new-case-groups');
+            const refDateInput = document.getElementById('new-case-ref-date');
+
+            if (templateId) {
+                if (refDateContainer) refDateContainer.classList.remove('hidden');
+                if (groupsContainer) groupsContainer.classList.add('hidden'); // Hide groups field, because template determines them
+                if (refDateInput) refDateInput.required = true;
+
+                // Pre-populate groups based on template
+                const t = allTemplates.find(x => x.id === parseInt(templateId));
+                if (t && groupsInput) {
+                    groupsInput.value = t.group_names.join(', ');
+                }
+            } else {
+                if (refDateContainer) refDateContainer.classList.add('hidden');
+                if (groupsContainer) groupsContainer.classList.remove('hidden');
+                if (refDateInput) {
+                    refDateInput.required = false;
+                    refDateInput.value = "";
+                }
+                // Pre-populate with default groups
+                const map = getGroupColorMap();
+                const existingKeys = Object.keys(map);
+                const defaultGroupsStr = existingKeys.length > 0 ? existingKeys.join(', ') : '票務與交通, LOCAL 與 住宿, 名單與證件';
+                if (groupsInput) groupsInput.value = defaultGroupsStr;
+            }
+        }
+
         async function submitNewCase() {
             const titleInput = document.getElementById('new-case-title');
             const descInput = document.getElementById('new-case-desc');
             const groupsInput = document.getElementById('new-case-groups');
+            const templateSelect = document.getElementById('new-case-template');
+            const refDateInput = document.getElementById('new-case-ref-date');
             
             const user = allUsers.find(u => u.id === currentUserId);
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
@@ -2388,19 +2790,30 @@
                 return;
             }
 
+            const templateId = templateSelect ? templateSelect.value : "";
+            const referenceDate = refDateInput ? refDateInput.value : "";
+
+            if (templateId && !referenceDate) {
+                alert(lang === 'vi-VN' ? "Vui lòng chọn ngày xuất phát!" : "請選擇出發日期！");
+                return;
+            }
+
             const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
             const payload = {
                 title: title,
                 description: descInput.value.trim(),
                 owner_id: currentUserId,
-                groups: groups
+                groups: groups,
+                template_id: templateId ? parseInt(templateId) : null,
+                reference_date: referenceDate
             };
 
             const res = await apiRequest('createCase', payload, 'POST');
             if (res) {
                 titleInput.value = '';
                 descInput.value = '';
+                if (refDateInput) refDateInput.value = '';
                 closeNewCaseModal();
                 await reloadAllViews();
             }
@@ -2754,6 +3167,354 @@
                 renderCaseTree();
                 renderGantt();
             }
+        }
+
+        // ==========================================
+        // --- Template Management System Logic ---
+        // ==========================================
+
+        function renderTemplateControl() {
+            const listContainer = document.getElementById('template-list-container');
+            const tbody = document.getElementById('template-task-tbody');
+            const selectedName = document.getElementById('selected-template-name');
+            const selectedDesc = document.getElementById('selected-template-desc');
+            const addTaskBtn = document.getElementById('add-template-task-btn');
+
+            if (!listContainer || !tbody || !selectedName || !selectedDesc) return;
+
+            // 1. Render Templates List
+            listContainer.innerHTML = '';
+            if (allTemplates.length === 0) {
+                listContainer.innerHTML = `<div class="text-xs text-slate-500 italic p-4 text-center">目前無範本，請新增！</div>`;
+            } else {
+                allTemplates.forEach(t => {
+                    const activeClass = (selectedTemplateId === t.id) 
+                        ? 'border-indigo-500 bg-indigo-950/30' 
+                        : 'border-slate-800 hover:border-slate-700 bg-slate-950/40';
+                    
+                    const div = document.createElement('div');
+                    div.className = `p-4 border rounded-xl cursor-pointer transition-all duration-200 ${activeClass}`;
+                    div.onclick = () => selectTemplate(t.id);
+
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-sm text-slate-200 block truncate max-w-[150px]">${t.template_name}</span>
+                            <div class="flex gap-2 text-xs">
+                                <button onclick="event.stopPropagation(); openEditTemplateModal(${t.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold">編輯</button>
+                                <button onclick="event.stopPropagation(); deleteTemplateAction(${t.id})" class="text-rose-500 hover:text-rose-400 font-semibold">刪除</button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 truncate">${t.description || '無描述'}</p>
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            ${t.group_names.map(g => `<span class="px-1.5 py-0.5 rounded text-[9px] bg-slate-800 border border-slate-700 text-slate-300">${g}</span>`).join('')}
+                        </div>
+                    `;
+                    listContainer.appendChild(div);
+                });
+            }
+
+            // 2. Render Template Tasks Table
+            const currentT = allTemplates.find(x => x.id === selectedTemplateId);
+            if (currentT) {
+                selectedName.textContent = currentT.template_name;
+                selectedDesc.textContent = currentT.description || '無描述';
+                if (addTaskBtn) addTaskBtn.classList.remove('hidden');
+
+                tbody.innerHTML = '';
+                if (currentT.tasks.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">尚無預設任務，請點選右上角新增！</td></tr>`;
+                } else {
+                    currentT.tasks.forEach(task => {
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b border-slate-850 hover:bg-slate-900/40 transition-colors text-xs text-slate-300";
+
+                        const groupBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] bg-indigo-950/80 border border-indigo-900/60 text-indigo-300">${task.group_name}</span>`;
+                        const startSign = task.start_day_offset >= 0 ? `+${task.start_day_offset}` : task.start_day_offset;
+                        const dueSign = task.due_day_offset >= 0 ? `+${task.due_day_offset}` : task.due_day_offset;
+
+                        tr.innerHTML = `
+                            <td class="py-3 pr-2">${groupBadge}</td>
+                            <td class="py-3 font-semibold text-slate-200 max-w-[200px] truncate">${task.title}</td>
+                            <td class="py-3 text-indigo-400 font-mono">${startSign} 天</td>
+                            <td class="py-3 text-rose-400 font-mono">${dueSign} 天</td>
+                            <td class="py-3 text-slate-400 max-w-[150px] truncate">${task.notes || '<span class="text-slate-600 italic">無</span>'}</td>
+                            <td class="py-3 text-right">
+                                <button onclick="openEditTemplateTaskModal(${task.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold mr-3">編輯</button>
+                                <button onclick="deleteTemplateTaskAction(${task.id})" class="text-rose-500 hover:text-rose-400 font-semibold">刪除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } else {
+                selectedName.textContent = '請選擇範本';
+                selectedDesc.textContent = '選取左側範本以查看並編輯預設子任務。';
+                if (addTaskBtn) addTaskBtn.classList.add('hidden');
+                tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">選取左側範本以載入任務。</td></tr>`;
+            }
+        }
+
+        function selectTemplate(id) {
+            selectedTemplateId = id;
+            renderTemplateControl();
+        }
+
+        // --- Template Modal ---
+        function openNewTemplateModal() {
+            document.getElementById('template-modal-title').textContent = "🚀 新增範本";
+            document.getElementById('template-modal-id').value = "";
+            document.getElementById('template-modal-name').value = "";
+            document.getElementById('template-modal-desc').value = "";
+            document.getElementById('template-modal-groups').value = "票務與交通, LOCAL 與 住宿, 名單與證件";
+            document.getElementById('template-modal').classList.remove('hidden');
+        }
+
+        function openEditTemplateModal(id) {
+            const t = allTemplates.find(x => x.id === id);
+            if (!t) return;
+            document.getElementById('template-modal-title').textContent = "✏️ 編輯範本";
+            document.getElementById('template-modal-id').value = t.id;
+            document.getElementById('template-modal-name').value = t.template_name;
+            document.getElementById('template-modal-desc').value = t.description || "";
+            document.getElementById('template-modal-groups').value = t.group_names.join(', ');
+            document.getElementById('template-modal').classList.remove('hidden');
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('template-modal').classList.add('hidden');
+        }
+
+        async function submitTemplateForm() {
+            const idVal = document.getElementById('template-modal-id').value;
+            const nameVal = document.getElementById('template-modal-name').value.trim();
+            const descVal = document.getElementById('template-modal-desc').value.trim();
+            const groupsVal = document.getElementById('template-modal-groups').value.trim();
+
+            if (!nameVal) {
+                alert("請輸入範本名稱！");
+                return;
+            }
+
+            const groups = groupsVal.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+
+            const payload = {
+                template_name: nameVal,
+                description: descVal,
+                group_names: groups
+            };
+
+            let res;
+            if (idVal) {
+                // Edit
+                const tId = parseInt(idVal);
+                payload.templateId = tId;
+                
+                // Optimistic UI update
+                const localT = allTemplates.find(x => x.id === tId);
+                if (localT) {
+                    localT.template_name = nameVal;
+                    localT.description = descVal;
+                    localT.group_names = groups;
+                }
+                renderTemplateControl();
+                closeTemplateModal();
+
+                res = await apiRequest('updateTemplate', payload, 'POST', true);
+            } else {
+                // Create
+                // Temporary optimistic UI addition
+                const tempId = Date.now();
+                allTemplates.push({
+                    id: tempId,
+                    template_name: nameVal,
+                    description: descVal,
+                    group_names: groups,
+                    tasks: []
+                });
+                selectTemplate(tempId);
+                closeTemplateModal();
+
+                res = await apiRequest('createTemplate', payload, 'POST', true);
+                if (res && res.templateId) {
+                    // Update temporary ID with actual DB ID
+                    const tempT = allTemplates.find(x => x.id === tempId);
+                    if (tempT) tempT.id = res.templateId;
+                    if (selectedTemplateId === tempId) selectedTemplateId = res.templateId;
+                }
+            }
+
+            await reloadAllViews();
+        }
+
+        async function deleteTemplateAction(id) {
+            const t = allTemplates.find(x => x.id === id);
+            if (!t) return;
+            
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+            
+            const confirmMsg = lang === 'vi-VN'
+                ? `Bạn có chắc muốn xóa mẫu "${t.template_name}"?\nTất cả công việc mặc định liên quan sẽ bị xóa vĩnh viễn!`
+                : `您確定要刪除範本「${t.template_name}」嗎？\n該範本底下的所有預設子任務將被永久刪除！此操作無法復原。`;
+                
+            if (!confirm(confirmMsg)) return;
+
+            // Optimistic UI delete
+            allTemplates = allTemplates.filter(x => x.id !== id);
+            if (selectedTemplateId === id) selectedTemplateId = null;
+            renderTemplateControl();
+
+            const res = await apiRequest('deleteTemplate', { templateId: id }, 'POST', true);
+            await reloadAllViews();
+        }
+
+        // --- Template Task Modal ---
+        function openNewTemplateTaskModal() {
+            const currentT = allTemplates.find(x => x.id === selectedTemplateId);
+            if (!currentT) return;
+
+            document.getElementById('template-task-modal-title').textContent = "➕ 新增預設任務";
+            document.getElementById('template-task-modal-id').value = "";
+            document.getElementById('template-task-modal-title-input').value = "";
+            document.getElementById('template-task-modal-start-offset').value = "0";
+            document.getElementById('template-task-modal-due-offset').value = "0";
+            document.getElementById('template-task-modal-notes').value = "";
+
+            // Populate select list for groups
+            const groupSelect = document.getElementById('template-task-modal-group');
+            if (groupSelect) {
+                groupSelect.innerHTML = '';
+                currentT.group_names.forEach(gn => {
+                    const opt = document.createElement('option');
+                    opt.value = gn;
+                    opt.textContent = gn;
+                    groupSelect.appendChild(opt);
+                });
+            }
+
+            document.getElementById('template-task-modal').classList.remove('hidden');
+        }
+
+        function openEditTemplateTaskModal(id) {
+            const currentT = allTemplates.find(x => x.id === selectedTemplateId);
+            if (!currentT) return;
+            const task = currentT.tasks.find(x => x.id === id);
+            if (!task) return;
+
+            document.getElementById('template-task-modal-title').textContent = "✏️ 編輯預設任務";
+            document.getElementById('template-task-modal-id').value = task.id;
+            document.getElementById('template-task-modal-title-input').value = task.title;
+            document.getElementById('template-task-modal-start-offset').value = task.start_day_offset;
+            document.getElementById('template-task-modal-due-offset').value = task.due_day_offset;
+            document.getElementById('template-task-modal-notes').value = task.notes || "";
+
+            // Populate select list for groups
+            const groupSelect = document.getElementById('template-task-modal-group');
+            if (groupSelect) {
+                groupSelect.innerHTML = '';
+                currentT.group_names.forEach(gn => {
+                    const opt = document.createElement('option');
+                    opt.value = gn;
+                    opt.textContent = gn;
+                    groupSelect.appendChild(opt);
+                });
+                groupSelect.value = task.group_name;
+            }
+
+            document.getElementById('template-task-modal').classList.remove('hidden');
+        }
+
+        function closeTemplateTaskModal() {
+            document.getElementById('template-task-modal').classList.add('hidden');
+        }
+
+        async function submitTemplateTaskForm() {
+            const currentT = allTemplates.find(x => x.id === selectedTemplateId);
+            if (!currentT) return;
+
+            const idVal = document.getElementById('template-task-modal-id').value;
+            const groupVal = document.getElementById('template-task-modal-group').value;
+            const titleVal = document.getElementById('template-task-modal-title-input').value.trim();
+            const startVal = parseInt(document.getElementById('template-task-modal-start-offset').value) || 0;
+            const dueVal = parseInt(document.getElementById('template-task-modal-due-offset').value) || 0;
+            const notesVal = document.getElementById('template-task-modal-notes').value.trim();
+
+            if (!titleVal) {
+                alert("請輸入任務名稱！");
+                return;
+            }
+
+            const payload = {
+                templateId: selectedTemplateId,
+                group_name: groupVal,
+                title: titleVal,
+                start_day_offset: startVal,
+                due_day_offset: dueVal,
+                notes: notesVal
+            };
+
+            let res;
+            if (idVal) {
+                // Edit
+                const taskId = parseInt(idVal);
+                payload.taskId = taskId;
+
+                // Optimistic UI update
+                const localTask = currentT.tasks.find(x => x.id === taskId);
+                if (localTask) {
+                    localTask.group_name = groupVal;
+                    localTask.title = titleVal;
+                    localTask.start_day_offset = startVal;
+                    localTask.due_day_offset = dueVal;
+                    localTask.notes = notesVal;
+                }
+                renderTemplateControl();
+                closeTemplateTaskModal();
+
+                res = await apiRequest('updateTemplateTask', payload, 'POST', true);
+            } else {
+                // Create
+                const tempId = Date.now();
+                currentT.tasks.push({
+                    id: tempId,
+                    template_id: selectedTemplateId,
+                    group_name: groupVal,
+                    title: titleVal,
+                    start_day_offset: startVal,
+                    due_day_offset: dueVal,
+                    notes: notesVal
+                });
+                renderTemplateControl();
+                closeTemplateTaskModal();
+
+                res = await apiRequest('createTemplateTask', payload, 'POST', true);
+                if (res && res.taskId) {
+                    const tempTask = currentT.tasks.find(x => x.id === tempId);
+                    if (tempTask) tempTask.id = res.taskId;
+                }
+            }
+
+            await reloadAllViews();
+        }
+
+        async function deleteTemplateTaskAction(taskId) {
+            const currentT = allTemplates.find(x => x.id === selectedTemplateId);
+            if (!currentT) return;
+            const task = currentT.tasks.find(x => x.id === taskId);
+            if (!task) return;
+
+            const confirmMsg = `您確定要刪除預設任務「${task.title}」嗎？`;
+            if (!confirm(confirmMsg)) return;
+
+            // Optimistic UI delete
+            currentT.tasks = currentT.tasks.filter(x => x.id !== taskId);
+            renderTemplateControl();
+
+            const res = await apiRequest('deleteTemplateTask', { taskId: taskId }, 'POST', true);
+            await reloadAllViews();
         }
     </script>
 </body>

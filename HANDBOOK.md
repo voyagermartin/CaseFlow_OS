@@ -124,6 +124,15 @@
 
 ---
 
+## 🤝 7. AI 開發與測試合作約定 (AI Testing & Development Agreement)
+
+為了優化開發效能並節省算力資源，團隊與 AI 助手（Antigravity）達成以下開發與測試約定：
+
+* **自力測試原則**：AI 助手在完成任何前端或後端功能開發後，**除非遇到難以定位的 bug 需要開啟瀏覽器進行 DEBUG 外**，一律不使用自動化的瀏覽器子代理（Browser Subagent）執行網頁操作測試。
+* **測試指南提供**：AI 助手在每次交付功能時，應在對話與 [walkthrough.md](file:///C:/Users/Martin/.gemini/antigravity-ide/brain/574ddfc5-097f-45fc-8534-e0a8b592703f/walkthrough.md) 中提供詳細的「手動測試步驟指引」（包含測試帳號、觸發流程、預期結果），引導使用者（Martin）自行在開啟的瀏覽器視窗中進行手動測試與驗證。
+
+---
+
 ## 🛠️ 開發日誌 (Development Log)
 
 ### 📅 2026-08-17 - 核心 MVP 基礎建設與三視圖實作
@@ -172,6 +181,10 @@
 - **全域 Loading 指示器 (z-index) 優化**：將原本位於 `main` 容器內的 `#view-loading` 移至 `<body>` 根節點，改為 `fixed` 全螢幕定位並將 `z-index` 提升至 `z-[100]`。徹底解決了點選儲存職位/人員後，Loading 轉圈圈被壓在 `z-50` 的 Modal 彈窗下方造成的視覺延遲與遮擋 Bug。
 - **後端 Roles 試算表防禦性無損初始化**：在 GAS 後端新增 `ensureRolesSheet` 輔助函數，在讀寫角色相關資料時自動偵測 `Roles` 工作表是否存在。若不存在則會自動且無損地補上該工作表並寫入預設角色資料，徹底避免了拋出 `Roles sheet not initialized` 錯誤，同時亦免去了管理員手動執行 `initDatabase()` 重灌資料庫而導致既有案件與任務資料遺失的風險。
 - **雲端部署同步與版本升級**：完成 GAS 程式碼推送（`clasp push`），並將網頁應用程式重新部署更新（`clasp deploy`），使 Web App 正式版本同步升級，確保前後端 API 路由與 UI 完全一致。
+
+### 📅 2026-08-26 - 可編輯案件範本系統與測試協定
+- **可編輯案件範本 (Case Templates)**：實作完成案件範本的完整 CRUD 功能。資料庫新增 `CaseTemplates` 與 `TemplateTasks` 表格；GAS 後端支援依基準日與天數偏移自動批量生成 Task Item；前端新增範本控管頁面與建立案件時的範本套用下拉選單；Mock 引擎亦同步支援。
+- **測試協定確立與 HANDBOOK 寫入**：於本手冊新增第 7 章，確立 AI 助手「功能完成後一律提供手動測試指引，不重複調用瀏覽器代理測試以節省算力」之開發規範。
 
 
 

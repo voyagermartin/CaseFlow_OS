@@ -21,6 +21,20 @@ function ensureRolesSheet(ss) {
   return sheet;
 }
 
+function ensureTemplatesSheets(ss) {
+  let tSheet = ss.getSheetByName("CaseTemplates");
+  if (!tSheet) {
+    tSheet = ss.insertSheet("CaseTemplates");
+    tSheet.appendRow(["id", "template_name", "description", "group_names"]);
+  }
+  let taskSheet = ss.getSheetByName("TemplateTasks");
+  if (!taskSheet) {
+    taskSheet = ss.insertSheet("TemplateTasks");
+    taskSheet.appendRow(["id", "template_id", "group_name", "title", "start_day_offset", "due_day_offset", "notes"]);
+  }
+  return { templatesSheet: tSheet, templateTasksSheet: taskSheet };
+}
+
 /**
  * Initialize Google Sheets database with mock tables and data.
  */
@@ -73,6 +87,25 @@ function initDatabase() {
   const commentSheet = setupSheet("Comments", commentHeaders);
   commentSheet.appendRow([1, 2, 2, "飯店確認信已收到，確認號：#12345", "2026-08-15 14:00:00"]);
   commentSheet.appendRow([2, 2, 4, "Đã xác nhận phòng với khách sạn rồi nhé!", "2026-08-15 15:30:00"]);
+
+  // 6. CaseTemplates Sheet
+  const templateHeaders = ["id", "template_name", "description", "group_names"];
+  const templateSheet = setupSheet("CaseTemplates", templateHeaders);
+  templateSheet.appendRow([1, "馬航怡保 5 天團範本", "馬來西亞怡保 5 天團之標準作業流程模板", "票務與交通, LOCAL 與 住宿, 名單與證件"]);
+  templateSheet.appendRow([2, "日本賞櫻 5 天團範本", "日本賞櫻團之標準作業流程模板", "機票組, 飯店與行程, 簽證與保險"]);
+
+  // 7. TemplateTasks Sheet
+  const templateTaskHeaders = ["id", "template_id", "group_name", "title", "start_day_offset", "due_day_offset", "notes"];
+  const templateTaskSheet = setupSheet("TemplateTasks", templateTaskHeaders);
+  // Malaysia Ipoh template tasks
+  templateTaskSheet.appendRow([1, 1, "票務與交通", "【票務組】收取訂金與開票確認", -45, -30, "記得確認開票代號與退改簽規則"]);
+  templateTaskSheet.appendRow([2, 1, "LOCAL 與 住宿", "【LOCAL組】預定怡保當地飯店", -30, -15, "訂單號收到後請與 Local 再次核對"]);
+  templateTaskSheet.appendRow([3, 1, "LOCAL 與 住宿", "【LOCAL組】確認遊覽車與導遊資訊", -15, -5, "車型要求3年內新車，含司機電話"]);
+  templateTaskSheet.appendRow([4, 1, "名單與證件", "【證件組】收集護照與辦理簽證", -40, -20, "逾期警報！請業務儘速追回護照正本"]);
+  // Japan Cherry Blossom template tasks
+  templateTaskSheet.appendRow([5, 2, "機票組", "機票開立與機位確認", -60, -45, "確認名單拼音與機位"]);
+  templateTaskSheet.appendRow([6, 2, "飯店與行程", "預訂東京/京都飯店", -50, -35, "注意賞櫻季房位緊張"]);
+  templateTaskSheet.appendRow([7, 2, "簽證與保險", "投保旅行平安險", -20, -7, "需有名單身分證號"]);
 }
 
 /**
@@ -93,6 +126,8 @@ function doGet(e) {
         throw new Error("Missing or invalid user_id parameter");
       }
       responseData = getCasesForUser(userId);
+    } else if (action === "getTemplates") {
+      responseData = getTemplates();
     } else {
       responseData = { status: "success", message: "CaseFlow OS GAS API works!" };
     }
@@ -117,7 +152,40 @@ function doPost(e) {
     if (action === "toggleTask") {
       responseData = toggleTask(parseInt(postData.taskId));
     } else if (action === "createCase") {
-      responseData = createCase(postData.title, postData.description, parseInt(postData.owner_id), postData.groups);
+      responseData = createCase(
+        postData.title,
+        postData.description,
+        parseInt(postData.owner_id),
+        postData.groups,
+        postData.template_id ? parseInt(postData.template_id) : null,
+        postData.reference_date
+      );
+    } else if (action === "createTemplate") {
+      responseData = createTemplate(postData.template_name, postData.description, postData.group_names);
+    } else if (action === "updateTemplate") {
+      responseData = updateTemplate(parseInt(postData.templateId), postData.template_name, postData.description, postData.group_names);
+    } else if (action === "deleteTemplate") {
+      responseData = deleteTemplate(parseInt(postData.templateId));
+    } else if (action === "createTemplateTask") {
+      responseData = createTemplateTask(
+        parseInt(postData.templateId),
+        postData.group_name,
+        postData.title,
+        parseInt(postData.start_day_offset),
+        parseInt(postData.due_day_offset),
+        postData.notes
+      );
+    } else if (action === "updateTemplateTask") {
+      responseData = updateTemplateTask(
+        parseInt(postData.taskId),
+        postData.group_name,
+        postData.title,
+        parseInt(postData.start_day_offset),
+        parseInt(postData.due_day_offset),
+        postData.notes
+      );
+    } else if (action === "deleteTemplateTask") {
+      responseData = deleteTemplateTask(parseInt(postData.taskId));
     } else if (action === "createTask") {
       responseData = createTask(
         parseInt(postData.case_id),
@@ -421,7 +489,7 @@ function toggleTask(taskId) {
   throw new Error("Task with ID " + taskId + " not found");
 }
 
-function createCase(title, description, ownerId, groups) {
+function createCase(title, description, ownerId, groups, templateId, referenceDate) {
   const ss = getSpreadsheet();
   
   // Permission check
@@ -443,6 +511,41 @@ function createCase(title, description, ownerId, groups) {
   const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
   sheet.appendRow([nextId, title, description || "", ownerId, driveUrl, groupsStr]);
+
+  // If template is selected and reference date is provided, auto-create tasks
+  if (templateId && referenceDate) {
+    ensureTemplatesSheets(ss);
+    const taskSheet = ss.getSheetByName("TemplateTasks");
+    const taskValues = taskSheet ? taskSheet.getDataRange().getValues() : [];
+    
+    // Parse referenceDate (e.g. "2026-09-15") safely to avoid timezone issue
+    const parts = referenceDate.split("-");
+    const refDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    const allUserIdsStr = users.map(u => u.id).join(",");
+
+    for (let i = 1; i < taskValues.length; i++) {
+      const tempId = parseInt(taskValues[i][1]);
+      if (tempId === templateId) {
+        const groupName = taskValues[i][2];
+        const taskTitle = taskValues[i][3];
+        const startOffset = parseInt(taskValues[i][4]);
+        const dueOffset = parseInt(taskValues[i][5]);
+        const notes = taskValues[i][6];
+
+        const start = new Date(refDate);
+        start.setDate(refDate.getDate() + (isNaN(startOffset) ? 0 : startOffset));
+        const startDateStr = Utilities.formatDate(start, "GMT+8", "yyyy-MM-dd");
+
+        const due = new Date(refDate);
+        due.setDate(refDate.getDate() + (isNaN(dueOffset) ? 0 : dueOffset));
+        const dueDateStr = Utilities.formatDate(due, "GMT+8", "yyyy-MM-dd");
+
+        // Add task using helper function createTask
+        createTask(nextId, groupName, taskTitle, dueDateStr, startDateStr, allUserIdsStr);
+      }
+    }
+  }
+
   return { status: "success", caseId: nextId };
 }
 
@@ -696,4 +799,151 @@ function deleteUser(userId) {
     }
   }
   throw new Error("User with ID " + userId + " not found");
+}
+
+function getTemplates() {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  
+  const tSheet = ss.getSheetByName("CaseTemplates");
+  const taskSheet = ss.getSheetByName("TemplateTasks");
+  
+  const tValues = tSheet.getDataRange().getValues();
+  const taskValues = taskSheet ? taskSheet.getDataRange().getValues() : [];
+  
+  const tasksByTemplateId = {};
+  for (let i = 1; i < taskValues.length; i++) {
+    const taskId = parseInt(taskValues[i][0]);
+    const templateId = parseInt(taskValues[i][1]);
+    const groupName = taskValues[i][2];
+    const title = taskValues[i][3];
+    const startOffset = parseInt(taskValues[i][4]);
+    const dueOffset = parseInt(taskValues[i][5]);
+    const notes = taskValues[i][6];
+    
+    if (!tasksByTemplateId[templateId]) {
+      tasksByTemplateId[templateId] = [];
+    }
+    tasksByTemplateId[templateId].push({
+      id: taskId,
+      template_id: templateId,
+      group_name: groupName,
+      title: title,
+      start_day_offset: isNaN(startOffset) ? 0 : startOffset,
+      due_day_offset: isNaN(dueOffset) ? 0 : dueOffset,
+      notes: notes || ""
+    });
+  }
+  
+  const templates = [];
+  for (let i = 1; i < tValues.length; i++) {
+    const tId = parseInt(tValues[i][0]);
+    const name = tValues[i][1];
+    const desc = tValues[i][2];
+    const groupsStr = tValues[i][3] || "";
+    const groupNames = groupsStr ? groupsStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+    
+    templates.push({
+      id: tId,
+      template_name: name,
+      description: desc || "",
+      group_names: groupNames,
+      tasks: tasksByTemplateId[tId] || []
+    });
+  }
+  return templates;
+}
+
+function createTemplate(name, description, groups) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  const sheet = ss.getSheetByName("CaseTemplates");
+  const nextId = getNextId(sheet);
+  const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+  sheet.appendRow([nextId, name, description || "", groupsStr]);
+  return { status: "success", templateId: nextId };
+}
+
+function updateTemplate(templateId, name, description, groups) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  const sheet = ss.getSheetByName("CaseTemplates");
+  const values = sheet.getDataRange().getValues();
+  const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === templateId) {
+      sheet.getRange(i + 1, 2).setValue(name);
+      sheet.getRange(i + 1, 3).setValue(description || "");
+      sheet.getRange(i + 1, 4).setValue(groupsStr);
+      return { status: "success", templateId: templateId };
+    }
+  }
+  throw new Error("Template with ID " + templateId + " not found");
+}
+
+function deleteTemplate(templateId) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  
+  // Delete template details
+  const sheet = ss.getSheetByName("CaseTemplates");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === templateId) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+  
+  // Cascade delete all tasks associated with this template
+  const taskSheet = ss.getSheetByName("TemplateTasks");
+  let taskValues = taskSheet ? taskSheet.getDataRange().getValues() : [];
+  for (let i = taskValues.length - 1; i >= 1; i--) {
+    if (parseInt(taskValues[i][1]) === templateId) {
+      taskSheet.deleteRow(i + 1);
+    }
+  }
+  
+  return { status: "success", templateId: templateId };
+}
+
+function createTemplateTask(templateId, groupName, title, startDayOffset, dueDayOffset, notes) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  const sheet = ss.getSheetByName("TemplateTasks");
+  const nextId = getNextId(sheet);
+  sheet.appendRow([nextId, templateId, groupName, title, startDayOffset || 0, dueDayOffset || 0, notes || ""]);
+  return { status: "success", taskId: nextId };
+}
+
+function updateTemplateTask(taskId, groupName, title, startDayOffset, dueDayOffset, notes) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  const sheet = ss.getSheetByName("TemplateTasks");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === taskId) {
+      sheet.getRange(i + 1, 3).setValue(groupName);
+      sheet.getRange(i + 1, 4).setValue(title);
+      sheet.getRange(i + 1, 5).setValue(startDayOffset || 0);
+      sheet.getRange(i + 1, 6).setValue(dueDayOffset || 0);
+      sheet.getRange(i + 1, 7).setValue(notes || "");
+      return { status: "success", taskId: taskId };
+    }
+  }
+  throw new Error("Template task with ID " + taskId + " not found");
+}
+
+function deleteTemplateTask(taskId) {
+  const ss = getSpreadsheet();
+  ensureTemplatesSheets(ss);
+  const sheet = ss.getSheetByName("TemplateTasks");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === taskId) {
+      sheet.deleteRow(i + 1);
+      return { status: "success", taskId: taskId };
+    }
+  }
+  throw new Error("Template task with ID " + taskId + " not found");
 }
