@@ -111,8 +111,149 @@ function initDatabase() {
 /**
  * Handle HTTP GET Requests.
  */
+function resolveParams(e) {
+  let params = {};
+  if (e && e.postData && e.postData.contents) {
+    try {
+      params = JSON.parse(e.postData.contents);
+    } catch (err) {
+      // ignore parse error
+    }
+  }
+  if (e && e.parameter) {
+    for (let k in e.parameter) {
+      params[k] = e.parameter[k];
+    }
+  }
+  return params;
+}
+
+function handleRequest(action, params) {
+  function getInt(val) {
+    if (val === undefined || val === null || val === "") return null;
+    const parsed = parseInt(val);
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  if (action === "getUsers") {
+    return getUsers();
+  } else if (action === "getRoles") {
+    return getRoles();
+  } else if (action === "getCases") {
+    const userId = getInt(params.user_id);
+    if (userId === null) {
+      throw new Error("Missing or invalid user_id parameter");
+    }
+    return getCasesForUser(userId);
+  } else if (action === "getTemplates") {
+    return getTemplates();
+  } else if (action === "toggleTask") {
+    return toggleTask(getInt(params.taskId));
+  } else if (action === "createCase") {
+    let groups = params.groups;
+    if (typeof groups === "string") {
+      try {
+        groups = JSON.parse(groups);
+      } catch (err) {
+        groups = groups.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      }
+    }
+    return createCase(
+      params.title,
+      params.description,
+      getInt(params.owner_id),
+      groups,
+      getInt(params.template_id),
+      params.reference_date
+    );
+  } else if (action === "createTemplate") {
+    return createTemplate(params.template_name, params.description, params.group_names);
+  } else if (action === "updateTemplate") {
+    return updateTemplate(getInt(params.templateId), params.template_name, params.description, params.group_names);
+  } else if (action === "deleteTemplate") {
+    return deleteTemplate(getInt(params.templateId));
+  } else if (action === "createTemplateTask") {
+    return createTemplateTask(
+      getInt(params.templateId),
+      params.group_name,
+      params.title,
+      getInt(params.start_day_offset),
+      getInt(params.due_day_offset),
+      params.notes
+    );
+  } else if (action === "updateTemplateTask") {
+    return updateTemplateTask(
+      getInt(params.taskId),
+      params.group_name,
+      params.title,
+      getInt(params.start_day_offset),
+      getInt(params.due_day_offset),
+      params.notes
+    );
+  } else if (action === "deleteTemplateTask") {
+    return deleteTemplateTask(getInt(params.taskId));
+  } else if (action === "createTask") {
+    return createTask(
+      getInt(params.case_id),
+      params.group_name,
+      params.title,
+      params.due_date,
+      params.start_date,
+      params.visible_user_ids
+    );
+  } else if (action === "updateTask") {
+    return updateTask(
+      getInt(params.taskId),
+      params.notes,
+      params.visible_user_ids,
+      params.due_date,
+      params.start_date
+    );
+  } else if (action === "deleteTask") {
+    return deleteTask(getInt(params.taskId));
+  } else if (action === "updateCase") {
+    let groups = params.groups;
+    if (typeof groups === "string") {
+      try {
+        groups = JSON.parse(groups);
+      } catch (err) {
+        groups = groups.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      }
+    }
+    return updateCase(
+      getInt(params.caseId),
+      params.title,
+      params.description,
+      params.driveUrl,
+      groups
+    );
+  } else if (action === "deleteCase") {
+    return deleteCase(getInt(params.caseId));
+  } else if (action === "addComment") {
+    return addComment(
+      getInt(params.taskId),
+      getInt(params.user_id),
+      params.content
+    );
+  } else if (action === "createRole") {
+    return createRole(params.role_name, params.can_create_case);
+  } else if (action === "updateRole") {
+    return updateRole(getInt(params.roleId), params.role_name, params.can_create_case);
+  } else if (action === "deleteRole") {
+    return deleteRole(getInt(params.roleId));
+  } else if (action === "createUser") {
+    return createUser(params.username, getInt(params.roleId), params.avatar_color, params.language, params.google_email);
+  } else if (action === "updateUser") {
+    return updateUser(getInt(params.userId), params.username, params.roleId !== undefined ? getInt(params.roleId) : undefined, params.avatar_color, params.language, params.google_email);
+  } else if (action === "deleteUser") {
+    return deleteUser(getInt(params.userId));
+  } else {
+    throw new Error("Unknown action: " + action);
+  }
+}
+
 function doGet(e) {
-  const action = e.parameter.action;
+  const action = e && e.parameter && e.parameter.action;
   
   // If no action is specified, serve index.html directly as the Web App UI
   if (!action) {
@@ -124,21 +265,8 @@ function doGet(e) {
 
   let responseData;
   try {
-    if (action === "getUsers") {
-      responseData = getUsers();
-    } else if (action === "getRoles") {
-      responseData = getRoles();
-    } else if (action === "getCases") {
-      const userId = parseInt(e.parameter.user_id);
-      if (isNaN(userId)) {
-        throw new Error("Missing or invalid user_id parameter");
-      }
-      responseData = getCasesForUser(userId);
-    } else if (action === "getTemplates") {
-      responseData = getTemplates();
-    } else {
-      responseData = { status: "success", message: "CaseFlow OS GAS API works!" };
-    }
+    const params = resolveParams(e);
+    responseData = handleRequest(action, params);
   } catch (error) {
     responseData = { status: "error", message: error.toString() };
   }
@@ -154,96 +282,12 @@ function doGet(e) {
 function doPost(e) {
   let responseData;
   try {
-    const postData = JSON.parse(e.postData.contents);
-    const action = postData.action;
-    
-    if (action === "toggleTask") {
-      responseData = toggleTask(parseInt(postData.taskId));
-    } else if (action === "createCase") {
-      responseData = createCase(
-        postData.title,
-        postData.description,
-        parseInt(postData.owner_id),
-        postData.groups,
-        postData.template_id ? parseInt(postData.template_id) : null,
-        postData.reference_date
-      );
-    } else if (action === "createTemplate") {
-      responseData = createTemplate(postData.template_name, postData.description, postData.group_names);
-    } else if (action === "updateTemplate") {
-      responseData = updateTemplate(parseInt(postData.templateId), postData.template_name, postData.description, postData.group_names);
-    } else if (action === "deleteTemplate") {
-      responseData = deleteTemplate(parseInt(postData.templateId));
-    } else if (action === "createTemplateTask") {
-      responseData = createTemplateTask(
-        parseInt(postData.templateId),
-        postData.group_name,
-        postData.title,
-        parseInt(postData.start_day_offset),
-        parseInt(postData.due_day_offset),
-        postData.notes
-      );
-    } else if (action === "updateTemplateTask") {
-      responseData = updateTemplateTask(
-        parseInt(postData.taskId),
-        postData.group_name,
-        postData.title,
-        parseInt(postData.start_day_offset),
-        parseInt(postData.due_day_offset),
-        postData.notes
-      );
-    } else if (action === "deleteTemplateTask") {
-      responseData = deleteTemplateTask(parseInt(postData.taskId));
-    } else if (action === "createTask") {
-      responseData = createTask(
-        parseInt(postData.case_id),
-        postData.group_name,
-        postData.title,
-        postData.due_date,
-        postData.start_date,
-        postData.visible_user_ids
-      );
-    } else if (action === "updateTask") {
-      responseData = updateTask(
-        parseInt(postData.taskId),
-        postData.notes,
-        postData.visible_user_ids,
-        postData.due_date,
-        postData.start_date
-      );
-    } else if (action === "deleteTask") {
-      responseData = deleteTask(parseInt(postData.taskId));
-    } else if (action === "updateCase") {
-      responseData = updateCase(
-        parseInt(postData.caseId),
-        postData.title,
-        postData.description,
-        postData.driveUrl,
-        postData.groups
-      );
-    } else if (action === "deleteCase") {
-      responseData = deleteCase(parseInt(postData.caseId));
-    } else if (action === "addComment") {
-      responseData = addComment(
-        parseInt(postData.taskId),
-        parseInt(postData.user_id),
-        postData.content
-      );
-    } else if (action === "createRole") {
-      responseData = createRole(postData.role_name, postData.can_create_case);
-    } else if (action === "updateRole") {
-      responseData = updateRole(parseInt(postData.roleId), postData.role_name, postData.can_create_case);
-    } else if (action === "deleteRole") {
-      responseData = deleteRole(parseInt(postData.roleId));
-    } else if (action === "createUser") {
-      responseData = createUser(postData.username, parseInt(postData.roleId), postData.avatar_color, postData.language, postData.google_email);
-    } else if (action === "updateUser") {
-      responseData = updateUser(parseInt(postData.userId), postData.username, postData.roleId !== undefined ? parseInt(postData.roleId) : undefined, postData.avatar_color, postData.language, postData.google_email);
-    } else if (action === "deleteUser") {
-      responseData = deleteUser(parseInt(postData.userId));
-    } else {
-      throw new Error("Unknown action: " + action);
+    const params = resolveParams(e);
+    const action = params.action;
+    if (!action) {
+      throw new Error("Missing action parameter");
     }
+    responseData = handleRequest(action, params);
   } catch (error) {
     responseData = { status: "error", message: error.toString() };
   }

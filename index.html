@@ -1222,11 +1222,22 @@
                     }
                     
                     // REAL GAS API Connection
-                    if (method === 'GET') {
+                    // Force GET to bypass Google Apps Script CORS redirect block on POST requests when cross-origin
+                    let actualMethod = method;
+                    if (actualMethod === 'POST' && window.location.hostname !== 'script.google.com') {
+                        actualMethod = 'GET';
+                    }
+
+                    if (actualMethod === 'GET') {
                         let url = `${GAS_API_URL}?action=${action}`;
                         if (payload) {
                             Object.keys(payload).forEach(k => {
-                                url += `&${k}=${encodeURIComponent(payload[k])}`;
+                                let val = payload[k];
+                                if (val === undefined) return;
+                                if (val !== null && typeof val === 'object') {
+                                    val = JSON.stringify(val);
+                                }
+                                url += `&${k}=${encodeURIComponent(val)}`;
                             });
                         }
                         const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
