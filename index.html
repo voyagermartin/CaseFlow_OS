@@ -2235,6 +2235,16 @@
         // --- Case Tree View Rendering ---
         function renderCaseTree() {
             const container = document.getElementById('cases-tree-container');
+            
+            // Remember currently expanded case IDs
+            const openCaseIds = new Set();
+            document.querySelectorAll('[id^="case-body-"]').forEach(el => {
+                if (!el.classList.contains('hidden')) {
+                    const id = el.id.replace('case-body-', '');
+                    openCaseIds.add(id);
+                }
+            });
+
             container.innerHTML = '';
             
             const user = allUsers.find(u => u.id === currentUserId);
@@ -2265,6 +2275,10 @@
                     </button>
                 ` : '';
 
+                const isExpanded = openCaseIds.has(c.id.toString());
+                const hiddenClass = isExpanded ? '' : 'hidden';
+                const arrowStyle = isExpanded ? 'style="transform: rotate(0deg)"' : 'style="transform: rotate(-90deg)"';
+
                 // Card title & info
                 caseCard.innerHTML = `
                     <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
@@ -2283,12 +2297,12 @@
                             </a>
                             ${manageButtons}
                             <span>${tText.caseOwner}: ${c.owner.username}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" style="transform: rotate(-90deg)" id="accordion-arrow-${c.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" ${arrowStyle} id="accordion-arrow-${c.id}">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                             </svg>
                         </div>
                     </div>
-                    <div id="case-body-${c.id}" class="p-5 space-y-6 hidden">
+                    <div id="case-body-${c.id}" class="p-5 space-y-6 ${hiddenClass}">
                         <!-- Task groups -->
                     </div>
                 `;
@@ -2823,6 +2837,15 @@
             // Clear inputs and re-render UI immediately
             titleInput.value = '';
             dueInput.value = '';
+
+            // Make sure current case stays expanded
+            const targetBody = document.getElementById(`case-body-${caseId}`);
+            if (targetBody && targetBody.classList.contains('hidden')) {
+                targetBody.classList.remove('hidden');
+                const arrow = document.getElementById(`accordion-arrow-${caseId}`);
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+
             renderCalendar();
             renderCaseTree();
             renderGantt();

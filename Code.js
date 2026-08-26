@@ -62,6 +62,26 @@ function parseGroupNames(input) {
   return cleaned ? [cleaned] : [];
 }
 
+function parseUserIds(input) {
+  if (!input) return "";
+  let val = input;
+  if (typeof val === "string") {
+    val = val.trim();
+    if (val.startsWith("[") && val.endsWith("]")) {
+      try {
+        val = JSON.parse(val);
+      } catch (e) {}
+    }
+  }
+  if (Array.isArray(val)) {
+    return val.map(v => parseInt(v)).filter(n => !isNaN(n)).join(",");
+  }
+  if (typeof val === "string") {
+    return val.split(",").map(v => parseInt(v.trim())).filter(n => !isNaN(n)).join(",");
+  }
+  return String(input);
+}
+
 function fixCorruptedGroupNames() {
   try {
     const ss = getSpreadsheet();
@@ -91,6 +111,13 @@ function fixCorruptedGroupNames() {
           const cleaned = cleanGroupName(raw);
           if (cleaned !== String(raw)) {
             tasksSheet.getRange(i + 1, 3).setValue(cleaned);
+          }
+        }
+        const rawVis = values[i][8];
+        if (rawVis) {
+          const cleanedVis = parseUserIds(rawVis);
+          if (cleanedVis !== String(rawVis)) {
+            tasksSheet.getRange(i + 1, 9).setValue(cleanedVis);
           }
         }
       }
@@ -527,9 +554,8 @@ function getCasesForUser(userId) {
     const startDate = taskValues[i][5];
     const isCompleted = taskValues[i][6] === true || taskValues[i][6] === "TRUE";
     const notes = taskValues[i][7];
-    const visibleUserIdsStr = taskValues[i][8].toString();
-    
-    const visibleUserIds = visibleUserIdsStr ? visibleUserIdsStr.split(",").map(idStr => parseInt(idStr.trim())).filter(id => !isNaN(id)) : [];
+    const visibleUserIdsStr = taskValues[i][8] ? taskValues[i][8].toString() : "";
+    const visibleUserIds = parseUserIds(visibleUserIdsStr).split(",").map(idStr => parseInt(idStr.trim())).filter(id => !isNaN(id));
     
     // Authorization filter: user must be in visible list
     if (!visibleUserIds.includes(userId)) {
@@ -750,7 +776,7 @@ function createTask(caseId, groupName, title, dueDate, startDate, visibleUserIds
   if (!sheet) throw new Error("Tasks sheet not initialized");
   
   const nextId = getNextId(sheet);
-  const visIdsStr = Array.isArray(visibleUserIds) ? visibleUserIds.join(",") : visibleUserIds;
+  const visIdsStr = parseUserIds(visibleUserIds);
   const cleanGn = cleanGroupName(groupName);
   
   sheet.appendRow([nextId, caseId, cleanGn, title, dueDate || "", startDate || "", false, "", visIdsStr]);
@@ -769,7 +795,7 @@ function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
         sheet.getRange(i + 1, 8).setValue(notes);
       }
       if (visibleUserIds !== undefined) {
-        const visIdsStr = Array.isArray(visibleUserIds) ? visibleUserIds.join(",") : visibleUserIds;
+        const visIdsStr = parseUserIds(visibleUserIds);
         sheet.getRange(i + 1, 9).setValue(visIdsStr);
       }
       if (dueDate !== undefined) {

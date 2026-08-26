@@ -282,3 +282,4 @@
 - **案件樹狀卡片預設收合**：【📋 案件模式】下所有案件卡片預設改為收合狀態 (collapsed)，箭頭指右，點擊卡片標頭可展開/收合；從個人待辦儀表板點擊跳轉時會智慧自動展開該案件。
 - **任務組名稱雙重脫逸防禦與試算表資料自動修復**：修復前端 POST/GET API 在處理陣列（如 `["TKT"]`）傳輸時，因 `JSON.stringify` 導致寫入試算表變成 `["[\"TKT\"]"]` 雜訊字串的 Bug。前後端全面導入 `cleanGroupName` 與 `parseGroupNames` 防禦解包，並在 GAS 後端加入 `fixCorruptedGroupNames()` 自動修復現有 Google Sheets 舊資料。
 - **案件名稱與團號視覺層級放大 (Typography Scale Upgrade)**：全面放大所有顯示「案件名稱 / 團號」之字型大小（包含【案件模式】專案標題由 text-base 升級為 text-xl 20px、儀表板案件連結升級為 text-sm font-bold、發起/編輯彈窗輸入框升級為 text-base，以及日曆事件字型放大），大幅提升標題可讀性與視覺層級對比。
+- **快速新增待辦消失修復與案件展開狀態記憶**：修復快速新增任務時 `visible_user_ids` 陣列字串化導致非同步背景同步時任務被權限過濾消失的 Bug。在 GAS 後端加入 `parseUserIds` 解析與試算表自動清洗；同時為 `renderCaseTree()` 導入 `openCaseIds` 折疊狀態記憶機制，確保快速新增待辦時目標案件卡片持續保持展開，不再消失。
