@@ -687,6 +687,7 @@ function toggleTask(taskId) {
       const currentVal = values[i][6] === true || values[i][6] === "TRUE";
       const newVal = !currentVal;
       sheet.getRange(i + 1, 7).setValue(newVal);
+      SpreadsheetApp.flush();
       return { status: "success", taskId: taskId, is_completed: newVal };
     }
   }
@@ -785,6 +786,7 @@ function createTask(caseId, groupName, title, dueDate, startDate, visibleUserIds
   const cleanGn = cleanGroupName(groupName);
   
   sheet.appendRow([nextId, caseId, cleanGn, title, dueDate || "", startDate || "", false, "", visIdsStr]);
+  SpreadsheetApp.flush();
   return { status: "success", taskId: nextId };
 }
 
@@ -809,6 +811,7 @@ function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
       if (startDate !== undefined) {
         sheet.getRange(i + 1, 6).setValue(startDate || "");
       }
+      SpreadsheetApp.flush();
       return { status: "success", taskId: taskId };
     }
   }
@@ -836,6 +839,7 @@ function deleteTask(taskId) {
     if (parseInt(values[i][0]) === taskId) {
       sheet.deleteRow(i + 1);
       deleteTaskComments(taskId);
+      SpreadsheetApp.flush();
       return { status: "success", taskId: taskId };
     }
   }
@@ -967,6 +971,7 @@ function deleteRole(roleId) {
   for (let i = 1; i < values.length; i++) {
     if (parseInt(values[i][0]) === roleId) {
       sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
       return { status: "success", roleId: roleId };
     }
   }
@@ -1024,6 +1029,7 @@ function deleteUser(userId) {
         throw new Error("無法刪除超級管理員 Super Master (Martin)！");
       }
       sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
       return { status: "success", userId: userId };
     }
   }

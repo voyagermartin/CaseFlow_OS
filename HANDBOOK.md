@@ -291,3 +291,4 @@
 - **全站效能與速度極致優化 (Full-Site Speed & Silent Request Optimization)**：
   1. **背景操作全靜音**：將 `quickAddTask`、`toggleTask`、`updateTask`（可見權限與筆記）等背景 API 設定為 `silent = true`，徹底消除點擊或快速新增時跳出全螢幕遮罩與轉圈圈動畫的停頓感。
   2. **首頁初始化全並行化**：將首頁載入原本分開發送的 `getUsers` 與 `reloadAllViews` 4 個 GET API 合併為單一 `Promise.all` 併行發送，將網頁首頁初始化載入時間縮短至原本的 1/4。
+- **GAS 強制即時落盤與快取防護 (Explicit SpreadsheetApp.flush Commit)**：在 Apps Script 所有資料寫入與刪除 API (`createTask`, `updateTask`, `deleteTask`, `toggleTask`, `deleteUser`, `deleteRole`) 回傳前端回應前加入 `SpreadsheetApp.flush()`，強制將記憶體開銷與新增資料即時寫入 Google Sheets 實體檔案，徹底避免因非同步延遲落盤導致重新整理 (F5) 時任務消失的問題。
