@@ -558,11 +558,29 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
 
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
-  
+
+  let finalTitle = (title || "").trim();
+  if (templateId) {
+    ensureTemplatesSheets(ss);
+    const tempSheet = ss.getSheetByName("CaseTemplates");
+    if (tempSheet) {
+      const tempValues = tempSheet.getDataRange().getValues();
+      for (let i = 1; i < tempValues.length; i++) {
+        if (parseInt(tempValues[i][0]) === parseInt(templateId)) {
+          const tName = (tempValues[i][1] || "").toString().trim();
+          if (tName && !finalTitle.endsWith("-" + tName)) {
+            finalTitle = finalTitle + "-" + tName;
+          }
+          break;
+        }
+      }
+    }
+  }
+
   const nextId = getNextId(sheet);
   const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
-  sheet.appendRow([nextId, title, description || "", ownerId, driveUrl, groupsStr]);
+  sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr]);
 
   // If template is selected and reference date is provided, auto-create tasks
   if (templateId && referenceDate) {

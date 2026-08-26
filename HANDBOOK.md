@@ -278,3 +278,4 @@
 - **GET 請求 Null 參數處理**：修復在跨來源 GET 請求中將 `null` 值錯誤序列化為 `"null"` 字串寫入試算表的隱藏 Bug，將其轉換為空字串 `""` 傳輸。
 - **網頁載入 Promise.all 並行優化**：移除重複的 `getUsers` API 請求，並將 `getRoles`、`getCases`、`getTemplates` 改為 `Promise.all` 併行發送，使載入時間縮短一半以上。
 - **API Response 診斷機制**：優化 `apiRequest` 解析異常的錯誤攔截，遇到非 JSON 回傳（如 Google 錯誤頁）時，在 Alert 中擷取輸出其前 200 個字元以利 Debug。
+- **套用範本案件名稱自動後綴**：在後端 `Code.js` 與前端 Mock 引擎的 `createCase` 邏輯中，若發起案件時選取了案件範本，系統會自動在案件標題後方加上 `-模版名`（例如：`2026 馬航怡保團-馬航怡保 5 天團範本`），提升專案範本標示之直覺度。

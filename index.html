@@ -1328,9 +1328,21 @@
                         } else if (action === 'createCase') {
                             const nextId = mockCases.length > 0 ? Math.max(...mockCases.map(x => x.id)) + 1 : 1;
                             const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                            
+                            let finalTitle = (payload.title || '').trim();
+                            if (payload.template_id) {
+                                const tmpl = mockTemplates.find(x => x.id === parseInt(payload.template_id));
+                                if (tmpl && tmpl.template_name) {
+                                    const tName = tmpl.template_name.trim();
+                                    if (tName && !finalTitle.endsWith('-' + tName)) {
+                                        finalTitle = finalTitle + '-' + tName;
+                                    }
+                                }
+                            }
+
                             mockCases.push({
                                 id: nextId,
-                                title: payload.title,
+                                title: finalTitle,
                                 description: payload.description,
                                 owner_id: payload.owner_id,
                                 drive_url: "https://drive.google.com/drive/folders/mock-id",
