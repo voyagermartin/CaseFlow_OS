@@ -1199,29 +1199,17 @@
                     allTemplates = initialRes.templates || [];
                 }
 
-                // Populate switcher options
-                const switcher = document.getElementById('user-switcher');
-                switcher.innerHTML = '';
-                allUsers.forEach(u => {
-                    const opt = document.createElement('option');
-                    opt.value = u.id;
-                    opt.textContent = `${u.username} [${u.role_name}]`;
-                    switcher.appendChild(opt);
-                });
-
-                if (allUsers.some(u => u.id === targetUserId)) {
+                // Determine active user ID safely
+                if (allUsers.some(u => u.id == targetUserId)) {
                     currentUserId = targetUserId;
                 } else if (allUsers.length > 0) {
                     currentUserId = allUsers[0].id;
                     localStorage.setItem('activeUserId', currentUserId);
-                    // If targetUserId was invalid or deleted, refetch cases for the fallback user
+                    // If targetUserId was invalid or deleted, refetch cases for fallback user
                     allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
                 }
 
-                if (currentUserId) {
-                    switcher.value = currentUserId;
-                    updateUserIndicatorAndLanguage();
-                }
+                updateUserIndicatorAndLanguage();
 
                 renderCalendar();
                 renderCaseTree();
@@ -1855,18 +1843,28 @@
             else el.classList.add('hidden');
         }
 
-        // Fetch Users
-        async function loadUsers() {
-            allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
-            
+        function renderUserSwitcher() {
             const switcher = document.getElementById('user-switcher');
+            if (!switcher) return;
             switcher.innerHTML = '';
             allUsers.forEach(u => {
                 const opt = document.createElement('option');
-                opt.value = u.id;
+                opt.value = String(u.id);
                 opt.textContent = `${u.username} [${u.role_name}]`;
+                if (u.id == currentUserId) {
+                    opt.selected = true;
+                }
                 switcher.appendChild(opt);
             });
+            if (currentUserId) {
+                switcher.value = String(currentUserId);
+            }
+        }
+
+        // Fetch Users
+        async function loadUsers() {
+            allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
+            renderUserSwitcher();
         }
 
         // Switch active user & update i18n
@@ -1878,7 +1876,8 @@
         }
 
         function updateUserIndicatorAndLanguage() {
-            const user = allUsers.find(u => u.id === currentUserId);
+            renderUserSwitcher();
+            const user = allUsers.find(u => u.id == currentUserId);
             const indicator = document.getElementById('user-avatar-indicator');
             if (user) {
                 indicator.textContent = user.username.charAt(0);
