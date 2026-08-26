@@ -271,3 +271,4 @@
 - **可編輯案件範本 (Case Templates)**：實作完成案件範本與範本任務的完整 CRUD 功能。試算表資料庫新增 `CaseTemplates` 與 `TemplateTasks` 表格；GAS 後端支援依出發基準日與天數偏移量自動批量生成 Task Item；前端新增範本控管頁面與建立案件時的範本套用下拉選單；Mock 引擎亦同步支援。
 - **個人待辦儀表板 (Personal Dashboard)**：實作個人待辦儀表板並設為系統預設首頁，集中展示指派給當前人員的未完成事項，並按「🔴 過期 ➡️ 🟡 48H內到期 ➡️ 🔵 進行中」優先權精準排序，支援直接快速核取完成與雙向跳轉至案件/留言抽屜。
 - **GAS 網頁應用程式直服介面 (GAS Web App Direct HTML serving)**：修改 `Code.js` 的 `doGet(e)` 進入點，當無 `action` 參數時自動以 `HtmlService` 讀取並渲染 `index.html` 網頁。使得整套系統能完全無伺服器託管於 Google 雲端運行，徹底解決了跨網域連線阻擋問題。
+- **跨網域 (CORS) 下的 POST 連線修復**：針對瀏覽器限制 Google Apps Script Web App 對 `POST` 請求重定向產生的 CORS 阻擋問題，重構 GAS 後端路由為統一參數解析器，支援 `GET` 與 `POST` 雙軌接收。前端在非 `script.google.com` 網域下發起請求時，會自動將 `POST` 請求轉換並打包為 `GET` 送出，實現了 100% 穩定之非相同來源（如本地 `file://` 或 GitHub Pages）API 連線。
