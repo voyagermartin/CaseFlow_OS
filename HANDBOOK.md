@@ -284,3 +284,4 @@
 - **案件名稱與團號視覺層級放大 (Typography Scale Upgrade)**：全面放大所有顯示「案件名稱 / 團號」之字型大小（包含【案件模式】專案標題由 text-base 升級為 text-xl 20px、儀表板案件連結升級為 text-sm font-bold、發起/編輯彈窗輸入框升級為 text-base，以及日曆事件字型放大），大幅提升標題可讀性與視覺層級對比。
 - **快速新增待辦消失修復與案件展開狀態記憶**：修復快速新增任務時 `visible_user_ids` 陣列字串化導致非同步背景同步時任務被權限過濾消失的 Bug。在 GAS 後端加入 `parseUserIds` 解析與試算表自動清洗；同時為 `renderCaseTree()` 導入 `openCaseIds` 折疊狀態記憶機制，確保快速新增待辦時目標案件卡片持續保持展開，不再消失。
 - **網頁載入與 API 讀取效能飆升 (Removing Blocking Write Loops on Read API)**：完全移除 `getCasesForUser` 讀取 API 中阻塞式的試算表 `setValue` 重寫迴圈。將資料淨化與權限解包改為記憶體即時運算（on-the-fly in-memory processing），將網頁載入與 API 回傳時間由原本的 60 秒以上大幅縮短至 1 秒內！
+- **快速新增待辦事項選擇器崩潰與特殊字元脫逸修復 (Safe Element ID & Attribute-Based Quick Add)**：修復快速新增待辦時當任務組名稱包含雙引號、中括號 `["TKT"]` 或空格時，CSS Selector 拋出 DOMException 及 JavaScript 行內語法錯誤導致新增失敗的 Bug。引進 `getSanitizedKey` 生成安全元素 Key，改以 `data-group-name` HTML 屬性傳遞組名，確保特殊字元組名 100% 穩定新增待辦事項。

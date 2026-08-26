@@ -1359,6 +1359,27 @@
             return cleaned ? [cleaned] : [];
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getSanitizedKey(caseId, groupName) {
+            const safeGroup = String(groupName || '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+            return `${caseId}-${safeGroup}`;
+        }
+
+        function handleQuickAddSubmit(btn) {
+            const caseId = parseInt(btn.getAttribute('data-case-id'));
+            const groupName = btn.getAttribute('data-group-name');
+            quickAddTask(caseId, groupName);
+        }
+
         // Mock Database Processing Engine
         function runMockApi(action, payload, method) {
             return new Promise((resolve) => {
@@ -2311,25 +2332,26 @@
                 
                 c.groups.forEach(g => {
                     const groupColor = getGroupColor(g.name);
+                    const safeKey = getSanitizedKey(c.id, g.name);
                     const groupDiv = document.createElement('div');
                     groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-4 space-y-4";
                     groupDiv.innerHTML = `
                         <div class="flex items-center justify-between border-b border-slate-850 pb-2">
                             <h4 class="font-bold text-slate-200 text-sm flex items-center gap-2">
                                 <span class="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${groupColor}"></span>
-                                ${g.name}
+                                ${escapeHtml(g.name)}
                             </h4>
                             <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-semibold border border-slate-700/60" style="border-left: 3px solid ${groupColor}">${tText.taskGroup}</span>
                         </div>
-                        <div class="space-y-2" id="group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}">
+                        <div class="space-y-2" id="group-tasks-${safeKey}">
                             <!-- Tasks list -->
                         </div>
                         <!-- Quick Add Task -->
                         <div class="pt-2 border-t border-slate-800/40 space-y-2">
                             <div class="flex gap-2">
-                                <input type="text" id="quick-task-title-${c.id}-${g.name.replace(/\s+/g, '')}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
-                                <input type="date" id="quick-task-due-${c.id}-${g.name.replace(/\s+/g, '')}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
-                                <button onclick="quickAddTask(${c.id}, '${g.name}')" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                                <input type="text" id="quick-task-title-${safeKey}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
+                                <input type="date" id="quick-task-due-${safeKey}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
+                                <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
                                     ${tText.addBtn}
                                 </button>
                             </div>
@@ -2342,7 +2364,7 @@
                                     const disabledAttr = hasPerm ? '' : 'disabled';
                                     return `
                                         <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
-                                            <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${c.id}-${g.name.replace(/\s+/g, '')} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
+                                            <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${safeKey} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
                                             <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
                                             <span class="text-slate-300">${u.username}</span>
                                         </label>
@@ -2352,7 +2374,7 @@
                         </div>
                     `;
                     
-                    const taskList = groupDiv.querySelector(`#group-tasks-${c.id}-${g.name.replace(/\s+/g, '')}`);
+                    const taskList = groupDiv.querySelector(`#group-tasks-${safeKey}`);
                     
                     if (g.tasks.length === 0) {
                         taskList.innerHTML = `<p class="text-xs text-slate-600 italic">No tasks</p>`;
@@ -2788,19 +2810,24 @@
         }
 
         async function quickAddTask(caseId, groupName) {
-            const key = `${caseId}-${groupName.replace(/\s+/g, '')}`;
-            const titleInput = document.getElementById(`quick-task-title-${key}`);
-            const dueInput = document.getElementById(`quick-task-due-${key}`);
+            const safeKey = getSanitizedKey(caseId, groupName);
+            const titleInput = document.getElementById(`quick-task-title-${safeKey}`);
+            const dueInput = document.getElementById(`quick-task-due-${safeKey}`);
             
+            if (!titleInput) {
+                console.error("quickAddTask titleInput not found for safeKey:", safeKey);
+                return;
+            }
+
             const title = titleInput.value.trim();
             if (!title) return;
 
-            const dueDate = dueInput.value || null;
+            const dueDate = dueInput ? dueInput.value || null : null;
             const startDate = dueDate ? new Date(new Date(dueDate).getTime() - 86400000 * 10).toISOString().split('T')[0] : null;
 
             // Get selected user IDs for visibility
-            const checkedBoxes = document.querySelectorAll(`.quick-task-vis-${key}:checked`);
-            let visible_user_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+            const checkedBoxes = document.querySelectorAll(`.quick-task-vis-${safeKey}:checked`);
+            let visible_user_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(n => !isNaN(n));
             if (visible_user_ids.length === 0) {
                 // Default to at least the current user if none selected to prevent orphaned tasks
                 visible_user_ids.push(currentUserId);
@@ -2810,7 +2837,7 @@
             const newTask = {
                 id: tempId,
                 case_id: caseId,
-                group_name: groupName,
+                group_name: cleanGroupName(groupName),
                 title: title,
                 due_date: dueDate,
                 start_date: startDate,
@@ -2825,7 +2852,7 @@
             let targetGroup = null;
             allCases.forEach(c => {
                 if (c.id === caseId) {
-                    const group = c.groups.find(g => g.name === groupName);
+                    const group = c.groups.find(g => cleanGroupName(g.name) === cleanGroupName(groupName));
                     if (group) targetGroup = group;
                 }
             });
@@ -2836,7 +2863,7 @@
 
             // Clear inputs and re-render UI immediately
             titleInput.value = '';
-            dueInput.value = '';
+            if (dueInput) dueInput.value = '';
 
             // Make sure current case stays expanded
             const targetBody = document.getElementById(`case-body-${caseId}`);
@@ -2853,14 +2880,14 @@
             // Background API call
             const payload = {
                 case_id: caseId,
-                group_name: groupName,
+                group_name: cleanGroupName(groupName),
                 title: title,
                 due_date: dueDate,
                 start_date: startDate,
                 visible_user_ids: visible_user_ids
             };
 
-            const res = await apiRequest('createTask', payload, 'POST', true);
+            const res = await apiRequest('createTask', payload, 'POST', false);
             if (res && res.status === 'success') {
                 // Update tempId to real ID returned by server
                 newTask.id = res.taskId;
@@ -2880,7 +2907,6 @@
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
-                alert("新增待辦事項失敗，已恢復原狀態。");
             }
         }
 
