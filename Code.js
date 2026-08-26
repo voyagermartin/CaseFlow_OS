@@ -479,6 +479,7 @@ function getUsers(ss) {
   const users = [];
   for (let i = 1; i < values.length; i++) {
     const uId = parseInt(values[i][0]);
+    if (isNaN(uId)) continue;
     const uName = values[i][1];
     const roleVal = values[i][2];
     let roleId = parseInt(roleVal);

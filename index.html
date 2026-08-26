@@ -1213,6 +1213,9 @@
                     currentUserId = targetUserId;
                 } else if (allUsers.length > 0) {
                     currentUserId = allUsers[0].id;
+                    localStorage.setItem('activeUserId', currentUserId);
+                    // If targetUserId was invalid or deleted, refetch cases for the fallback user
+                    allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
                 }
 
                 if (currentUserId) {

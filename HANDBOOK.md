@@ -293,3 +293,4 @@
   2. **首頁初始化全並行化**：將首頁載入原本分開發送的 `getUsers` 與 `reloadAllViews` 4 個 GET API 合併為單一 `Promise.all` 併行發送，將網頁首頁初始化載入時間縮短至原本的 1/4。
 - **GAS 強制即時落盤與快取防護 (Explicit SpreadsheetApp.flush Commit)**：在 Apps Script 所有資料寫入與刪除 API (`createTask`, `updateTask`, `deleteTask`, `toggleTask`, `deleteUser`, `deleteRole`) 回傳前端回應前加入 `SpreadsheetApp.flush()`，強制將記憶體開銷與新增資料即時寫入 Google Sheets 實體檔案，徹底避免因非同步延遲落盤導致重新整理 (F5) 時任務消失的問題。
 - **GAS 單一通道首頁載入引擎 (Unified Single-Pass Initial Data Endpoint `getInitialData`)**：將原本網頁啟動時需發起的 4 次獨立 HTTP 請求 (`getUsers`, `getRoles`, `getCases`, `getTemplates`)，在 GAS 後端合併為單一 `getInitialData` API。Apps Script 後端重用同一 `SpreadsheetApp` 實例進行單次全讀取，徹底消除了多重 cold-start 冷啟動與連線排隊。進站首頁載入速度達到 0.3 秒內的終極極速體驗。
+- **刪除人員/無效 ID 進站重置與選單自動同步防護 (User Switcher Fallback Sync)**：修復當 `localStorage` 記錄的當前使用者 ID 已被刪除或無效時，進站重新整理 `getInitialData` 回傳成員清單未包含該 ID，導致頂端人員切換選單與當前權限狀態脫鉤消失的 Bug。自動備援將當前使用者指派為第一位可用成員並同動同步選單與案件樹。
