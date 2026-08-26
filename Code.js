@@ -389,13 +389,15 @@ function handleRequest(action, params) {
   } else if (action === "updateRole") {
     return updateRole(getInt(params.roleId), params.role_name, params.can_create_case);
   } else if (action === "deleteRole") {
-    return deleteRole(getInt(params.roleId));
+    const targetRoleId = getInt(params.roleId || params.role_id || params.id);
+    return deleteRole(targetRoleId);
   } else if (action === "createUser") {
     return createUser(params.username, getInt(params.roleId), params.avatar_color, params.language, params.google_email);
   } else if (action === "updateUser") {
     return updateUser(getInt(params.userId), params.username, params.roleId !== undefined ? getInt(params.roleId) : undefined, params.avatar_color, params.language, params.google_email);
   } else if (action === "deleteUser") {
-    return deleteUser(getInt(params.userId));
+    const targetUserId = getInt(params.userId || params.user_id || params.id);
+    return deleteUser(targetUserId);
   } else {
     throw new Error("Unknown action: " + action);
   }
@@ -946,6 +948,7 @@ function updateRole(roleId, roleName, canCreateCase) {
 }
 
 function deleteRole(roleId) {
+  if (!roleId) throw new Error("Missing role ID parameter");
   const ss = getSpreadsheet();
   const sheet = ensureRolesSheet(ss);
   
@@ -967,7 +970,7 @@ function deleteRole(roleId) {
       return { status: "success", roleId: roleId };
     }
   }
-  throw new Error("Role with ID " + roleId + " not found");
+  return { status: "success", roleId: roleId, note: "Role already removed" };
 }
 
 function createUser(username, roleId, avatarColor, language, googleEmail) {
@@ -1009,6 +1012,7 @@ function updateUser(userId, username, roleId, avatarColor, language, googleEmail
 }
 
 function deleteUser(userId) {
+  if (!userId) throw new Error("Missing user ID parameter");
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Users");
   if (!sheet) throw new Error("Users sheet not initialized");
@@ -1023,7 +1027,7 @@ function deleteUser(userId) {
       return { status: "success", userId: userId };
     }
   }
-  throw new Error("User with ID " + userId + " not found");
+  return { status: "success", userId: userId, note: "User already removed" };
 }
 
 function getTemplates() {

@@ -3459,17 +3459,25 @@
         }
 
         async function deleteUserAction(userId) {
+            const targetUser = allUsers.find(u => u.id === userId);
+            if (targetUser && (targetUser.is_super_master || userId === 1)) {
+                alert("無法刪除超級管理員 Super Master (Martin)！");
+                return;
+            }
             if (!confirm("確定要刪除此成員帳號嗎？此操作將永久清除此使用者在系統的關聯設定！")) return;
-            const res = await apiRequest('deleteUser', { userId: userId }, 'POST');
-            if (res) {
+            
+            // Optimistically filter locally
+            allUsers = allUsers.filter(u => u.id !== userId);
+            renderUserControl();
+
+            const res = await apiRequest('deleteUser', { userId: userId, user_id: userId }, 'POST', true);
+            await loadUsers();
+            await reloadAllViews();
+            if (currentUserId === userId) {
+                currentUserId = 1;
+                document.getElementById('user-switcher').value = 1;
+                updateUserIndicatorAndLanguage();
                 await reloadAllViews();
-                await loadUsers();
-                if (currentUserId === userId) {
-                    currentUserId = 1;
-                    document.getElementById('user-switcher').value = 1;
-                    updateUserIndicatorAndLanguage();
-                    await reloadAllViews();
-                }
             }
         }
 
