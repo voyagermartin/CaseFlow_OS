@@ -2888,14 +2888,12 @@
             };
 
             const res = await apiRequest('createTask', payload, 'POST', false);
-            if (res && res.status === 'success') {
+            if (res && res.status === 'success' && res.taskId) {
                 // Update tempId to real ID returned by server
                 newTask.id = res.taskId;
                 if (selectedTaskId === tempId) {
                     selectedTaskId = res.taskId;
                 }
-                // Silent full reload in background to make sure everything is in sync
-                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
@@ -2907,6 +2905,7 @@
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+                alert("新增待辦事項失敗，請再試一次。");
             }
         }
 
