@@ -113,8 +113,16 @@ function initDatabase() {
  */
 function doGet(e) {
   const action = e.parameter.action;
-  let responseData;
+  
+  // If no action is specified, serve index.html directly as the Web App UI
+  if (!action) {
+    return HtmlService.createHtmlOutputFromFile("index")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1")
+      .setTitle("CaseFlow OS - 案件協同與權限管家")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
 
+  let responseData;
   try {
     if (action === "getUsers") {
       responseData = getUsers();
