@@ -556,8 +556,8 @@ function getCasesForUser(userId) {
     const visibleUserIdsStr = taskValues[i][8] ? taskValues[i][8].toString() : "";
     const visibleUserIds = parseUserIds(visibleUserIdsStr).split(",").map(idStr => parseInt(idStr.trim())).filter(id => !isNaN(id));
     
-    // Authorization filter: user must be in visible list
-    if (!visibleUserIds.includes(userId)) {
+    // Authorization filter: if visibleUserIds list is non-empty, user must be in the list
+    if (visibleUserIds.length > 0 && !visibleUserIds.includes(userId)) {
       continue;
     }
 
@@ -775,7 +775,11 @@ function createTask(caseId, groupName, title, dueDate, startDate, visibleUserIds
   if (!sheet) throw new Error("Tasks sheet not initialized");
   
   const nextId = getNextId(sheet);
-  const visIdsStr = parseUserIds(visibleUserIds);
+  let visIdsStr = parseUserIds(visibleUserIds);
+  if (!visIdsStr) {
+    const users = getUsers();
+    visIdsStr = users.map(u => u.id).join(",");
+  }
   const cleanGn = cleanGroupName(groupName);
   
   sheet.appendRow([nextId, caseId, cleanGn, title, dueDate || "", startDate || "", false, "", visIdsStr]);

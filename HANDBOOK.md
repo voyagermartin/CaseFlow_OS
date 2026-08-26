@@ -285,3 +285,4 @@
 - **快速新增待辦消失修復與案件展開狀態記憶**：修復快速新增任務時 `visible_user_ids` 陣列字串化導致非同步背景同步時任務被權限過濾消失的 Bug。在 GAS 後端加入 `parseUserIds` 解析與試算表自動清洗；同時為 `renderCaseTree()` 導入 `openCaseIds` 折疊狀態記憶機制，確保快速新增待辦時目標案件卡片持續保持展開，不再消失。
 - **網頁載入與 API 讀取效能飆升 (Removing Blocking Write Loops on Read API)**：完全移除 `getCasesForUser` 讀取 API 中阻塞式的試算表 `setValue` 重寫迴圈。將資料淨化與權限解包改為記憶體即時運算（on-the-fly in-memory processing），將網頁載入與 API 回傳時間由原本的 60 秒以上大幅縮短至 1 秒內！
 - **快速新增待辦事項選擇器崩潰與特殊字元脫逸修復 (Safe Element ID & Attribute-Based Quick Add)**：修復快速新增待辦時當任務組名稱包含雙引號、中括號 `["TKT"]` 或空格時，CSS Selector 拋出 DOMException 及 JavaScript 行內語法錯誤導致新增失敗的 Bug。引進 `getSanitizedKey` 生成安全元素 Key，改以 `data-group-name` HTML 屬性傳遞組名，確保特殊字元組名 100% 穩定新增待辦事項。
+- **空權限名單任務過濾 Bug 終極修復 (Empty Visibility Fallback & Non-Orphan Protection)**：修復 `getCasesForUser` 與 `getMockCasesForUser` 中當 `visible_user_ids` 為空（如試算表新增列或無限制任務）時，`if (!visibleUserIds.includes(userId))` 誤將無限制任務判斷為「全員無權限」並在背景同步時過濾剔除的根本 Bug。補強預設為全員可見並強化 `createTask` 預設權限賦予，確保快速新增待辦 100% 永久保留不消失。

@@ -1668,7 +1668,7 @@
 
             const tasksByCaseId = {};
             mockTasks.forEach(t => {
-                if (!t.visible_user_ids.includes(userId)) return;
+                if (t.visible_user_ids && t.visible_user_ids.length > 0 && !t.visible_user_ids.includes(userId)) return;
                 
                 const taskObj = {
                     ...t,
