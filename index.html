@@ -1301,6 +1301,60 @@
             }
         }
 
+        function cleanGroupName(str) {
+            if (!str) return "";
+            let s = String(str).trim();
+            while ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+                try {
+                    let parsed = JSON.parse(s);
+                    if (Array.isArray(parsed)) {
+                        s = parsed.map(item => cleanGroupName(item)).filter(Boolean).join(", ");
+                    } else if (typeof parsed === "string") {
+                        s = parsed;
+                    } else {
+                        break;
+                    }
+                } catch (e) {
+                    s = s.replace(/^["'\[\]\s]+|["'\[\]\s]+$/g, "").trim();
+                    break;
+                }
+            }
+            return s.trim().replace(/^["'\[\]\s]+|["'\[\]\s]+$/g, "");
+        }
+
+        function parseGroupNames(input) {
+            if (!input) return [];
+            let val = input;
+            while (typeof val === "string") {
+                const trimmed = val.trim();
+                if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+                    try {
+                        val = JSON.parse(trimmed);
+                    } catch (e) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if (Array.isArray(val)) {
+                const result = [];
+                val.forEach(item => {
+                    const sub = parseGroupNames(item);
+                    sub.forEach(s => { if (s && !result.includes(s)) result.push(s); });
+                });
+                return result;
+            }
+
+            if (typeof val === "string") {
+                return val.split(",").map(s => cleanGroupName(s)).filter(s => s.length > 0);
+            }
+
+            const cleaned = cleanGroupName(String(val));
+            return cleaned ? [cleaned] : [];
+        }
+
         // Mock Database Processing Engine
         function runMockApi(action, payload, method) {
             return new Promise((resolve) => {
@@ -1327,7 +1381,7 @@
                             }
                         } else if (action === 'createCase') {
                             const nextId = mockCases.length > 0 ? Math.max(...mockCases.map(x => x.id)) + 1 : 1;
-                            const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                            const groupsStr = parseGroupNames(payload.groups).join(', ');
                             
                             let finalTitle = (payload.title || '').trim();
                             if (payload.template_id) {
@@ -1369,7 +1423,7 @@
                                         mockTasks.push({
                                             id: nextTaskId,
                                             case_id: nextId,
-                                            group_name: tt.group_name,
+                                            group_name: cleanGroupName(tt.group_name),
                                             title: tt.title,
                                             due_date: dueStr,
                                             start_date: startStr,
@@ -1383,7 +1437,7 @@
                             resolve({ status: 'success', caseId: nextId });
                         } else if (action === 'createTemplate') {
                             const nextId = mockTemplates.length > 0 ? Math.max(...mockTemplates.map(x => x.id)) + 1 : 1;
-                            const groupsStr = Array.isArray(payload.group_names) ? payload.group_names.join(', ') : payload.group_names;
+                            const groupsStr = parseGroupNames(payload.group_names).join(', ');
                             mockTemplates.push({
                                 id: nextId,
                                 template_name: payload.template_name,
@@ -1396,7 +1450,7 @@
                             if (t) {
                                 t.template_name = payload.template_name;
                                 t.description = payload.description;
-                                t.group_names = Array.isArray(payload.group_names) ? payload.group_names.join(', ') : payload.group_names;
+                                t.group_names = parseGroupNames(payload.group_names).join(', ');
                                 resolve({ status: 'success', templateId: t.id });
                             } else {
                                 resolve({ status: 'error', message: 'Template not found' });
@@ -1410,7 +1464,7 @@
                             mockTemplateTasks.push({
                                 id: nextId,
                                 template_id: payload.templateId,
-                                group_name: payload.group_name,
+                                group_name: cleanGroupName(payload.group_name),
                                 title: payload.title,
                                 start_day_offset: parseInt(payload.start_day_offset) || 0,
                                 due_day_offset: parseInt(payload.due_day_offset) || 0,
@@ -1420,7 +1474,7 @@
                         } else if (action === 'updateTemplateTask') {
                             const t = mockTemplateTasks.find(x => x.id === payload.taskId);
                             if (t) {
-                                t.group_name = payload.group_name;
+                                t.group_name = cleanGroupName(payload.group_name);
                                 t.title = payload.title;
                                 t.start_day_offset = parseInt(payload.start_day_offset) || 0;
                                 t.due_day_offset = parseInt(payload.due_day_offset) || 0;
@@ -1437,7 +1491,7 @@
                             mockTasks.push({
                                 id: nextId,
                                 case_id: payload.case_id,
-                                group_name: payload.group_name,
+                                group_name: cleanGroupName(payload.group_name),
                                 title: payload.title,
                                 due_date: payload.due_date,
                                 start_date: payload.start_date,
@@ -1554,7 +1608,7 @@
                 tasksByTemplateId[t.template_id].push({
                     id: t.id,
                     template_id: t.template_id,
-                    group_name: t.group_name,
+                    group_name: cleanGroupName(t.group_name),
                     title: t.title,
                     start_day_offset: t.start_day_offset,
                     due_day_offset: t.due_day_offset,
@@ -1562,8 +1616,7 @@
                 });
             });
             return mockTemplates.map(t => {
-                const groupsStr = t.group_names || "";
-                const groupNames = groupsStr ? groupsStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+                const groupNames = parseGroupNames(t.group_names);
                 return {
                     id: t.id,
                     template_name: t.template_name,
@@ -1607,13 +1660,17 @@
                 const caseTasks = tasksByCaseId[c.id] || [];
                 if (c.owner_id !== userId && caseTasks.length === 0) return;
 
-                const groupNames = c.group_names ? c.group_names.split(',').map(g => g.trim()).filter(g => g.length > 0) : [];
+                const groupNames = parseGroupNames(c.group_names);
                 const groupMap = {};
-                groupNames.forEach(gn => { groupMap[gn] = []; });
+                groupNames.forEach(gn => {
+                    const cleanedGn = cleanGroupName(gn);
+                    if (cleanedGn) groupMap[cleanedGn] = [];
+                });
 
                 caseTasks.forEach(t => {
-                    if (!groupMap[t.group_name]) groupMap[t.group_name] = [];
-                    groupMap[t.group_name].push(t);
+                    const cleanedGn = cleanGroupName(t.group_name);
+                    if (!groupMap[cleanedGn]) groupMap[cleanedGn] = [];
+                    groupMap[cleanedGn].push(t);
                 });
 
                 const groups = Object.keys(groupMap).map((gn, index) => ({

@@ -8,6 +8,128 @@ function getSpreadsheet() {
   }
 }
 
+function cleanGroupName(str) {
+  if (!str) return "";
+  let s = String(str).trim();
+  while ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    try {
+      let parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        s = parsed.map(item => cleanGroupName(item)).filter(Boolean).join(", ");
+      } else if (typeof parsed === "string") {
+        s = parsed;
+      } else {
+        break;
+      }
+    } catch (e) {
+      s = s.replace(/^["'\[\]\s]+|["'\[\]\s]+$/g, "").trim();
+      break;
+    }
+  }
+  return s.trim().replace(/^["'\[\]\s]+|["'\[\]\s]+$/g, "");
+}
+
+function parseGroupNames(input) {
+  if (!input) return [];
+  let val = input;
+  while (typeof val === "string") {
+    const trimmed = val.trim();
+    if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+      try {
+        val = JSON.parse(trimmed);
+      } catch (e) {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  if (Array.isArray(val)) {
+    const result = [];
+    val.forEach(item => {
+      const sub = parseGroupNames(item);
+      sub.forEach(s => { if (s && !result.includes(s)) result.push(s); });
+    });
+    return result;
+  }
+
+  if (typeof val === "string") {
+    return val.split(",").map(s => cleanGroupName(s)).filter(s => s.length > 0);
+  }
+
+  const cleaned = cleanGroupName(String(val));
+  return cleaned ? [cleaned] : [];
+}
+
+function fixCorruptedGroupNames() {
+  try {
+    const ss = getSpreadsheet();
+    
+    // 1. Cases sheet
+    const casesSheet = ss.getSheetByName("Cases");
+    if (casesSheet) {
+      const values = casesSheet.getDataRange().getValues();
+      for (let i = 1; i < values.length; i++) {
+        const raw = values[i][5];
+        if (raw) {
+          const cleaned = parseGroupNames(raw).join(", ");
+          if (cleaned !== String(raw)) {
+            casesSheet.getRange(i + 1, 6).setValue(cleaned);
+          }
+        }
+      }
+    }
+
+    // 2. Tasks sheet
+    const tasksSheet = ss.getSheetByName("Tasks");
+    if (tasksSheet) {
+      const values = tasksSheet.getDataRange().getValues();
+      for (let i = 1; i < values.length; i++) {
+        const raw = values[i][2];
+        if (raw) {
+          const cleaned = cleanGroupName(raw);
+          if (cleaned !== String(raw)) {
+            tasksSheet.getRange(i + 1, 3).setValue(cleaned);
+          }
+        }
+      }
+    }
+
+    // 3. CaseTemplates sheet
+    const tempSheet = ss.getSheetByName("CaseTemplates");
+    if (tempSheet) {
+      const values = tempSheet.getDataRange().getValues();
+      for (let i = 1; i < values.length; i++) {
+        const raw = values[i][3];
+        if (raw) {
+          const cleaned = parseGroupNames(raw).join(", ");
+          if (cleaned !== String(raw)) {
+            tempSheet.getRange(i + 1, 4).setValue(cleaned);
+          }
+        }
+      }
+    }
+
+    // 4. TemplateTasks sheet
+    const ttSheet = ss.getSheetByName("TemplateTasks");
+    if (ttSheet) {
+      const values = ttSheet.getDataRange().getValues();
+      for (let i = 1; i < values.length; i++) {
+        const raw = values[i][2];
+        if (raw) {
+          const cleaned = cleanGroupName(raw);
+          if (cleaned !== String(raw)) {
+            ttSheet.getRange(i + 1, 3).setValue(cleaned);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("fixCorruptedGroupNames error: " + err);
+  }
+}
+
 function ensureRolesSheet(ss) {
   let sheet = ss.getSheetByName("Roles");
   if (!sheet) {
@@ -363,6 +485,7 @@ function getUsers() {
  * Fetch and construct filtered Case tree for a specific user.
  */
 function getCasesForUser(userId) {
+  fixCorruptedGroupNames();
   const ss = getSpreadsheet();
   const users = getUsers();
   const userMap = {};
@@ -398,7 +521,7 @@ function getCasesForUser(userId) {
   for (let i = 1; i < taskValues.length; i++) {
     const tId = parseInt(taskValues[i][0]);
     const caseId = parseInt(taskValues[i][1]);
-    const groupName = taskValues[i][2];
+    const groupName = cleanGroupName(taskValues[i][2]);
     const title = taskValues[i][3];
     const dueDate = taskValues[i][4];
     const startDate = taskValues[i][5];
@@ -445,7 +568,7 @@ function getCasesForUser(userId) {
     const driveUrl = caseValues[i][4];
     const groupNamesStr = caseValues[i][5] || "";
     
-    const groupNames = groupNamesStr ? groupNamesStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+    const groupNames = parseGroupNames(groupNamesStr);
     const caseTasks = tasksByCaseId[cId] || [];
     
     // Only return the case if user is the owner OR has at least one visible task in it
@@ -456,14 +579,16 @@ function getCasesForUser(userId) {
     // Dynamic grouping by group_name
     const groupMap = {};
     groupNames.forEach(gn => {
-      groupMap[gn] = [];
+      const cleanedGn = cleanGroupName(gn);
+      if (cleanedGn) groupMap[cleanedGn] = [];
     });
     
     caseTasks.forEach(t => {
-      if (!groupMap[t.group_name]) {
-        groupMap[t.group_name] = [];
+      const cleanedGn = cleanGroupName(t.group_name);
+      if (!groupMap[cleanedGn]) {
+        groupMap[cleanedGn] = [];
       }
-      groupMap[t.group_name].push(t);
+      groupMap[cleanedGn].push(t);
     });
 
     const groups = Object.keys(groupMap).map((gn, index) => {
@@ -578,7 +703,7 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
   }
 
   const nextId = getNextId(sheet);
-  const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+  const groupsStr = parseGroupNames(groups).join(", ");
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
   sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr]);
 
@@ -596,7 +721,7 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
     for (let i = 1; i < taskValues.length; i++) {
       const tempId = parseInt(taskValues[i][1]);
       if (tempId === templateId) {
-        const groupName = taskValues[i][2];
+        const groupName = cleanGroupName(taskValues[i][2]);
         const taskTitle = taskValues[i][3];
         const startOffset = parseInt(taskValues[i][4]);
         const dueOffset = parseInt(taskValues[i][5]);
@@ -626,8 +751,9 @@ function createTask(caseId, groupName, title, dueDate, startDate, visibleUserIds
   
   const nextId = getNextId(sheet);
   const visIdsStr = Array.isArray(visibleUserIds) ? visibleUserIds.join(",") : visibleUserIds;
+  const cleanGn = cleanGroupName(groupName);
   
-  sheet.appendRow([nextId, caseId, groupName, title, dueDate || "", startDate || "", false, "", visIdsStr]);
+  sheet.appendRow([nextId, caseId, cleanGn, title, dueDate || "", startDate || "", false, "", visIdsStr]);
   return { status: "success", taskId: nextId };
 }
 
@@ -710,7 +836,7 @@ function updateCase(caseId, title, description, driveUrl, groups) {
       if (description !== undefined) sheet.getRange(i + 1, 3).setValue(description);
       if (driveUrl !== undefined) sheet.getRange(i + 1, 5).setValue(driveUrl);
       if (groups !== undefined) {
-        const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+        const groupsStr = parseGroupNames(groups).join(", ");
         sheet.getRange(i + 1, 6).setValue(groupsStr);
       }
       return { status: "success", caseId: caseId };
@@ -929,7 +1055,7 @@ function createTemplate(name, description, groups) {
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
   const nextId = getNextId(sheet);
-  const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+  const groupsStr = parseGroupNames(groups).join(", ");
   sheet.appendRow([nextId, name, description || "", groupsStr]);
   return { status: "success", templateId: nextId };
 }
@@ -939,7 +1065,7 @@ function updateTemplate(templateId, name, description, groups) {
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
   const values = sheet.getDataRange().getValues();
-  const groupsStr = Array.isArray(groups) ? groups.join(", ") : groups;
+  const groupsStr = parseGroupNames(groups).join(", ");
   for (let i = 1; i < values.length; i++) {
     if (parseInt(values[i][0]) === templateId) {
       sheet.getRange(i + 1, 2).setValue(name);
@@ -982,7 +1108,8 @@ function createTemplateTask(templateId, groupName, title, startDayOffset, dueDay
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("TemplateTasks");
   const nextId = getNextId(sheet);
-  sheet.appendRow([nextId, templateId, groupName, title, startDayOffset || 0, dueDayOffset || 0, notes || ""]);
+  const cleanGn = cleanGroupName(groupName);
+  sheet.appendRow([nextId, templateId, cleanGn, title, startDayOffset || 0, dueDayOffset || 0, notes || ""]);
   return { status: "success", taskId: nextId };
 }
 
@@ -991,9 +1118,10 @@ function updateTemplateTask(taskId, groupName, title, startDayOffset, dueDayOffs
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("TemplateTasks");
   const values = sheet.getDataRange().getValues();
+  const cleanGn = cleanGroupName(groupName);
   for (let i = 1; i < values.length; i++) {
     if (parseInt(values[i][0]) === taskId) {
-      sheet.getRange(i + 1, 3).setValue(groupName);
+      sheet.getRange(i + 1, 3).setValue(cleanGn);
       sheet.getRange(i + 1, 4).setValue(title);
       sheet.getRange(i + 1, 5).setValue(startDayOffset || 0);
       sheet.getRange(i + 1, 6).setValue(dueDayOffset || 0);

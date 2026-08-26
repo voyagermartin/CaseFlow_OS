@@ -280,3 +280,4 @@
 - **API Response 診斷機制**：優化 `apiRequest` 解析異常的錯誤攔截，遇到非 JSON 回傳（如 Google 錯誤頁）時，在 Alert 中擷取輸出其前 200 個字元以利 Debug。
 - **套用範本案件名稱自動後綴**：在後端 `Code.js` 與前端 Mock 引擎的 `createCase` 邏輯中，若發起案件時選取了案件範本，系統會自動在案件標題後方加上 `-模版名`（例如：`2026 馬航怡保團-馬航怡保 5 天團範本`），提升專案範本標示之直覺度。
 - **案件樹狀卡片預設收合**：【📋 案件模式】下所有案件卡片預設改為收合狀態 (collapsed)，箭頭指右，點擊卡片標頭可展開/收合；從個人待辦儀表板點擊跳轉時會智慧自動展開該案件。
+- **任務組名稱雙重脫逸防禦與試算表資料自動修復**：修復前端 POST/GET API 在處理陣列（如 `["TKT"]`）傳輸時，因 `JSON.stringify` 導致寫入試算表變成 `["[\"TKT\"]"]` 雜訊字串的 Bug。前後端全面導入 `cleanGroupName` 與 `parseGroupNames` 防禦解包，並在 GAS 後端加入 `fixCorruptedGroupNames()` 自動修復現有 Google Sheets 舊資料。
