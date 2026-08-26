@@ -2222,12 +2222,12 @@
                             </a>
                             ${manageButtons}
                             <span>${tText.caseOwner}: ${c.owner.username}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" id="accordion-arrow-${c.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" style="transform: rotate(-90deg)" id="accordion-arrow-${c.id}">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                             </svg>
                         </div>
                     </div>
-                    <div id="case-body-${c.id}" class="p-5 space-y-6">
+                    <div id="case-body-${c.id}" class="p-5 space-y-6 hidden">
                         <!-- Task groups -->
                     </div>
                 `;
