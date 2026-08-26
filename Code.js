@@ -284,7 +284,10 @@ function handleRequest(action, params) {
     return isNaN(parsed) ? null : parsed;
   }
 
-  if (action === "getUsers") {
+  if (action === "getInitialData") {
+    const userId = getInt(params.user_id) || 1;
+    return getInitialData(userId);
+  } else if (action === "getUsers") {
     return getUsers();
   } else if (action === "getRoles") {
     return getRoles();
@@ -451,8 +454,8 @@ function doPost(e) {
 /**
  * Fetch all users.
  */
-function getUsers() {
-  const ss = getSpreadsheet();
+function getUsers(ss) {
+  if (!ss) ss = getSpreadsheet();
   
   // First load all roles into a map
   const rolesSheet = ensureRolesSheet(ss);
@@ -513,9 +516,9 @@ function getUsers() {
 /**
  * Fetch and construct filtered Case tree for a specific user.
  */
-function getCasesForUser(userId) {
-  const ss = getSpreadsheet();
-  const users = getUsers();
+function getCasesForUser(userId, ss) {
+  if (!ss) ss = getSpreadsheet();
+  const users = getUsers(ss);
   const userMap = {};
   users.forEach(u => { userMap[u.id] = u; });
 
@@ -914,8 +917,8 @@ function deleteCase(caseId) {
   return { status: "success", caseId: caseId };
 }
 
-function getRoles() {
-  const ss = getSpreadsheet();
+function getRoles(ss) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ensureRolesSheet(ss);
   const values = sheet.getDataRange().getValues();
   const roles = [];
@@ -1036,8 +1039,8 @@ function deleteUser(userId) {
   return { status: "success", userId: userId, note: "User already removed" };
 }
 
-function getTemplates() {
-  const ss = getSpreadsheet();
+function getTemplates(ss) {
+  if (!ss) ss = getSpreadsheet();
   ensureTemplatesSheets(ss);
   
   const tSheet = ss.getSheetByName("CaseTemplates");
@@ -1087,6 +1090,20 @@ function getTemplates() {
     });
   }
   return templates;
+}
+
+function getInitialData(userId) {
+  const ss = getSpreadsheet();
+  const users = getUsers(ss);
+  const roles = getRoles(ss);
+  const cases = getCasesForUser(userId, ss);
+  const templates = getTemplates(ss);
+  return {
+    users: users,
+    roles: roles,
+    cases: cases,
+    templates: templates
+  };
 }
 
 function createTemplate(name, description, groups) {

@@ -1190,18 +1190,14 @@
                 const savedUserId = localStorage.getItem('activeUserId');
                 let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
 
-                // Fire all initial GET APIs simultaneously in parallel!
-                const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
-                    apiRequest('getUsers', null, 'GET', true),
-                    apiRequest('getRoles', null, 'GET', true),
-                    apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
-                    apiRequest('getTemplates', null, 'GET', true)
-                ]);
-
-                allUsers = usersRes || [];
-                allRoles = rolesRes || [];
-                allCases = casesRes || [];
-                allTemplates = templatesRes || [];
+                // Single unified batch API request!
+                const initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
+                if (initialRes) {
+                    allUsers = initialRes.users || [];
+                    allRoles = initialRes.roles || [];
+                    allCases = initialRes.cases || [];
+                    allTemplates = initialRes.templates || [];
+                }
 
                 // Populate switcher options
                 const switcher = document.getElementById('user-switcher');
@@ -1409,7 +1405,15 @@
             return new Promise((resolve) => {
                 setTimeout(() => {
                     if (method === 'GET') {
-                        if (action === 'getUsers') {
+                        if (action === 'getInitialData') {
+                            const userId = parseInt(payload.user_id) || 1;
+                            resolve({
+                                users: JSON.parse(JSON.stringify(mockUsers)),
+                                roles: JSON.parse(JSON.stringify(mockRoles)),
+                                cases: getMockCasesForUser(userId),
+                                templates: JSON.parse(JSON.stringify(getMockTemplates()))
+                            });
+                        } else if (action === 'getUsers') {
                             resolve(JSON.parse(JSON.stringify(mockUsers)));
                         } else if (action === 'getRoles') {
                             resolve(JSON.parse(JSON.stringify(mockRoles)));
