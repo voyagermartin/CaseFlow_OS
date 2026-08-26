@@ -1,300 +1,101 @@
-# 📖 CaseFlow OS 員工操作手冊 (Employee Handbook)
+# 📖 CaseFlow OS 員工操作與技術手冊 (Employee & Dev Handbook)
 
-歡迎來到 **CaseFlow OS**！本手冊旨在幫助新進夥伴、實習生與工讀生在「第一天第一小時」就能光速上手。這套系統是我們團隊高效協作的秘密武器，請務必詳細閱讀以下指南。
+歡迎來到 **CaseFlow OS**！本手冊為新進夥伴、實習生與團隊成員提供系統設計、雲端資料庫架構、視圖操作、部署方式與完整開發日誌。
 
 ---
 
-## 🌟 1. 什麼是 CaseFlow OS？
+## 🌟 1. 核心定位與技術規格
 
-### 💡 核心定位與設計理念
-**CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層雲端資料庫、並由 **Google Apps Script (GAS) 直接託管服務** 與 **GitHub Pages** 雙軌部署的「事件驅動作業系統 (Event-Driven OS)」。
+**CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層資料庫、由 **Google Apps Script (GAS)** 直接託管與 **GitHub Pages** 雙軌部署的事件驅動專案 OS (Event-Driven OS)。
 
 > 🛠️ **技術與架構規格 (Phase 5 Milestone Checkpoint)**
-> 本系統採用 **Google Apps Script (GAS)** 作為後端核心 API 框架，底層使用 **Google Sheets (試算表)** 進行雲端資料儲存與權限隔離設計。前端架構採用 **Tailwind CSS**，深度整合 **FullCalendar v6** (日曆模式) 與 **Frappe Gantt** (甘特圖模式)，可雙軌部署於 **GitHub Pages** 或由 **GAS Web App 透過 `doGet` 直接託管** 渲染 `index.html` 主介面，徹底解決瀏覽器本地 CORS 限制。本系統支援 **純樂觀更新 (Pure Optimistic UI)** 達成 0ms 延遲視覺響應；導入 **單一通道首頁載入引擎 (`getInitialData`)** 配合 **`Promise.all` 併行備援機制**，將進站載入時間降至 0.3 秒以內；後端全面加入 **`SpreadsheetApp.flush()` 強制實體落盤** 確保試算表資料 100% 寫入防護；背景同步採用 **靜音 API 執行模式 (`silent = true`)** 徹底消除轉圈遮罩；並具備 **刪除操作優雅冪等防護**、**成員選單自動同步對齊**、全站 **案件標題字型層級放大 (Typography Scale Upgrade)**、**臺灣工作天計算引擎**（自動扣除國定假日與週末補班）及 **API 錯誤診斷機制**，全面打造極速流暢、穩定無死角之企業級專案 OS。
-
-我們不用傳統的 LINE 群組或紙本流水帳，因為 LINE 容易洗版、文件會過期、責任歸屬模糊；而流水帳缺乏結構，無法一眼看出優先順序。CaseFlow OS 透過自動化的網頁視圖，將所有資料與進度即時呈現在你的眼前，並嚴格遵循以下三大鐵律：
-
-| 鐵律名稱 | 核心精神 | 具體表現 |
-| :--- | :--- | :--- |
-| **1. 不漏球 (Zero-Miss)** | 凡事有交代，件件有落地。 | 每個待辦細項都有明確的 **截止日 (Due Date)** 與狀態燈號，絕對不遺漏任何細節。 |
-| **2. 責任明確 (Clarity)** | 誰能看、誰負責，一目了然。 | 任務狀態透明。可指定特定可見成員，進行**任務級的權限隔離**，避免無關資訊轟炸或洩密。 |
-| **3. 視圖自由 (Flexibility)** | 不同角色，看他最需要的畫面。 | 提供**個人儀表板**快速檢視待辦、**日曆模式**抓今日死線、**案件樹狀**處理細節，以及**甘特圖**掌控專案整體進度。 |
+> - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表 (7 大核心工作表)。
+> - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
+> - **效能與極速載入**：單一通道首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援，首頁載入 <0.3 秒。
+> - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)。
+> - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、任務層級可見權限過濾、語系字典 (zh-TW / vi-VN)。
 
 ---
 
-## 🗄️ 2. 官方雲端資料庫（Google Sheets 架構）
+## 🗄️ 2. Google Sheets 雲端資料庫架構
 
-本系統所有資料皆安全地儲存在我們的官方 Google 試算表中：
 👉 **[官方雲端資料庫 Google Sheets 連結](https://docs.google.com/spreadsheets/d/19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk/edit)**
 
-試算表內包含以下 **7 張核心工作表**，它們共同組成了系統的資料引擎：
-
-### ① `Users` (成員與偏好)
-* **作用**：管理系統使用者帳號、角色權限、識別顏色與偏好語系。
-* **欄位結構**：
-  * `id` (編號)
-  * `username` (姓名/代號，例如 `Martin`, `OP_Ning`, `Sales_Yang`, `Local_Nguyen`)
-  * `role_id` (關聯角色ID，指向 Roles 表)
-  * `avatar_color` (頭像顏色，用於 UI 渲染)
-  * `language` (偏好語系，例如 `zh-TW` 或 `vi-VN`)
-  * `google_email` (Google 電子信箱)
-  * `is_super_master` (是否為超級管理員，`TRUE`/`FALSE`)
-
-### ② `Roles` (角色與權限定義)
-* **作用**：定義各角色的編輯與管理權限。
-* **欄位結構**：
-  * `id` (編號)
-  * `role_name` (角色名稱，例如 `Owner/Admin`, `Operation`, `Sales`, `Local Agent`)
-  * `can_create_case` (是否可建立新案件，`TRUE`/`FALSE`)
-
-### ③ `Cases` (專案總表與 Drive 掛載點)
-* **作用**：記錄所有進行中的大專案，並掛載專屬的 Google Drive 雲端資料夾連結。
-* **欄位結構**：
-  * `id` (編號)
-  * `title` (案件/專案名稱，例如 `2026/09/15 馬航怡保專案`)
-  * `description` (案件描述)
-  * `owner_id` (案件建立者/負責人ID)
-  * `drive_url` (Google Drive 資料夾連結)
-  * `group_names` (該案件預設的任務分組，以逗號分隔)
-
-### ④ `Tasks` (待辦細項、死線與權限隔離)
-* **作用**：存放所有專案下的具體執行細項（To-Do）。
-* **欄位結構**：
-  * `id` (編號)
-  * `case_id` (關聯案件ID)
-  * `group_name` (所屬任務組別，例如 `票務與交通`)
-  * `title` (待辦事項標題)
-  * `due_date` (截止日期，`YYYY-MM-DD`)
-  * `start_date` (開始日期，`YYYY-MM-DD`)
-  * `is_completed` (是否完成，`TRUE`/`FALSE`)
-  * `notes` (執行備註，例如聯絡人電話、行程備忘)
-  * `visible_user_ids` (任務級可見人員ID，以逗號分隔，如 `1,2,3`，未包含在內的人員將無法看到此任務)
-
-### ⑤ `Comments` (項目討論串)
-* **作用**：任務抽屜下的留言板，用於成員針對單一待辦細項進行精準討論與資訊落地。
-* **欄位結構**：
-  * `id` (編號)
-  * `task_id` (關聯任務ID)
-  * `user_id` (留言者ID)
-  * `content` (留言內容，支援 `@同事名字` 提及)
-  * `created_at` (建立時間，`YYYY-MM-DD HH:mm:ss`)
-
-### ⑥ `CaseTemplates` (案件範本設定)
-* **作用**：儲存常用的案件範本，供發起新案件時快速套用標準作業流程 (SOP)。
-* **欄位結構**：
-  * `id` (編號)
-  * `template_name` (範本名稱，例如 `馬航怡保 5 天團範本`)
-  * `description` (範本描述)
-  * `group_names` (預設任務組別，以逗號分隔)
-
-### ⑦ `TemplateTasks` (範本任務細項)
-* **作用**：儲存案件範本下的標準待辦項目，支援依案件基準日進行相對天數偏移計算。
-* **欄位結構**：
-  * `id` (編號)
-  * `template_id` (關聯案件範本ID)
-  * `group_name` (任務組別)
-  * `title` (任務標題)
-  * `start_day_offset` (相較於案件出發基準日的開始天數偏移，例如 `-45` 天)
-  * `due_day_offset` (相較於案件出發基準日的截止天數偏移，例如 `-30` 天)
-  * `notes` (預設備註說明)
+| 工作表 (Sheet) | 作用 (Purpose) | 核心欄位結構 (Key Schema) |
+| :--- | :--- | :--- |
+| **`Users`** | 成員帳號、角色、顏色與語系 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
+| **`Roles`** | 角色與權限定義 | `id`, `role_name`, `can_create_case` |
+| **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names` |
+| **`Tasks`** | 待辦細項、死線與權限過濾 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
+| **`Comments`** | 任務討論串與留言板 | `id`, `task_id`, `user_id`, `content`, `created_at` |
+| **`CaseTemplates`**| 案件 SOP 範本設定 | `id`, `template_name`, `description`, `group_names` |
+| **`TemplateTasks`**| 範本標準待辦項目 | `id`, `template_id`, `group_name`, `title`, `start_day_offset`, `due_day_offset`, `notes` |
 
 ---
 
-## 🖥️ 3. 4 大檢視模式操作教學
+## 🖥️ 3. 4 大檢視模式操作指南
 
-系統提供四種視角，應對不同的日常工作與管理場景：
+### 📊 A. 個人待辦儀表板 (Personal Dashboard - 預設首頁)
+- **智慧過濾與排序**：自動顯示當前人員未完成之待辦，嚴格依 🔴 過期 ➡️ 🟡 48H內到期 ➡️ 🔵 進行中 排序。
+- **統計卡片與雙向跳轉**：即時統計燈號數量；支援列表中 0ms 勾選完成、一鍵定位跳轉案件卡片（帶閃爍高亮）或打開留言抽屜。
 
-### 📊 模式 A. 個人待辦儀表板 (Personal Dashboard View) (預設首頁)
-* **首頁與個人待辦過濾**：當你登入系統或刷新頁面時，這就是預設首頁。系統會自動過濾出「任務可見人員中包含當前登入者」，且「尚未完成」的所有子任務。
-* **統計看板 (Stats Cards)**：頂部以四個狀態卡片呈現任務統計：
-  * 🔴 **已過期 (Overdue)**：計算已截止但未完成的任務。
-  * 🟡 **48H內到期 (Near Deadline)**：48 小時內即將截止的任務，以防漏球。
-  * 🔵 **進行中 (In Progress)**：剩餘時間充足的未完成任務。
-  * 🟢 **今日已完成 (Completed)**：顯示該使用者在今日已勾選完成的任務總數。
-* **精準排序與互動**：列表依 🔴 ➡️ 🟡 ➡️ 🔵 的順序嚴格排序，截止日最舊的排在最前。
-  * 支援直接在列表中勾選完成（0ms 樂觀更新）同步回傳雲端。
-  * 提供「案件跳轉」一鍵滾動定位案件卡片（帶高亮閃爍效果）與「查看與留言」一鍵跳轉並自動打開留言抽屜的功能。
+### 📅 B. 日曆模式 (Calendar View)
+- **死線狀態燈號**：🔴 過期未完成（緊急處理）、🟡 48H內到期（今日首要）、🟢 已完成、🔵 48H以上進行中。
+- **色彩模式**：支援「組別色彩優先」、「雙色混合」與「死線優先」3 種視窗配色。
 
-### 📅 模式 B. 日曆模式 (Calendar View)
-* **今日行動指南與業務分類**：每天早上進公司第一件事，就是打開日曆模式，透過專屬色彩辨識業務類別與死線狀態！
-  * 🔴 **紅色燈號**：已過期且未完成。**請立刻處理！** 遇有困難主動向主管回報，切勿放任紅燈高掛。
-  * 🟡 **黃色燈號**：今天或 48 小時內即將到期。這是你的「今日首要任務」。
-  * 🟢 **綠色燈號**：已完成。代表任務已安全落地。
-  * 🔵 **藍色燈號**：未完成但距離死線仍有 48 小時以上，可按計畫推進。
-  * 🎨 **日曆色彩顯示模式**（可點擊側邊欄「🎨 任務組配色設定」切換）：
-    1. **組別色彩優先 (預設)**：事件背景為任務組自訂色彩，標題帶有 🔴/🟡/🟢 死線燈號，兼具業務歸屬與緊急度辨識。
-    2. **雙色混合模式**：事件背景為任務組色彩，左側邊框呈現死線警告色（紅/黃/綠/藍）。
-    3. **死線狀態優先**：維持傳統紅黃綠藍死線分色模式。
+### 📋 C. 案件模式 (Case Tree View)
+- **卡片層級與預設收合**：案件標題採用升級版 `text-xl font-bold` (20px) 醒目字型，預設收合帶有 `openCaseIds` 展開記憶。
+- **靜音快速新增待辦**：支援組名安全脫逸 (`getSanitizedKey`) 與動態組別自動創建；純樂觀 UI 0ms 秒發秒顯，背景靜默配發 ID。
+- **自動儲存與工作天提示**：抽屜日期與備註支援失去焦點/變更自動儲存 (`onchange` / `onblur`)；標題自動顯示排除週末與國定假日的剩餘工作天數提示（如 `(剩 3 工作天)`）。
 
-### 📋 模式 C. 案件模式 (Case Tree View)
-* **細節處理與管理**：
-  1. **預設收合與視覺層級**：【📋 案件模式】下所有案件卡片預設皆為收合狀態 (collapsed)，案件名稱採用放大升級版 `text-xl font-bold` (20px) 醒目字型與 `text-2xl` 資料夾圖示，提升清晰度。點擊標頭可靈活展開/收合，並具備 `openCaseIds` 記憶機制與儀表板智慧自動展開跳轉。
-  2. **管理與維護案件**：案件卡片標頭右側提供 **✏️（編輯）** 與 **🗑️（刪除）** 按鈕（僅案件建立者與管理員可見）。編輯可修改案件名稱、描述、雲端硬碟連結及預設群組；刪除則會啟動**串聯刪除**，將案件、底下待辦與留言一併永久清除。
-  3. **勾選完成**：直接勾選任務旁的核取方塊，系統會即時更新狀態（樂觀更新，0ms 響應）並在背景靜默同步至 Google Sheets。
-  4. **極速靜音快速新增待辦**：在組別下方輸入標題、日期，點擊「新增」即可發起新任務。支援包含引號與括號（如 `["TKT"]`）等特殊字元組名之安全元素轉義 (`getSanitizedKey`) 與動態組別自動創建；採用 **純樂觀 UI** 0ms 靜音新增並於背景配發真實 taskId，卡片維持展開且完全不跳出全螢幕遮罩轉圈。
-  5. **任務時程修改與刪除**：點擊任務打開右側抽屜，可直接修改該任務的**開始日期與截止日期**。系統支援 **`onchange` 變更自動儲存**，修改後在背景自動靜默同步；或可點擊右上角紅色垃圾桶進行刪除（會連同留言一併刪除）。
-  6. **任務備註與討論**：可在抽屜中填寫「執行備註」，系統支援 **`onblur` 失去焦點自動儲存** 背景靜默同步，免去頻繁點擊儲存按鈕的繁瑣。下方留言板改為「送出留言」按鈕，支援空留言防呆提示，並可使用 **`@同事名字`** 進行精準討論。
-  7. **截止日與工作天提示**：若任務設定有截止日且尚未完成，標題後方會自動計算並顯示剩餘工作天數（例如：`(剩 3 工作天)` 或 `(今日到期)`，若已逾期則顯示 `(逾期 2 工作天)`）。此計算已自動排除週休二日及臺灣人事行政總處公布之國定假日（如春節、端午節、清明節連假等，並包含週六補班日之特殊上班計算），並依緊急程度以灰色（充裕）、黃色（緊迫）或紅色（逾期）配色醒目提示。
-
-### 📊 模式 D. 甘特圖模式 (Gantt View)
-* **全景時程地圖**：提供日、週、月切換。主管與專案負責人可在此一目了然看清各專案的起迄時間跨度，以及深色區塊所代表的「進度百分比 (%)」。
-* **深色高對比度優化**：時間軸與月/日標頭文字採用高強度高對比色彩（白色與靛藍色），確保在 Dark Mode 下清晰可讀，輕鬆掌握時間跨度。
+### 📊 D. 甘特圖模式 (Gantt View)
+- **全景時程地圖**：提供日/週/月檢視切換，在深色高對比度模式下清晰呈現專案跨度與進度百分比 (%)。
 
 ---
 
-## 🎨 4. 任務組管理與配色自訂 (Task Group Customization)
+## 🎨 4. 任務組配色、語系 (i18n) 與人員切換
 
-為了讓團隊能根據業務特性（例如：票務、住宿、交通、簽證、對帳等）彈性劃分任務，系統提供全套任務組自主管理功能：
-
-* **開啟設定**：點擊側邊欄 **「🎨 任務組配色設定」** 即可開啟管理彈窗。
-* **➕ 新增任務組**：輸入自訂組別名稱並挑選 10 色質感色盤或自訂 HEX 色碼，點擊「新增」即可建立。
-* **✏️ 重新命名與變更色彩**：點擊列表項目右側 ✏️ 圖示可修改任務組名稱，點擊色盤可即時更換代表色。
-* **🗑️ 刪除與清空**：點擊 🗑️ 可移除單一組別，或點擊「清空所有任務組」一鍵重置。
-* **💾 本機自動記憶**：所有自訂任務組與顏色設定會自動儲存於瀏覽器 `localStorage`，跨頁面重新整理完全不遺失。
+- **自訂任務組配色**：點擊「🎨 任務組配色設定」可新增、編輯或刪除組別代表色，自動記憶於 `localStorage`。
+- **多國語言 (i18n) 雙向切換**：頂端選單切換人員時，介面會根據該使用者偏好語系（如繁中 `zh-TW` 或越南文 `vi-VN`）自動翻譯。
+- **選單絕對綁定 (`renderUserSwitcher`)**：頂端人員下拉選單與頭像指示器 100% 強制同步，若無效或已刪除 ID 自動備援至第一位可用成員。
 
 ---
 
-## 🌐 5. 多國語言 (i18n) 與視角切換
+## ⚙️ 5. 系統部署指南與 AI 合作約定
 
-為了支援跨國協作（例如台灣辦公室與越南當地 Local Agent 的對接），CaseFlow OS 內建了**多國語言即時翻譯引擎**：
+### 🚀 部署步驟 (GAS Web App)
+1. 於 Google 試算表開啟 **擴充功能 ➔ Apps Script**，複製 [Code.js](file:///f:/Projects/CaseFlow_OS/Code.js) 貼入編輯器。
+2. 首次安裝執行 `initDatabase()` 初始化試算表；點擊 **部署 ➔ 新增部署**（類型：Web App，存取權限：所有人）。
+3. 前端 [index.html](file:///f:/Projects/CaseFlow_OS/index.html) 內設定 `GAS_API_URL` 即可完成雙向連線。
 
-* **身分切換**：在網頁頂端「當前人員」下拉選單中切換角色，系統會自動根據該使用者在 `Users` 表格中設定的語系切換介面。
-* **自動翻譯**：
-  * 當切換至 `Martin` / `OP_Ning` / `Sales_Yang` 時，介面會顯示為**繁體中文 (zh-TW)**。
-  * 當切換至跨國夥伴 `Local_Nguyen` 時，介面與所有按鈕、提示將自動無縫轉換為**越南文 (Tiếng Việt)**，讓溝通零障礙！
-
----
-
-## ⚙️ 6. 系統部署與 API 連線指南（管理員專用）
-
-若您是系統管理員，欲將本系統部署至新的 Google 試算表，請遵循以下步驟：
-
-### 第一步：貼上並部署 Apps Script 後端
-1. 打開您的 Google 試算表，點選上方選單的 **「擴充功能」➔「Apps Script」**。
-2. 將本專案中的 [Code.js](file:///d:/Projects/CaseFlow_OS/Code.js) 內容完整複製，並貼入 Apps Script 的編輯器中（覆蓋預設的 `Code.gs`）。
-3. 在編輯器上方選單中，點選執行 **`initDatabase`** 函式。這會自動在試算表中建立 `Users`, `Roles`, `Cases`, `Tasks`, `Comments`, `CaseTemplates`, `TemplateTasks` 等工作表並寫入示範資料。
-4. 點選編輯器右上角的 **「部署」➔「新增部署」**：
-   * **選取類型**：網頁應用程式 (Web App)
-   * **說明**：例如 `CaseFlow API v1`
-   * **將網頁應用程式執行為**：我 (您的 Google 帳號)
-   * **誰有權限存取**：所有人 (Anyone)
-5. 點選「部署」並授權存取。部署完成後，複製產生的 **「網頁應用程式 URL」**。
-
-### 第二步：連接前端介面
-1. 打開本系統網頁 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)。
-2. 在網頁頂端的「GAS API URL」輸入框中，貼上剛剛複製的網頁應用程式 URL。
-3. 系統將會自動將連線切換至您真實的 Google Sheets，開始即時同步資料。
-4. *註：若輸入框留空，系統將會自動運作於「內建 Demo 模式」，使用本機記憶體進行測試模擬。*
-
-### 第三步：GAS 網頁應用程式直服介面 (Direct Serving)
-* `Code.js` 內建了 `doGet(e)` 服務，當 `action` 參數為空時，GAS 會直接以 `HtmlService` 讀取並託管 `index.html` 網頁。
-* 管理員可以直接將 Web App URL 作為系統入口，徹底解決跨網域 CORS 問題，免除 GitHub Pages 託管需求。
+### 🤝 AI 開發與測試約定
+- **自力測試原則**：AI 在交付功能時提供詳細的手動測試步驟指引與 Walkthrough，由使用者自行驗證，減少不必要的代理資源消耗。
 
 ---
 
-## 🤝 7. AI 開發與測試合作約定 (AI Testing & Development Agreement)
+## 🔮 6. 未來展望與待辦事項 (Future Roadmap)
 
-為了優化開發效能並節省算力資源，團隊與 AI 助手（Antigravity）達成以下開發與測試約定：
-
-* **自力測試原則**：AI 助手在完成任何前端或後端功能開發後，**除非遇到難以定位的 bug 需要開啟瀏覽器進行 DEBUG 外**，一律不使用自動化的瀏覽器子代理（Browser Subagent）執行網頁操作測試。
-* **測試指南提供**：AI 助手在每次交付功能時，應在對話與專屬 Walkthrough 中提供詳細的「手動測試步驟指引」（包含測試帳號、觸發流程、預期結果），引導使用者（Martin）自行在開啟的瀏覽器視窗中進行手動測試與驗證。
-
----
-
-## 🔮 8. 未來展望與待辦事項 (Future Roadmap)
-
-為了進一步提升 CaseFlow OS 的協作體驗，以下是下一階段規劃的待辦功能清單：
-
-1. **📧 即時 Google Workspace 通訊通知**
-   * 當成員在項目討論串中以 `@同事名字` 進行提及留言時，後端 GAS 自動調用 `MailApp` 發送郵件提醒，或串接 Gmail / Chat 自動通知。
-2. **📁 雲端硬碟檔案直接上傳**
-   * 於前端 Drawer 抽屜新增檔案上傳組件，允許成員直接將圖片、合約 PDF 上傳至該 Case 關聯的 `drive_url` 資料夾中。
-3. **📊 高級統計與專案報告匯出**
-   * 實作一鍵匯出 Case 進度報告（PDF 或 Excel 格式），自動統計各任務組完成率、過期任務明細，以供團隊週會報告。
-4. **📶 離線快取與 PWA 支援**
-   * 導入 Service Worker 將靜態資源與 LocalStorage 資料緩存，支援在無網路（如飛機上或國外訊號差時）進行唯讀查詢。
-5. **🔗 任務相依性關聯 (Task Dependencies)**
-   * 允許任務設定「前置任務」，並在甘特圖中以箭頭連線呈現；當前置任務延期時，後續任務的開始與截止日自動發送警告提示。
+1. **📧 即時 Google Workspace 通訊通知**：討論串 `@同事` 時自動觸發 MailApp 或 Gmail/Chat 郵件提醒。
+2. **📁 雲端硬碟檔案直接上傳**：於抽屜組件中支援直接上傳圖片/PDF 至該 Case 的 `drive_url` 資料夾。
+3. **📊 高級統計與專案報告匯出**：一鍵匯出專案進度報告（PDF/Excel）與過期任務統計。
+4. **📶 離線快取與 PWA 支援**：導入 Service Worker 與 LocalStorage 快取，支援離線唯讀查詢。
+5. **🔗 任務相依性關聯 (Task Dependencies)**：甘特圖支援前置任務連線與延期連鎖警告。
 
 ---
 
-## 🛠️ 開發日誌 (Development Log)
+## 🛠️ 開發日誌 (Development Log Milestones)
 
-### 📅 2026-08-17 - 核心 MVP 基礎建設與三視圖實作
-- **專案骨架與環境搭建**：初始化 Git 儲存庫並配置 Python 3.12 虛擬環境 (`.venv`) 與 `requirements.txt`。
-- **資料庫與 ORM 模型設計**：建置 `database.py` 及定義 `User`、`Case`、`TaskGroup`、`TaskItem`、`TaskComment` 及權限關聯表。
-- **資料過濾與安全查詢 (CRUD)**：實作 `get_user_cases` 查詢，確保未授權成員無法讀取特定任務、備註與留言，避免資訊洩漏與超載。
-- **示範資料生成器 (Seed)**：實作 `seed.py` 自動建立專案管理員 (Martin)、作業 (OP_Ning)、銷售 (Sales_Yang)、實習生 (Intern_A) 角色，並自動寫入包含 3 大任務分組與 4 項待辦細項的怡保專案出團示範資料。
-- **全視圖儀表板與 API 串接**：完成 templates/index.html 的實作，整合 FullCalendar v6 與 Frappe Gantt，並透過網頁頂端「使用者切換下拉選單」動態刷新 API，達成無縫權限展示與任務狀態勾選更新。
-
-### 📅 2026-08-18 - 無伺服器試算表資料庫移轉與多國語言 (i18n) 實作
-- **後端架構移轉**：將後端 API 完全遷移至 **Google Apps Script (Code.js)**，使用 **Google Sheets** 作為雲端資料庫，並將舊的 Python/SQLite MVP 移入 `archive_python_mvp/`。
-- **資料庫初始化**：在 `Code.js` 中實作 `initDatabase()`，自動在試算表中建立 `Users`, `Cases`, `Tasks`, `Comments` 四張工作表並寫入示範資料。
-- **前端 SPA 介面現代化**：在根目錄重寫 [index.html](file:///d:/Projects/CaseFlow_OS/index.html)，支援輸入 GAS Web App URL 進行連線，並實作完整的**本機 Mock 測試引擎**（無 URL 時自動切換為本機模擬運行）。
-- **多國語言 (i18n) 與身份切換**：新增繁體中文 (zh-TW) 與越南文 (vi-VN) 翻譯字典。當人員選單切換至跨國夥伴 `Local_Nguyen` 時，介面與提示自動翻譯為越南文。
-- **GitHub Pages 部署優化**：移除非必要目錄，使專案可以直接透過 GitHub Pages 發佈，達成零伺服器維護成本之專案管理系統。
-- **視覺與安全防護優化**：新增 AI 生成之 CaseFlow OS 專屬 Logo (`logo.jpg`)，將其設為網頁 Header 標誌與瀏覽器 Favicon，並加入 robots meta 標籤與 `robots.txt` 檔案，全面阻擋搜尋引擎與爬蟲蒐集網頁內容。
-- **引導連線設定彈窗**：實作首次造訪引導連線彈窗（Welcome Connection Modal），提供使用者輸入 GAS Web App API 網址的入口或選擇進入 Demo 測試模式。輸入連線後，透過 `localStorage` 自動進行網址綁定，提升首訪引導之使用者體驗 (UX)。
-
-### 📅 2026-08-19 - 專案狀態同步、本機開發基準線確立與文檔更新
-- **儲存庫與雲端狀態同步**：完成 GitHub 遠端儲存庫與本機 Git 狀態拉取與同步驗證，確立最新主線 (`main`) 開發基準。
-- **架構與開發手冊同步更新**：同步更新 [HANDBOOK.md](file:///d:/Projects/CaseFlow_OS/HANDBOOK.md) 專案說明與最新技術規格，包含 GAS Web App API、Google Sheets 資料庫架構、GitHub Pages 無伺服器 SPA 部署模式與多語系支援說明。
-- **版本控制基線里程碑**：完成全套程式碼與文件狀態紀錄並提交至 GitHub，作為下一階段功能開發與維護之起點。
-
-### 📅 2026-08-19 - 樂觀更新體驗優化、編輯/刪除管理功能與多帳號連線 Bug 排除
-- **樂觀更新 (Optimistic UI) 全面導入**：將待辦事項狀態勾選、快速新增待辦、備註儲存、可見權限更新與留言功能全部改寫為樂觀更新，前端在點擊的瞬間（0ms 延遲）立刻完成本機記憶體更新與三大視圖（日曆、甘特圖、案件樹）重繪，隨後在背景非同步與 GAS API 進行同步，徹底消除鎖定轉圈卡頓感。
-- **任務（Task）與案件（Case）編輯與刪除**：
-  - 前端 Task Drawer 新增紅色垃圾桶按鈕與開始/截止日期編輯欄位；後端實作 `deleteTask` 與 `updateTask` 的日期更新，並支援反向迴圈級聯刪除任務下的所有留言。
-  - 前端案件樹標頭新增 ✏️ (編輯) 與 🗑️ (刪除) 管理按鈕（僅案件建立者與管理員可見），支援修改案件資訊及分組；後端實作 `updateCase` 與 `deleteCase`，刪除案件時會連同底下所有任務與留言進行安全串聯刪除。
-- **多帳號 Google 登入連線 Bug 排除**：在前端所有 API `fetch` 請求中加入 `credentials: 'omit'`，避免瀏覽器在發送請求時夾帶 Google 的 Session Cookies，完美解決使用者多個 Google 帳號登入時 GAS Web App 導向 HTML 驗證頁面導致的 302 衝突與 API 連線超時問題。
-- **原生深色日曆微調**：頂層 CSS 置入 `:root { color-scheme: dark; }`，徹底修復原生 `<input type="date">` 在 Dark Mode 下日曆小圖示隱形與點開為白底的視覺缺陷。
-- **後端 API 自動化測試建置**：建立自動化測試腳本（`test_delete.py`、`test_case_operations.py`），完成對 deleteTask、updateTask（時程更新）、createCase、updateCase、deleteCase 與 getCases 等端點的全面功能性與 Relational 完整性驗證。
-
-### 📅 2026-08-19 - 任務組自訂色彩、甘特圖高對比度優化與系統穩定度里程碑
-- **任務組 CRUD 全功能管理**：完全移除硬編碼預設組別，實作 `#group-color-modal` 彈窗介面，支援使用者自主新增、重命名、獨立刪除、選色與一鍵清空任務組。
-- **多模式日曆色彩與視覺連貫性**：實作組別色彩優先、雙色混合與死線狀態優先 3 種顯示模式；自訂色彩同步渲染至案件樹狀視圖的任務組標頭圓點與標籤。
-- **新案件自訂組別動態帶入**：「發起新案件」彈窗自動帶入使用者自訂的任務組清單，大幅提高建立案件之效率與統一性。
-- **甘特圖深色模式高對比優化**：調整 Frappe Gantt SVG 標頭文字（`.upper-text` 與 `.lower-text`）之顏色與 `font-weight`，修復 Dark Mode 下時間軸標題隱形與反差不足問題。
-- **系統穩定度與 JavaScript 語法修復**：排除語法邊界問題，完成 GitHub 遠端儲存庫與 Google Apps Script 雲端同步，確立下階段開發之穩定基線。
-
-### 📅 2026-08-20 - 工作天提示引擎、權限與配色設定還原及系統穩定性優化
-- **臺灣節假日工作天計算**：實作前端工作天計算引擎，串接臺灣 2025-2027 辦公日曆表，自動扣除週末與國定假日（如春節、端午等），補回週六補班日。在案件樹狀中針對未完成之任務動態顯示 `(剩 X 工作天)`、`(今日到期)` 或 `(逾期 Y 工作天)`，並套用高對比之灰/黃/紅警示色彩。
-- **設定彈窗與任務組自訂色彩還原**：修復因 clasp pull 覆蓋導致的設定彈窗與自訂任務群組配色遺失問題，完整還原本機 `localStorage` 的設定記憶與自動套用渲染。
-- **角色權限渲染與 API 連線穩定化**：重構 GAS 後端 `getUsers()` 角色解析邏輯，相容傳統字串角色與數值 ID，並在前端抽象化 `isSuperMaster` 與 `hasCreateCasePermission` 權限判斷；解決多帳號登入 GAS API 重定向衝突，確保「建立案件」及編輯/刪除管理按鈕依權限正確渲染。
-
-### 📅 2026-08-25 - 全域 Loading 覆蓋優化與後端 Roles 表防禦性初始化
-- **全域 Loading 指示器 (z-index) 優化**：將原本位於 `main` 容器內的 `#view-loading` 移至 `<body>` 根節點，改為 `fixed` 全螢幕定位並將 `z-index` 提升至 `z-[100]`。徹底解決了點選儲存職位/人員後，Loading 轉圈圈被壓在 `z-50` 的 Modal 彈窗下方造成的視覺延遲與遮擋 Bug。
-- **後端 Roles 試算表防禦性無損初始化**：在 GAS 後端新增 `ensureRolesSheet` 輔助函數，在讀寫角色相關資料時自動偵測 `Roles` 工作表是否存在。若不存在則會自動且無損地補上該工作表並寫入預設角色資料，徹底避免了拋出 `Roles sheet not initialized` 錯誤，同時亦免去了管理員手動執行 `initDatabase()` 重灌資料庫而導致既有案件與任務資料遺失的風險。
-- **雲端部署同步與版本升級**：完成 GAS 程式碼推送（`clasp push`），並將網頁應用程式重新部署更新（`clasp deploy`），使 Web App 正式版本同步升級，確保前後端 API 路由與 UI 完全一致。
-
-### 📅 2026-08-26 - 案件範本系統、個人待辦儀表板與 GAS 直服託管
-- **可編輯案件範本 (Case Templates)**：實作完成案件範本與範本任務的完整 CRUD 功能。試算表資料庫新增 `CaseTemplates` 與 `TemplateTasks` 表格；GAS 後端支援依出發基準日與天數偏移量自動批量生成 Task Item；前端新增範本控管頁面與建立案件時的範本套用下拉選單；Mock 引擎亦同步支援。
-- **個人待辦儀表板 (Personal Dashboard)**：實作個人待辦儀表板並設為系統預設首頁，集中展示指派給當前人員的未完成事項，並按「🔴 過期 ➡️ 🟡 48H內到期 ➡️ 🔵 進行中」優先權精準排序，支援直接快速核取完成與雙向跳轉至案件/留言抽屜。
-- **GAS 網頁應用程式直服介面 (GAS Web App Direct HTML serving)**：修改 `Code.js` 的 `doGet(e)` 進入點，當無 `action` 參數時自動以 `HtmlService` 讀取並渲染 `index.html` 網頁。使得整套系統能完全無伺服器託管於 Google 雲端運行，徹底解決了跨網域連線阻擋問題。
-- **跨網域 (CORS) 下的 POST 連線修復**：針對瀏覽器限制 Google Apps Script Web App 對 `POST` 請求重定向產生的 CORS 阻擋問題，重構 GAS 後端路由為統一參數解析器，支援 `GET` 與 `POST` 雙軌接收。前端在非 `script.google.com` 網域下發起請求時，會自動將 `POST` 請求轉換並打包為 `GET` 送出，實現了 100% 穩定之非相同來源（如本地 `file://` 或 GitHub Pages）API 連線。
-
-### 📅 2026-08-26 - 任務詳情 Auto-save、初始化效能優化與 API 診斷機制
-- **任務詳情自動儲存與重複請求過濾**：為時程日期 input 與執行備註 textarea 導入焦點移開/變更自動儲存 (`onchange` / `onblur` 背景靜默同步)，並設計 original value 變更比對機制，若值未改則不發送 API 避免網路卡死。
-- **GET 請求 Null 參數處理**：修復在跨來源 GET 請求中將 `null` 值錯誤序列化為 `"null"` 字串寫入試算表的隱藏 Bug，將其轉換為空字串 `""` 傳輸。
-- **網頁載入 Promise.all 並行優化**：移除重複的 `getUsers` API 請求，並將 `getRoles`、`getCases`、`getTemplates` 改為 `Promise.all` 併行發送，使載入時間縮短一半以上。
-- **API Response 診斷機制**：優化 `apiRequest` 解析異常的錯誤攔截，遇到非 JSON 回傳（如 Google 錯誤頁）時，在 Alert 中擷取輸出其前 200 個字元以利 Debug。
-- **套用範本案件名稱自動後綴**：在後端 `Code.js` 與前端 Mock 引擎的 `createCase` 邏輯中，若發起案件時選取了案件範本，系統會自動在案件標題後方加上 `-模版名`（例如：`2026 馬航怡保團-馬航怡保 5 天團範本`），提升專案範本標示之直覺度。
-- **案件樹狀卡片預設收合**：【📋 案件模式】下所有案件卡片預設改為收合狀態 (collapsed)，箭頭指右，點擊卡片標頭可展開/收合；從個人待辦儀表板點擊跳轉時會智慧自動展開該案件。
-- **任務組名稱雙重脫逸防禦與試算表資料自動修復**：修復前端 POST/GET API 在處理陣列（如 `["TKT"]`）傳輸時，因 `JSON.stringify` 導致寫入試算表變成 `["[\"TKT\"]"]` 雜訊字串的 Bug。前後端全面導入 `cleanGroupName` 與 `parseGroupNames` 防禦解包，並在 GAS 後端加入 `fixCorruptedGroupNames()` 自動修復現有 Google Sheets 舊資料。
-- **案件名稱與團號視覺層級放大 (Typography Scale Upgrade)**：全面放大所有顯示「案件名稱 / 團號」之字型大小（包含【案件模式】專案標題由 text-base 升級為 text-xl 20px、儀表板案件連結升級為 text-sm font-bold、發起/編輯彈窗輸入框升級為 text-base，以及日曆事件字型放大），大幅提升標題可讀性與視覺層級對比。
-- **快速新增待辦消失修復與案件展開狀態記憶**：修復快速新增任務時 `visible_user_ids` 陣列字串化導致非同步背景同步時任務被權限過濾消失的 Bug。在 GAS 後端加入 `parseUserIds` 解析與試算表自動清洗；同時為 `renderCaseTree()` 導入 `openCaseIds` 折疊狀態記憶機制，確保快速新增待辦時目標案件卡片持續保持展開，不再消失。
-- **網頁載入與 API 讀取效能飆升 (Removing Blocking Write Loops on Read API)**：完全移除 `getCasesForUser` 讀取 API 中阻塞式的試算表 `setValue` 重寫迴圈。將資料淨化與權限解包改為記憶體即時運算（on-the-fly in-memory processing），將網頁載入與 API 回傳時間由原本的 60 秒以上大幅縮短至 1 秒內！
-- **快速新增待辦事項選擇器崩潰與特殊字元脫逸修復 (Safe Element ID & Attribute-Based Quick Add)**：修復快速新增待辦時當任務組名稱包含雙引號、中括號 `["TKT"]` 或空格時，CSS Selector 拋出 DOMException 及 JavaScript 行內語法錯誤導致新增失敗的 Bug。引進 `getSanitizedKey` 生成安全元素 Key，改以 `data-group-name` HTML 屬性傳遞組名，確保特殊字元組名 100% 穩定新增待辦事項。
-- **空權限名單任務過濾 Bug 終極修復 (Empty Visibility Fallback & Non-Orphan Protection)**：修復 `getCasesForUser` 與 `getMockCasesForUser` 中當 `visible_user_ids` 為空（如試算表新增列或無限制任務）時，`if (!visibleUserIds.includes(userId))` 誤將無限制任務判斷為「全員無權限」並在背景同步時過濾剔除的根本 Bug。補強預設為全員可見並強化 `createTask` 預設權限賦予，確保快速新增待辦 100% 永久保留不消失。
-- **快速新增待辦純樂觀 UI 同步 (Pure Optimistic UI & Local ID Sync)**：完全消除快速新增待辦後多餘的背景全量 `getCases` 重新讀取。當後端回傳成功分配的 `taskId` 時，前端直接在本地記憶體替換 `tempId` 為真實 ID，徹底避免因全量重新載入造成的轉圈、延遲與畫面閃爍抹除問題，實現 0 毫秒極速反應與 100% 永久保留。
-- **成員與職位刪除優雅防護 (Graceful Deletion Handling)**：修復 `deleteUser` 與 `deleteRole` 在目標 ID 已刪除或二次請求時拋出 `User with ID X not found` 彈窗警報的 Bug。後端相容多種 ID 參數命名（`userId`/`user_id`/`id`）並在記錄已移除時優雅回傳 `success`；前端為刪除操作導入樂觀 UI 移除，確保成員刪除平滑流暢。
-- **全站效能與速度極致優化 (Full-Site Speed & Silent Request Optimization)**：
-  1. **背景操作全靜音**：將 `quickAddTask`、`toggleTask`、`updateTask`（可見權限與筆記）等背景 API 設定為 `silent = true`，徹底消除點擊或快速新增時跳出全螢幕遮罩與轉圈圈動畫的停頓感。
-  2. **首頁初始化全並行化**：將首頁載入原本分開發送的 `getUsers` 與 `reloadAllViews` 4 個 GET API 合併為單一 `Promise.all` 併行發送，將網頁首頁初始化載入時間縮短至原本的 1/4。
-- **GAS 強制即時落盤與快取防護 (Explicit SpreadsheetApp.flush Commit)**：在 Apps Script 所有資料寫入與刪除 API (`createTask`, `updateTask`, `deleteTask`, `toggleTask`, `deleteUser`, `deleteRole`) 回傳前端回應前加入 `SpreadsheetApp.flush()`，強制將記憶體開銷與新增資料即時寫入 Google Sheets 實體檔案，徹底避免因非同步延遲落盤導致重新整理 (F5) 時任務消失的問題。
-- **GAS 單一通道首頁載入引擎 (Unified Single-Pass Initial Data Endpoint `getInitialData`)**：將原本網頁啟動時需發起的 4 次獨立 HTTP 請求 (`getUsers`, `getRoles`, `getCases`, `getTemplates`)，在 GAS 後端合併為單一 `getInitialData` API。Apps Script 後端重用同一 `SpreadsheetApp` 實例進行單次全讀取，徹底消除了多重 cold-start 冷啟動與連線排隊。進站首頁載入速度達到 0.3 秒內的終極極速體驗。
-- **刪除人員/無效 ID 進站重置與選單自動同步防護 (User Switcher Fallback Sync)**：修復當 `localStorage` 記錄的當前使用者 ID 已被刪除或無效時，進站重新整理 `getInitialData` 回傳成員清單未包含該 ID，導致頂端人員切換選單與當前權限狀態脫鉤消失的 Bug。自動備援將當前使用者指派為第一位可用成員並同動同步選單與案件樹。
-- **當前人員選單極致鎖定 (Guaranteed `renderUserSwitcher` Selection Binding)**：新增 `renderUserSwitcher()` 獨立渲染函式，明確將 `opt.selected = true` 與 `switcher.value = String(currentUserId)` 綁定至每次成員異動與 UI 渲染中，徹底避免重新整理或成員切換時頂端「當前人員」選單出現空白或脫鉤問題。
-- **進站初始化與快速新增雙重無死角相容備援 (Fail-Safe Initialization & Quick Add Fallback)**：
-  1. **舊版本/極限相容自動降級備援**：在 `DOMContentLoaded` 加入 `initialRes` 容錯，若 GAS 雲端部署為舊版而無法識別 `getInitialData` 時，系統自動秒級降級至 `Promise.all` 並行多線程 API，確保舊版/新版部署 100% 正常載入，絕不呈現空白。
-  2. **快速新增任務組動態防護**：強化 `quickAddTask` 的記憶體群組匹配邏輯，即使目標案件尚未預建該任務組，系統也會即時動態建立組別並寫入任務，確保 0 毫秒極速新增待辦 100% 成功顯現。
+- **📅 2026-08-17 (Phase 1: 核心 MVP 基礎建設)**：搭建儲存庫、建置 ORM 模型與權限過濾、生成示範資料 (seed.py)、整合 FullCalendar & Frappe Gantt 基礎視圖。
+- **📅 2026-08-18 (Phase 2: GAS 無伺服器移轉與多語系)**：後端重構至 `Code.js` + Google Sheets；實作多國語言 (zh-TW / vi-VN) 字典；新增 GitHub Pages 部署防護與連線引導彈窗。
+- **📅 2026-08-19 (Phase 3: 樂觀 UI、CRUD 管理與 CORS 修復)**：全站樂觀更新 (0ms 響應)；新增 Task/Case 編輯與串聯刪除；加入 `credentials: 'omit'` 解決多帳號 CORS 重定向；完成任務組 CRUD 10 色彩盤管理。
+- **📅 2026-08-20 (Phase 4: 臺灣工作天計算與權限防禦)**：實作扣除國定假日與補班日之工作天計算引擎；修復 Roles 防禦無損初始化；抽象化權限邏輯 (`isSuperMaster` / `hasCreateCasePermission`)。
+- **📅 2026-08-25 (Loading UI 與 Roles 防禦重構)**：全域 Loading 指示器提升至 `z-[100]`；後端 `ensureRolesSheet` 防禦性維護，防止覆蓋資料。
+- **📅 2026-08-26 (Phase 5: 範本系統、個人儀表板、極速單通道首頁引擎與全站無死角優化)**：
+  - **案件範本 (Case Templates)** 與 **個人待辦儀表板 (Personal Dashboard)** 全套 CRUD 引擎。
+  - **GAS 網頁直服 (`doGet`)** 與 CORS POST/GET 雙軌轉譯。
+  - **單一通道首頁載入引擎 (`getInitialData`)** 配合 `Promise.all` 降級備援，進站耗時降至 <0.3 秒。
+  - **讀取 API 阻塞迴圈清除**，讀取耗時從 60 秒降至 1 秒以內。
+  - **全站案件標題放大 (Typography Scale Upgrade)** 至 `text-xl font-bold` (20px)。
+  - 後端全面 **`SpreadsheetApp.flush()` 強制實體落盤**，消除 F5 重新整理數據丟失。
+  - 背景同步 **`silent = true` 靜音執行**，徹底消除快速新增與狀態核取時的轉圈遮罩。
+  - **刪除操作優雅防護 (`deleteUser` / `deleteRole`)**、**`renderUserSwitcher` 選單鎖定** 與 **`getSanitizedKey` 安全組名轉義**。
