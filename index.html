@@ -517,12 +517,12 @@
                 <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">開始日期 (Start Date)</span>
-                        <input type="date" id="drawer-task-start-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">開始日期 (Start Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
+                        <input type="date" id="drawer-task-start-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">截止日期 (Due Date)</span>
-                        <input type="date" id="drawer-task-due-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">截止日期 (Due Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
+                        <input type="date" id="drawer-task-due-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                 </div>
                 <button onclick="saveTaskDates()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
@@ -532,8 +532,11 @@
 
             <!-- Notes Section -->
             <div class="space-y-2">
-                <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="notesLabel">執行備註 (Notes)</label>
-                <textarea id="drawer-task-notes" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-brand-500 transition-colors" data-i18n="notesPlaceholder" placeholder="請在此填寫訂購代碼等備註..."></textarea>
+                <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="notesLabel">執行備註 (Notes)</label>
+                    <span class="text-[9px] text-emerald-500 font-medium">(移開焦點自動儲存)</span>
+                </div>
+                <textarea id="drawer-task-notes" onblur="saveTaskNotes(true)" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-brand-500 transition-colors" data-i18n="notesPlaceholder" placeholder="請在此填寫訂購代碼等備註..."></textarea>
                 <button onclick="saveTaskNotes()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="saveNotesBtn">
                     儲存備註
                 </button>
@@ -964,7 +967,7 @@
                 updateVisBtn: "更新可見權限",
                 commentLabel: "項目級討論留言 (@精準對象)",
                 commentPlaceholder: "寫點留言...可使用 @小明 標註",
-                submitCommentBtn: "送出",
+                submitCommentBtn: "送出留言",
                 newCaseModalTitle: "🚀 發起新案件 (New Case)",
                 caseNameLabel: "案件名稱 / 團號",
                 caseNamePlaceholder: "例如：2026/09/15 馬航怡保專案",
@@ -1051,7 +1054,7 @@
                 updateVisBtn: "Cập nhật quyền xem",
                 commentLabel: "Thảo luận chi tiết công việc (@đối tượng chính xác)",
                 commentPlaceholder: "Viết bình luận... dùng @tên để gắn thẻ",
-                submitCommentBtn: "Gửi",
+                submitCommentBtn: "Gửi bình luận",
                 newCaseModalTitle: "🚀 Khởi tạo dự án mới (New Case)",
                 caseNameLabel: "Tên dự án / Số đoàn",
                 caseNamePlaceholder: "Ví dụ: 2026/09/15 Tour Ipoh Malaysia",
@@ -1170,28 +1173,37 @@
         let gantt = null;
         let ganttViewMode = 'Day';
         let selectedTaskId = null;
+        let originalNotes = '';
+        let originalStartDate = '';
+        let originalDueDate = '';
         let allTemplates = [];
         let selectedTemplateId = null;
 
         // On Document Ready
         document.addEventListener('DOMContentLoaded', async () => {
-            await loadUsers();
-            
-            // Set default active user
-            const savedUserId = localStorage.getItem('activeUserId');
-            const switcher = document.getElementById('user-switcher');
-            if (savedUserId && Array.from(switcher.options).some(opt => opt.value == savedUserId)) {
-                currentUserId = parseInt(savedUserId);
-            } else if (allUsers.length > 0) {
-                currentUserId = allUsers[0].id;
-            }
-            
-            if (currentUserId) {
-                switcher.value = currentUserId;
-                updateUserIndicatorAndLanguage();
-            }
+            showLoading(true);
+            try {
+                await loadUsers();
+                
+                // Set default active user
+                const savedUserId = localStorage.getItem('activeUserId');
+                const switcher = document.getElementById('user-switcher');
+                if (savedUserId && Array.from(switcher.options).some(opt => opt.value == savedUserId)) {
+                    currentUserId = parseInt(savedUserId);
+                } else if (allUsers.length > 0) {
+                    currentUserId = allUsers[0].id;
+                }
+                
+                if (currentUserId) {
+                    switcher.value = currentUserId;
+                    updateUserIndicatorAndLanguage();
+                }
 
-            await reloadAllViews();
+                await reloadAllViews();
+            } catch (e) {
+                console.error("初始化失敗:", e);
+                showLoading(false);
+            }
         });
 
 
@@ -1234,14 +1246,22 @@
                             Object.keys(payload).forEach(k => {
                                 let val = payload[k];
                                 if (val === undefined) return;
-                                if (val !== null && typeof val === 'object') {
+                                if (val === null) {
+                                    val = "";
+                                } else if (typeof val === 'object') {
                                     val = JSON.stringify(val);
                                 }
                                 url += `&${k}=${encodeURIComponent(val)}`;
                             });
                         }
                         const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
-                        const json = await res.json();
+                        const text = await res.text();
+                        let json;
+                        try {
+                            json = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error(`回傳格式非 JSON。原始回傳前 200 字元：\n${text.substring(0, 200)}`);
+                        }
                         if (json.status === 'error') throw new Error(json.message);
                         return json;
                     } else {
@@ -1252,7 +1272,13 @@
                             redirect: 'follow',
                             credentials: 'omit'
                         });
-                        const json = await res.json();
+                        const text = await res.text();
+                        let json;
+                        try {
+                            json = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error(`回傳格式非 JSON。原始回傳前 200 字元：\n${text.substring(0, 200)}`);
+                        }
                         if (json.status === 'error') throw new Error(json.message);
                         return json;
                     }
@@ -1413,6 +1439,8 @@
                             if (t) {
                                 if (payload.notes !== undefined) t.notes = payload.notes;
                                 if (payload.visible_user_ids !== undefined) t.visible_user_ids = payload.visible_user_ids;
+                                if (payload.start_date !== undefined) t.start_date = payload.start_date;
+                                if (payload.due_date !== undefined) t.due_date = payload.due_date;
                                 resolve({ status: 'success', taskId: t.id });
                             } else {
                                 resolve({ status: 'error', message: 'Task not found' });
@@ -1704,7 +1732,7 @@
 
         // Fetch Users
         async function loadUsers() {
-            allUsers = await apiRequest('getUsers') || [];
+            allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
             
             const switcher = document.getElementById('user-switcher');
             switcher.innerHTML = '';
@@ -1776,10 +1804,22 @@
         async function reloadAllViews() {
             if (!currentUserId) return;
             
-            allUsers = await apiRequest('getUsers', null, 'GET', true) || [];
-            allRoles = await apiRequest('getRoles', null, 'GET', true) || [];
-            allCases = await apiRequest('getCases', { user_id: currentUserId }) || [];
-            allTemplates = await apiRequest('getTemplates', null, 'GET', true) || [];
+            showLoading(true);
+            try {
+                const [rolesRes, casesRes, templatesRes] = await Promise.all([
+                    apiRequest('getRoles', null, 'GET', true),
+                    apiRequest('getCases', { user_id: currentUserId }, 'GET', true),
+                    apiRequest('getTemplates', null, 'GET', true)
+                ]);
+                
+                allRoles = rolesRes || [];
+                allCases = casesRes || [];
+                allTemplates = templatesRes || [];
+            } catch (e) {
+                console.error("並行加載失敗:", e);
+            } finally {
+                showLoading(false);
+            }
             
             updateUserIndicatorAndLanguage();
             renderCalendar();
@@ -2766,6 +2806,10 @@
             document.getElementById('drawer-task-notes').value = taskObj.notes || '';
             document.getElementById('drawer-task-start-date').value = taskObj.start_date || '';
             document.getElementById('drawer-task-due-date').value = taskObj.due_date || '';
+
+            originalNotes = taskObj.notes || '';
+            originalStartDate = taskObj.start_date || '';
+            originalDueDate = taskObj.due_date || '';
             
             // Build visible users checklist
             const visContainer = document.getElementById('drawer-task-visibility');
@@ -2842,13 +2886,18 @@
             });
         }
 
-        async function saveTaskNotes() {
+        async function saveTaskNotes(silent = false) {
             if (!selectedTaskId) return;
             if (selectedTaskId > 1000000000000) {
-                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const notes = document.getElementById('drawer-task-notes').value.trim();
+            
+            if (silent && notes === originalNotes.trim()) {
+                return;
+            }
+            originalNotes = notes;
             
             const user = allUsers.find(u => u.id === currentUserId);
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
@@ -2864,23 +2913,29 @@
             });
             if (taskObj) taskObj.notes = notes;
 
-            const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST');
+            const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST', silent);
             if (res) {
-                alert(tText.successSaveNotes);
+                if (!silent) alert(tText.successSaveNotes);
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
             }
         }
 
-        async function saveTaskDates() {
+        async function saveTaskDates(silent = false) {
             if (!selectedTaskId) return;
             if (selectedTaskId > 1000000000000) {
-                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const startDate = document.getElementById('drawer-task-start-date').value || null;
             const dueDate = document.getElementById('drawer-task-due-date').value || null;
+
+            if (silent && startDate === originalStartDate && dueDate === originalDueDate) {
+                return;
+            }
+            originalStartDate = startDate || '';
+            originalDueDate = dueDate || '';
 
             const user = allUsers.find(u => u.id === currentUserId);
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
@@ -2903,10 +2958,10 @@
                 taskId: selectedTaskId, 
                 start_date: startDate, 
                 due_date: dueDate 
-            }, 'POST');
+            }, 'POST', silent);
             
             if (res) {
-                alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
+                if (!silent) alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
@@ -2958,7 +3013,12 @@
             }
             const input = document.getElementById('new-comment-input');
             const content = input.value.trim();
-            if (!content) return;
+            if (!content) {
+                const user = allUsers.find(u => u.id === currentUserId);
+                const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+                alert(lang === 'vi-VN' ? "Vui lòng nhập nội dung bình luận!" : "請輸入留言內容！");
+                return;
+            }
 
             const userObj = allUsers.find(u => u.id === currentUserId) || { username: 'System', role: '', avatar_color: '#4f46e5' };
             const tempCommentId = Date.now();
