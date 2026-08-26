@@ -512,7 +512,6 @@ function getUsers() {
  * Fetch and construct filtered Case tree for a specific user.
  */
 function getCasesForUser(userId) {
-  fixCorruptedGroupNames();
   const ss = getSpreadsheet();
   const users = getUsers();
   const userMap = {};
