@@ -107,9 +107,10 @@
   - **案件出發日自愈與升序排列**：在 `Cases` 工作表新增第 7 欄 `reference_date`；支援於編輯案件彈窗內調整出發日；實作「雙模智慧解析自愈引擎」，自動匹配標準日期格式或團號編碼格式（如 `JX260916A` 提取為 `2026-09-16`），在載入時自動寫回補齊舊有資料，並按出發日由近到遠排序，且在樹狀圖中直顯出發日小標籤。
   - **老舊數據自動兼容升級**：後端 `ensureTemplatesSheets` 升級為 6 欄位，自動為舊 CaseTemplates 補齊 `default_description` 與 `briefing_options` 欄位標題，老舊數據無痛直升。
   - **全自動代部署協議**：與 AI 達成全權代理部署協議，代碼修正後由 AI 自動完成 clasp push、clasp deploy、git commit 與 git push，使用者僅於最終環境進行驗證。
-- **📅 2026-08-27 (第二部分：Google SSO 實名綁定登入與權限鎖定防禦)**：
-  - **Google 原生 SSO 登入驗證**：利用 GAS 後端 `Session.getActiveUser().getEmail()` 取得登入者帳戶，安全匹配 `Users` 中的 `google_email` 進行防禦過濾。
-  - **超級管理員 Email 首次登入自動綁定 (First-login Auto-binding)**：若 `Users` 資料庫中超級管理員 (Martin) 的 Email 欄位為空，系統在 Martin 首次登入時會自動抓取其 Email 並寫回 Sheets 綁定，完美自癒免手動修改。
-  - **權限鎖定與 dropdown 隱藏**：一般同仁進站後，頂端 Navbar 與側邊欄的「人員切換」選單會被徹底隱藏鎖死，改為靜態頭像與 `Username [Role]` 標示，並強制前端 `currentUserId` 鎖定為真實登入 ID；管理員 Martin 則保留切換選單以便巡邏與視角測試。
-  - **後端閉環過濾 (Impersonation Defense)**：後端介面拒絕前端 `user_id` 越權請求。若非 Super Master，後端強制覆蓋請求 ID 為真實登入 ID，防範駭客修改前端 JS 代碼。
-  - **未授權毛玻璃阻斷頁面**：若使用者以未在 `Users` 綁定的外部 Google 帳戶進站，頁面會彈出極致精美的玻璃質感阻斷畫面，顯示其 Email 並引導聯繫 Martin 授權開通。
+- **📅 2026-08-27 (第二部分：Google SSO 實名驗證失敗與 CORS 退回跨域匿名相容部署)**：
+  - **SSO CORS 失敗分析**：發現由於前端是託管在 GitHub Pages (`voyagermartin.github.io`) 上，前端對後端的所有 API 呼叫都是**跨網域 (CORS) 的 fetch 請求**。而跨網域 `fetch` 預設是無法攜帶 Google 登入 Cookie 的（CORS 匿名限制）。
+  - **部署配置還原**：若將 Web App 設定為 `USER_ACCESSING` 與 `ANYONE`，Google 會強制阻斷任何匿名請求，導致 GitHub Pages 呼叫失敗、全站資料空白。因此已在 `appsscript.json` 中將 Web App 重新還原為 **`USER_DEPLOYING`** (執行身分：我) 與 **`ANYONE_ANONYMOUS`** (權限：所有人，包含匿名)，成功打通跨網域連線。
+  - **原生通道 `google.script.run` 雙軌備援與異步載入自旋鎖**：在前端 `apiRequest` 整合 `google.script.run`，於直接訪問 Web App 網址時直接走原生安全通道；並實作 `waitForGoogleScript` 自旋鎖（每 50ms 檢查，最長 2.5 秒），解決 F5 重新整理時 Google 原生 API 還未加載完成的 Race Condition。
+  - **後端安全防鎖死 (Soft Fallback)**：當後端接收不到 Email（如跨域 anonymous）或 Email 不在 `Users` 資料表中時，自動改為寬鬆放行模式（不彈出毛玻璃阻斷遮罩），並自動導向至選取的人員 ID 或預設 ID 1 (Martin) 進站，保障系統不論何種連線環境都不會鎖死。
+  - **浮動除錯面板 (Developer Debugger)**：在網頁右下角新增一個獨立的浮動除錯面板，即時呈現 Hostname、Is GAS Container、loggedInUserEmail、allUsers.length、currentUserId、loginUser、allCases.length 與 Status，以方便開發與測試診斷。
+  - **LocalStorage F5 記憶功能**：在寬鬆免登入模式下，LocalStorage 會正常儲存並於 F5 重新整理時還原使用者所選擇的人員 ID，保證當前人員不會再次遺失。
