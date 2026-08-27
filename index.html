@@ -1250,6 +1250,18 @@
         // On Document Ready - Optimized parallel batch initial load
         document.addEventListener('DOMContentLoaded', async () => {
             showLoading(true);
+
+            // Update debug hostname and container flag
+            const isGASContainer = window.location.hostname.includes('google.com') || window.location.hostname.includes('googleusercontent.com');
+            const debugHostnameEl = document.getElementById('debug-hostname');
+            const debugIsgasEl = document.getElementById('debug-isgas');
+            const debugEmailEl = document.getElementById('debug-email');
+            const debugStatusEl = document.getElementById('debug-status');
+
+            if (debugHostnameEl) debugHostnameEl.textContent = window.location.hostname || "localfile";
+            if (debugIsgasEl) debugIsgasEl.textContent = isGASContainer ? "YES" : "NO";
+            if (debugEmailEl) debugEmailEl.textContent = (typeof loggedInUserEmail !== 'undefined') ? loggedInUserEmail : "undefined";
+            if (debugStatusEl) debugStatusEl.textContent = "Loading API...";
             try {
                 const savedUserId = localStorage.getItem('activeUserId');
                 let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
@@ -1312,11 +1324,32 @@
 
                 updateUserIndicatorAndLanguage();
 
+                // Update debug variables after API loads successfully
+                const debugUsersCountEl = document.getElementById('debug-users-count');
+                const debugCurrentIdEl = document.getElementById('debug-current-id');
+                const debugLoginUserEl = document.getElementById('debug-login-user');
+                const debugCasesCountEl = document.getElementById('debug-cases-count');
+                const debugStatusEl = document.getElementById('debug-status');
+
+                if (debugUsersCountEl) debugUsersCountEl.textContent = allUsers.length;
+                if (debugCurrentIdEl) debugCurrentIdEl.textContent = currentUserId || "null";
+                if (debugLoginUserEl) debugLoginUserEl.textContent = loginUser ? `${loginUser.username} (ID: ${loginUser.id})` : "null";
+                if (debugCasesCountEl) debugCasesCountEl.textContent = allCases.length;
+                if (debugStatusEl) {
+                    debugStatusEl.textContent = "Ready";
+                    debugStatusEl.style.color = "#34d399"; // green
+                }
+
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
             } catch (e) {
                 console.error("初始化失敗:", e);
+                const debugStatusEl = document.getElementById('debug-status');
+                if (debugStatusEl) {
+                    debugStatusEl.textContent = "Error: " + e.toString();
+                    debugStatusEl.style.color = "#f87171"; // red
+                }
                 alert("系統初始化失敗！\n請將此錯誤訊息截圖提供給開發人員以進行修復：\n\n" + e.toString());
             } finally {
                 showLoading(false);
@@ -4600,5 +4633,21 @@
             await reloadAllViews(true);
         }
     </script>
+
+    <!-- Floating Developer Debugger Panel -->
+    <div id="dev-debug-panel" style="position: fixed; bottom: 16px; right: 16px; background-color: #0f172a; border: 1px solid #334155; padding: 12px; rounded: 12px; border-radius: 12px; z-index: 9999; font-family: monospace; font-size: 11px; color: #cbd5e1; max-width: 320px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); line-height: 1.4;">
+        <div style="font-weight: bold; color: #f1f5f9; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>🔍 CaseFlow OS Debugger</span>
+            <button onclick="document.getElementById('dev-debug-panel').style.display='none'" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
+        </div>
+        <div>Hostname: <span id="debug-hostname" style="color: #38bdf8;">-</span></div>
+        <div>Is GAS Container: <span id="debug-isgas" style="color: #38bdf8;">-</span></div>
+        <div>loggedInUserEmail: <span id="debug-email" style="color: #38bdf8;">-</span></div>
+        <div>allUsers.length: <span id="debug-users-count" style="color: #38bdf8;">-</span></div>
+        <div>currentUserId: <span id="debug-current-id" style="color: #38bdf8;">-</span></div>
+        <div>loginUser: <span id="debug-login-user" style="color: #38bdf8;">-</span></div>
+        <div>allCases.length: <span id="debug-cases-count" style="color: #38bdf8;">-</span></div>
+        <div style="border-top: 1px solid #334155; margin-top: 6px; padding-top: 4px; font-weight: bold; color: #fbbf24;">Status: <span id="debug-status">-</span></div>
+    </div>
 </body>
 </html>
