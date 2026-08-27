@@ -1227,6 +1227,10 @@
         // --- Client State ---
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg/exec";
 
+        // Injected by Apps Script template engine. Will be empty string when running locally or on GitHub Pages.
+        const loggedInUserEmail = "<?= userEmail ?>";
+        const loggedInUserSignature = "<?= userSignature ?>";
+
         let currentUserId = null;
         let allUsers = [];
         let allRoles = [];
@@ -1280,8 +1284,10 @@
                     loginUser = initialRes.loginUser || null;
                 }
 
-                // If logged-in user is not Super Master, enforce their own ID
-                if (loginUser) {
+                // Check if we are running in authenticated Web App mode
+                const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
+
+                if (loginUser && isAuthenticatedMode) {
                     if (loginUser.is_super_master === true || loginUser.id === 1) {
                         // Keep targetUserId for testing impersonation
                         if (allUsers.some(u => u.id == targetUserId)) {
@@ -1295,7 +1301,7 @@
                         localStorage.setItem('activeUserId', currentUserId);
                     }
                 } else {
-                    // Fallback if loginUser is missing (legacy compat)
+                    // Local / GitHub Pages development mode: bypass locking, always allow switching
                     if (allUsers.some(u => u.id == targetUserId)) {
                         currentUserId = targetUserId;
                     } else if (allUsers.length > 0) {
@@ -1335,14 +1341,28 @@
         // Global Request Wrapper
         async function apiRequest(action, payload = null, method = 'GET', silent = false) {
             if (!silent) showLoading(true);
-            
+
             try {
                 if (GAS_API_URL) {
                     // Check URL format to avoid common user copy-paste mistakes (like pasting sheet URL)
                     if (!GAS_API_URL.includes("script.google.com/macros/s/") || !GAS_API_URL.includes("/exec")) {
                         throw new Error("網址格式錯誤！\n請貼上以 /exec 結尾的 Google Apps Script 網頁應用程式 (Web App) 網址。\n不要貼上 Google 試算表或 Apps Script 編輯器的編輯網址。");
                     }
-                    
+
+                    // Inject signature-based authentication parameters if active
+                    let authEmail = "";
+                    let authSignature = "";
+                    if (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?")) {
+                        authEmail = loggedInUserEmail;
+                        authSignature = loggedInUserSignature;
+                    }
+
+                    let finalPayload = payload ? { ...payload } : {};
+                    if (authEmail) {
+                        finalPayload.auth_email = authEmail;
+                        finalPayload.auth_signature = authSignature;
+                    }
+
                     // REAL GAS API Connection
                     // Force GET to bypass Google Apps Script CORS redirect block on POST requests when cross-origin
                     let actualMethod = method;
@@ -1352,9 +1372,9 @@
 
                     if (actualMethod === 'GET') {
                         let url = `${GAS_API_URL}?action=${action}`;
-                        if (payload) {
-                            Object.keys(payload).forEach(k => {
-                                let val = payload[k];
+                        if (finalPayload) {
+                            Object.keys(finalPayload).forEach(k => {
+                                let val = finalPayload[k];
                                 if (val === undefined) return;
                                 if (val === null) {
                                     val = "";
@@ -1375,7 +1395,7 @@
                         if (json.status === 'error') throw new Error(json.message);
                         return json;
                     } else {
-                        const bodyPayload = { action: action, ...payload };
+                        const bodyPayload = { action: action, ...finalPayload };
                         const res = await fetch(GAS_API_URL, {
                             method: 'POST',
                             body: JSON.stringify(bodyPayload),
@@ -2000,14 +2020,21 @@
             
             const switcher = document.getElementById('user-switcher');
             const staticLabel = document.getElementById('user-static-label');
+            const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
             if (switcher && staticLabel) {
-                if (loginUser && (loginUser.is_super_master === true || loginUser.id === 1)) {
+                if (isAuthenticatedMode && loginUser) {
+                    if (loginUser.is_super_master === true || loginUser.id === 1) {
+                        switcher.classList.remove('hidden');
+                        staticLabel.classList.add('hidden');
+                    } else {
+                        switcher.classList.add('hidden');
+                        staticLabel.classList.remove('hidden');
+                        staticLabel.textContent = `${loginUser.username} [${loginUser.role_name}]`;
+                    }
+                } else {
+                    // Local / dev fallback: always show switcher
                     switcher.classList.remove('hidden');
                     staticLabel.classList.add('hidden');
-                } else if (loginUser) {
-                    switcher.classList.add('hidden');
-                    staticLabel.classList.remove('hidden');
-                    staticLabel.textContent = `${loginUser.username} [${loginUser.role_name}]`;
                 }
             }
 

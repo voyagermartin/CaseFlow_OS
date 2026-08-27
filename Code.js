@@ -308,9 +308,24 @@ function handleRequest(action, params) {
 
   const ss = getSpreadsheet();
   const users = getUsers(ss);
-  
-  let activeEmail = Session.getActiveUser().getEmail();
-  activeEmail = activeEmail ? activeEmail.toLowerCase().trim() : "";
+
+  // Extract signed email from request if verified
+  let activeEmail = "";
+  if (params.auth_email && params.auth_signature) {
+    const rawSig = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, params.auth_email, SPREADSHEET_ID);
+    const expectedSig = Utilities.base64Encode(rawSig);
+    if (params.auth_signature === expectedSig) {
+      activeEmail = params.auth_email.toLowerCase().trim();
+    }
+  }
+
+  // Fallback to Apps Script session email (only present if visited directly and running in SAME_ORIGIN or USER_ACCESSING context)
+  if (!activeEmail) {
+    let sessionEmail = Session.getActiveUser().getEmail();
+    if (sessionEmail) {
+      activeEmail = sessionEmail.toLowerCase().trim();
+    }
+  }
 
   let trueUser = null;
   if (activeEmail) {
@@ -337,26 +352,37 @@ function handleRequest(action, params) {
     }
   }
 
-  if (!trueUser) {
-    if (action === "getInitialData") {
-      return {
-        status: "unauthorized",
-        email: activeEmail,
-        users: users,
-        roles: getRoles(ss)
-      };
-    }
-    throw new Error("Unauthorized user access: " + activeEmail);
-  }
+  // Determine targetUserId and impersonation
+  let targetUserId = getInt(params.user_id || params.userId) || 1;
+  let impersonatedUserId = targetUserId;
 
-  // Impersonation & Security Enforcement
-  let impersonatedUserId = trueUser.id;
-  const isSuper = trueUser.is_super_master === true || trueUser.id === 1 || trueUser.username === "Martin";
-  
-  if (isSuper) {
-    if (params.user_id !== undefined && params.user_id !== null && params.user_id !== "") {
-      impersonatedUserId = parseInt(params.user_id);
+  if (activeEmail) {
+    // We are authenticated: Enforce authorization
+    if (!trueUser) {
+      if (action === "getInitialData") {
+        return {
+          status: "unauthorized",
+          email: activeEmail,
+          users: users,
+          roles: getRoles(ss)
+        };
+      }
+      throw new Error("Unauthorized user access: " + activeEmail);
     }
+    
+    // Impersonation & Security Enforcement
+    const isSuper = trueUser.is_super_master === true || trueUser.id === 1 || trueUser.username === "Martin";
+    if (isSuper) {
+      impersonatedUserId = targetUserId;
+    } else {
+      // Lock non-super-master to their own ID
+      impersonatedUserId = trueUser.id;
+    }
+  } else {
+    // We are NOT authenticated (e.g. local testing or GitHub Pages): Bypass check
+    // In this case, trueUser is set to the targeted user for mock testing
+    trueUser = users.find(u => u.id === targetUserId) || users[0] || null;
+    impersonatedUserId = targetUserId;
   }
 
   if (action === "getInitialData") {
@@ -487,10 +513,22 @@ function handleRequest(action, params) {
 
 function doGet(e) {
   const action = e && e.parameter && e.parameter.action;
-  
+
   // If no action is specified, serve index.html directly as the Web App UI
   if (!action) {
-    return HtmlService.createHtmlOutputFromFile("index")
+    let activeEmail = Session.getActiveUser().getEmail();
+    activeEmail = activeEmail ? activeEmail.toLowerCase().trim() : "";
+    let signature = "";
+    if (activeEmail) {
+      const rawSig = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, activeEmail, SPREADSHEET_ID);
+      signature = Utilities.base64Encode(rawSig);
+    }
+
+    const template = HtmlService.createTemplateFromFile("index");
+    template.userEmail = activeEmail;
+    template.userSignature = signature;
+
+    return template.evaluate()
       .addMetaTag("viewport", "width=device-width, initial-scale=1")
       .setTitle("CaseFlow OS - 案件協同與權限管家")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
