@@ -1342,6 +1342,26 @@
         async function apiRequest(action, payload = null, method = 'GET', silent = false) {
             if (!silent) showLoading(true);
 
+            // If running inside Google Apps Script (HTML Service container), use native google.script.run
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                return new Promise((resolve, reject) => {
+                    google.script.run
+                        .withSuccessHandler((res) => {
+                            if (!silent) showLoading(false);
+                            if (res && res.status === 'error') {
+                                reject(new Error(res.message));
+                            } else {
+                                resolve(res);
+                            }
+                        })
+                        .withFailureHandler((err) => {
+                            if (!silent) showLoading(false);
+                            reject(err);
+                        })
+                        .apiCall(action, payload);
+                });
+            }
+
             try {
                 if (GAS_API_URL) {
                     // Check URL format to avoid common user copy-paste mistakes (like pasting sheet URL)

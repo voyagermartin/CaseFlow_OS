@@ -1417,3 +1417,10 @@ function deleteTemplateTask(taskId) {
   }
   throw new Error("Template task with ID " + taskId + " not found");
 }
+
+/**
+ * Expose apiCall natively to client-side google.script.run.
+ */
+function apiCall(action, params) {
+  return handleRequest(action, params);
+}
