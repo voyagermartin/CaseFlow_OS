@@ -174,7 +174,12 @@ function ensureTemplatesSheets(ss) {
   let tSheet = ss.getSheetByName("CaseTemplates");
   if (!tSheet) {
     tSheet = ss.insertSheet("CaseTemplates");
-    tSheet.appendRow(["id", "template_name", "description", "group_names"]);
+    tSheet.appendRow(["id", "template_name", "description", "group_names", "default_description"]);
+  } else {
+    // Robustness: ensure column 5 header is set for legacy sheets upgrade
+    if (tSheet.getLastColumn() < 5 || tSheet.getRange(1, 5).getValue() === "") {
+      tSheet.getRange(1, 5).setValue("default_description");
+    }
   }
   let taskSheet = ss.getSheetByName("TemplateTasks");
   if (!taskSheet) {
@@ -238,10 +243,22 @@ function initDatabase() {
   commentSheet.appendRow([2, 2, 4, "Đã xác nhận phòng với khách sạn rồi nhé!", "2026-08-15 15:30:00"]);
 
   // 6. CaseTemplates Sheet
-  const templateHeaders = ["id", "template_name", "description", "group_names"];
+  const templateHeaders = ["id", "template_name", "description", "group_names", "default_description"];
   const templateSheet = setupSheet("CaseTemplates", templateHeaders);
-  templateSheet.appendRow([1, "馬航怡保 5 天團範本", "馬來西亞怡保 5 天團之標準作業流程模板", "票務與交通, LOCAL 與 住宿, 名單與證件"]);
-  templateSheet.appendRow([2, "日本賞櫻 5 天團範本", "日本賞櫻團之標準作業流程模板", "機票組, 飯店與行程, 簽證與保險"]);
+  templateSheet.appendRow([
+    1, 
+    "馬航怡保 5 天團範本", 
+    "馬來西亞怡保 5 天團之標準作業流程模板", 
+    "票務與交通, LOCAL 與 住宿, 名單與證件",
+    "怡保出團預置事項：\n- 飯店：已核對 Ascott 房型無誤\n- 交通：接送機司機電話確認完畢\n- 證件：團員護照正本已收齊"
+  ]);
+  templateSheet.appendRow([
+    2, 
+    "日本賞櫻 5 天團範本", 
+    "日本賞櫻團之標準作業流程模板", 
+    "機票組, 飯店與行程, 簽證與保險",
+    "日本賞櫻團預置事項：\n- 行程：東京上野公園與新宿御苑花況確認\n- 飯店：箱根溫泉飯店晚餐已預訂\n- 保險：全體團員旅遊平安險已投保"
+  ]);
 
   // 7. TemplateTasks Sheet
   const templateTaskHeaders = ["id", "template_id", "group_name", "title", "start_day_offset", "due_day_offset", "notes"];
@@ -319,9 +336,9 @@ function handleRequest(action, params) {
       params.reference_date
     );
   } else if (action === "createTemplate") {
-    return createTemplate(params.template_name, params.description, params.group_names);
+    return createTemplate(params.template_name, params.description, params.group_names, params.default_description);
   } else if (action === "updateTemplate") {
-    return updateTemplate(getInt(params.templateId), params.template_name, params.description, params.group_names);
+    return updateTemplate(getInt(params.templateId), params.template_name, params.description, params.group_names, params.default_description);
   } else if (action === "deleteTemplate") {
     return deleteTemplate(getInt(params.templateId));
   } else if (action === "createTemplateTask") {
@@ -1121,12 +1138,14 @@ function getTemplates(ss) {
     const desc = tValues[i][2];
     const groupsStr = tValues[i][3] || "";
     const groupNames = groupsStr ? groupsStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+    const defaultDesc = tValues[i][4] || "";
     
     templates.push({
       id: tId,
       template_name: name,
       description: desc || "",
       group_names: groupNames,
+      default_description: defaultDesc,
       tasks: tasksByTemplateId[tId] || []
     });
   }
@@ -1147,17 +1166,18 @@ function getInitialData(userId) {
   };
 }
 
-function createTemplate(name, description, groups) {
+function createTemplate(name, description, groups, defaultDescription) {
   const ss = getSpreadsheet();
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
   const nextId = getNextId(sheet);
   const groupsStr = parseGroupNames(groups).join(", ");
-  sheet.appendRow([nextId, name, description || "", groupsStr]);
+  sheet.appendRow([nextId, name, description || "", groupsStr, defaultDescription || ""]);
+  SpreadsheetApp.flush();
   return { status: "success", templateId: nextId };
 }
 
-function updateTemplate(templateId, name, description, groups) {
+function updateTemplate(templateId, name, description, groups, defaultDescription) {
   const ss = getSpreadsheet();
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
@@ -1168,6 +1188,8 @@ function updateTemplate(templateId, name, description, groups) {
       sheet.getRange(i + 1, 2).setValue(name);
       sheet.getRange(i + 1, 3).setValue(description || "");
       sheet.getRange(i + 1, 4).setValue(groupsStr);
+      sheet.getRange(i + 1, 5).setValue(defaultDescription || "");
+      SpreadsheetApp.flush();
       return { status: "success", templateId: templateId };
     }
   }

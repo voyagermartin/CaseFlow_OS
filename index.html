@@ -729,7 +729,11 @@
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateDescLabel">範本描述</label>
-                    <textarea id="template-modal-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本適用場景或簡要說明..."></textarea>
+                    <textarea id="template-modal-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本適用場景或簡要說明..."></textarea>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">預置案件描述 (套用範本時自動代入)</label>
+                    <textarea id="template-modal-default-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本套用後，新案件預設的描述、待辦歷程或重要預置事項..."></textarea>
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateGroupsLabel">預設任務群組 (以逗號分隔)</label>
@@ -3516,16 +3520,20 @@
             const groupsContainer = document.getElementById('new-case-groups-container');
             const groupsInput = document.getElementById('new-case-groups');
             const refDateInput = document.getElementById('new-case-ref-date');
+            const descInput = document.getElementById('new-case-desc');
 
             if (templateId) {
                 if (refDateContainer) refDateContainer.classList.remove('hidden');
                 if (groupsContainer) groupsContainer.classList.add('hidden'); // Hide groups field, because template determines them
                 if (refDateInput) refDateInput.required = true;
 
-                // Pre-populate groups based on template
+                // Pre-populate groups and default description based on template
                 const t = allTemplates.find(x => x.id === parseInt(templateId));
-                if (t && groupsInput) {
-                    groupsInput.value = t.group_names.join(', ');
+                if (t) {
+                    if (groupsInput) groupsInput.value = t.group_names.join(', ');
+                    if (descInput && t.default_description) {
+                        descInput.value = t.default_description;
+                    }
                 }
             } else {
                 if (refDateContainer) refDateContainer.classList.add('hidden');
@@ -3533,6 +3541,9 @@
                 if (refDateInput) {
                     refDateInput.required = false;
                     refDateInput.value = "";
+                }
+                if (descInput) {
+                    descInput.value = "";
                 }
                 // Pre-populate with default groups
                 const map = getGroupColorMap();
@@ -4042,6 +4053,7 @@
             document.getElementById('template-modal-id').value = "";
             document.getElementById('template-modal-name').value = "";
             document.getElementById('template-modal-desc').value = "";
+            document.getElementById('template-modal-default-desc').value = "";
             document.getElementById('template-modal-groups').value = "票務與交通, LOCAL 與 住宿, 名單與證件";
             document.getElementById('template-modal').classList.remove('hidden');
         }
@@ -4053,6 +4065,7 @@
             document.getElementById('template-modal-id').value = t.id;
             document.getElementById('template-modal-name').value = t.template_name;
             document.getElementById('template-modal-desc').value = t.description || "";
+            document.getElementById('template-modal-default-desc').value = t.default_description || "";
             document.getElementById('template-modal-groups').value = t.group_names.join(', ');
             document.getElementById('template-modal').classList.remove('hidden');
         }
@@ -4065,6 +4078,7 @@
             const idVal = document.getElementById('template-modal-id').value;
             const nameVal = document.getElementById('template-modal-name').value.trim();
             const descVal = document.getElementById('template-modal-desc').value.trim();
+            const defaultDescVal = document.getElementById('template-modal-default-desc').value.trim();
             const groupsVal = document.getElementById('template-modal-groups').value.trim();
 
             if (!nameVal) {
@@ -4080,6 +4094,7 @@
             const payload = {
                 template_name: nameVal,
                 description: descVal,
+                default_description: defaultDescVal,
                 group_names: groups
             };
 
@@ -4094,6 +4109,7 @@
                 if (localT) {
                     localT.template_name = nameVal;
                     localT.description = descVal;
+                    localT.default_description = defaultDescVal;
                     localT.group_names = groups;
                 }
                 renderTemplateControl();
@@ -4108,6 +4124,7 @@
                     id: tempId,
                     template_name: nameVal,
                     description: descVal,
+                    default_description: defaultDescVal,
                     group_names: groups,
                     tasks: []
                 });
