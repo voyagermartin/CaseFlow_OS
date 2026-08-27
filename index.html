@@ -3131,22 +3131,149 @@
 
             comments.forEach(c => {
                 const userObj = allUsers.find(u => u.id === c.user_id) || { username: 'Unknown', role: '', avatar_color: '#94a3b8' };
+                const currentUser = allUsers.find(u => u.id === currentUserId);
+                const canManage = (c.user_id === currentUserId) || (currentUser && isSuperMaster(currentUser));
+                
+                const manageHtml = canManage ? `
+                    <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                        <button onclick="startEditComment(${c.id}, this)" class="text-slate-500 hover:text-slate-350 p-0.5 text-[10px] transition-colors" title="編輯留言">
+                            ✏️
+                        </button>
+                        <button onclick="deleteCommentAction(${c.id})" class="text-rose-500 hover:text-rose-450 p-0.5 text-[10px] transition-colors" title="刪除留言">
+                            🗑️
+                        </button>
+                    </div>
+                ` : '';
+
                 list.innerHTML += `
-                    <div class="bg-slate-950/60 border border-slate-850 p-3 rounded-xl space-y-1">
+                    <div class="bg-slate-950/60 border border-slate-850 p-3 rounded-xl space-y-1.5" id="comment-card-${c.id}">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1.5">
-                                <span class="h-4.5 w-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase" style="background-color: ${userObj.avatar_color}">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="h-4.5 w-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase shrink-0" style="background-color: ${userObj.avatar_color}">
                                     ${userObj.username.charAt(0)}
                                 </span>
-                                <span class="text-xs font-bold text-slate-200">${userObj.username}</span>
-                                <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-normal">${userObj.role}</span>
+                                <span class="text-xs font-bold text-slate-200 truncate">${userObj.username}</span>
+                                <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-normal shrink-0">${userObj.role || ''}</span>
                             </div>
-                            <span class="text-[9px] text-slate-500">${c.created_at}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] text-slate-500 shrink-0">${c.created_at}</span>
+                                ${manageHtml}
+                            </div>
                         </div>
-                        <p class="text-xs text-slate-350 leading-relaxed">${c.content}</p>
+                        <p class="text-xs text-slate-350 leading-relaxed break-all" id="comment-text-${c.id}">${escapeHtml(c.content)}</p>
                     </div>
                 `;
             });
+        }
+
+        async function deleteCommentAction(commentId) {
+            if (!confirm("確定要刪除這條討論留言嗎？")) return;
+            
+            // Local update
+            let foundTask = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        if (t.comments) {
+                            const index = t.comments.findIndex(cm => cm.id === commentId);
+                            if (index !== -1) {
+                                t.comments.splice(index, 1);
+                                foundTask = t;
+                            }
+                        }
+                    });
+                });
+            });
+
+            if (foundTask) {
+                renderDrawerComments(foundTask.comments);
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            }
+
+            showDrawerSyncStatus('syncing', "正在刪除留言...");
+            const res = await apiRequest('deleteComment', { commentId: commentId }, 'POST', true);
+            if (res && res.status === 'success') {
+                showDrawerSyncStatus('success');
+            } else {
+                showDrawerSyncStatus('error', '刪除失敗');
+                alert("刪除留言失敗，請重新整理頁面再試。");
+            }
+        }
+
+        function startEditComment(commentId, btn) {
+            const textEl = document.getElementById(`comment-text-${commentId}`);
+            if (!textEl) return;
+            
+            // If already editing, ignore
+            if (textEl.querySelector('input')) return;
+            
+            const originalContent = textEl.textContent.trim();
+            
+            textEl.innerHTML = `
+                <div class="flex gap-2 mt-1 w-full">
+                    <input type="text" id="comment-edit-input-${commentId}" value="${escapeHtml(originalContent)}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+                    <button onclick="saveCommentEdit(${commentId})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
+                        儲存
+                    </button>
+                    <button onclick="cancelCommentEdit(${commentId}, \`${escapeHtml(originalContent).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="bg-slate-800 hover:bg-slate-750 text-slate-350 text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
+                        取消
+                    </button>
+                </div>
+            `;
+            
+            // Auto focus
+            setTimeout(() => {
+                const input = document.getElementById(`comment-edit-input-${commentId}`);
+                if (input) input.focus();
+            }, 50);
+        }
+
+        function cancelCommentEdit(commentId, originalContent) {
+            const textEl = document.getElementById(`comment-text-${commentId}`);
+            if (textEl) {
+                textEl.innerHTML = escapeHtml(originalContent);
+            }
+        }
+
+        async function saveCommentEdit(commentId) {
+            const input = document.getElementById(`comment-edit-input-${commentId}`);
+            if (!input) return;
+            const newContent = input.value.trim();
+            if (!newContent) return;
+
+            // Local update
+            let foundTask = null;
+            allCases.forEach(c => {
+                c.groups.forEach(g => {
+                    g.tasks.forEach(t => {
+                        if (t.comments) {
+                            const found = t.comments.find(cm => cm.id === commentId);
+                            if (found) {
+                                found.content = newContent;
+                                foundTask = t;
+                            }
+                        }
+                    });
+                });
+            });
+
+            if (foundTask) {
+                renderDrawerComments(foundTask.comments);
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+            }
+
+            showDrawerSyncStatus('syncing', "正在儲存留言...");
+            const res = await apiRequest('updateComment', { commentId: commentId, content: newContent }, 'POST', true);
+            if (res && res.status === 'success') {
+                showDrawerSyncStatus('success');
+            } else {
+                showDrawerSyncStatus('error', '修改失敗');
+                alert("儲存修改留言失敗，請重新整理頁面再試。");
+            }
         }
 
         async function saveTaskNotes(silent = true) {

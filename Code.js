@@ -363,6 +363,10 @@ function handleRequest(action, params) {
     );
   } else if (action === "deleteTask") {
     return deleteTask(getInt(params.taskId));
+  } else if (action === "deleteComment") {
+    return deleteComment(getInt(params.commentId));
+  } else if (action === "updateComment") {
+    return updateComment(getInt(params.commentId), params.content);
   } else if (action === "dumpTasks") {
     const ss = getSpreadsheet();
     const sheet = ss.getSheetByName("Tasks");
@@ -835,6 +839,38 @@ function addComment(taskId, userId, content) {
   const nowStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
   sheet.appendRow([nextId, taskId, userId, content, nowStr]);
   return { status: "success", commentId: nextId };
+}
+
+function updateComment(commentId, content) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Comments");
+  if (!sheet) throw new Error("Comments sheet not initialized");
+  
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === commentId) {
+      sheet.getRange(i + 1, 4).setValue(content); // Column 4 is content
+      SpreadsheetApp.flush();
+      return { status: "success", commentId: commentId };
+    }
+  }
+  throw new Error("Comment with ID " + commentId + " not found");
+}
+
+function deleteComment(commentId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Comments");
+  if (!sheet) throw new Error("Comments sheet not initialized");
+  
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][0]) === commentId) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { status: "success", commentId: commentId };
+    }
+  }
+  throw new Error("Comment with ID " + commentId + " not found");
 }
 
 function deleteTask(taskId) {
