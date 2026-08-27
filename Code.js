@@ -621,12 +621,33 @@ function getCasesForUser(userId, ss) {
   // Helper to extract date from case title for self-healing
   function extractDateFromTitle(t) {
     if (!t) return "";
-    const match = t.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
-    if (match) {
-      const y = match[1];
-      const m = match[2].padStart(2, '0');
-      const d = match[3].padStart(2, '0');
+    
+    // 1. Matches YYYY/MM/DD or YYYY-MM-DD
+    const standardMatch = t.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+    if (standardMatch) {
+      const y = standardMatch[1];
+      const m = standardMatch[2].padStart(2, '0');
+      const d = standardMatch[3].padStart(2, '0');
       return `${y}-${m}-${d}`;
+    }
+    
+    // 2. Matches YYMMDD (e.g. 260916 in JX260916A)
+    const matches = t.match(/\d{6}/g);
+    if (matches) {
+      for (let i = 0; i < matches.length; i++) {
+        const val = matches[i];
+        const yy = parseInt(val.substring(0, 2));
+        const mm = parseInt(val.substring(2, 4));
+        const dd = parseInt(val.substring(4, 6));
+        
+        // Year validation (e.g. 2020 ~ 2035), Month (1 ~ 12), Day (1 ~ 31)
+        if (yy >= 20 && yy <= 35 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          const y = "20" + yy;
+          const m = mm.toString().padStart(2, '0');
+          const d = dd.toString().padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+      }
     }
     return "";
   }
