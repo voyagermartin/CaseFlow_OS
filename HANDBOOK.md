@@ -19,27 +19,6 @@
 
 ## 🗄️ 2. Google Sheets 雲端資料庫架構
 
-# 📖 CaseFlow OS 員工操作與技術手冊 (Employee & Dev Handbook)
-
-歡迎來到 **CaseFlow OS**！本手冊為新進夥伴、實習生與團隊成員提供系統設計、雲端資料庫架構、視圖操作、部署方式與完整開發日誌。
-
----
-
-## 🌟 1. 核心定位與技術規格
-
-**CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層資料庫、由 **Google Apps Script (GAS)** 直接託管與 **GitHub Pages** 雙軌部署的事件驅動專案 OS (Event-Driven OS)。
-
-> 🛠️ **技術與架構規格 (Phase 5 Milestone Checkpoint)**
-> - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表 (7 大核心工作表)。
-> - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
-> - **效能與極速載入**：單一通道首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援，首頁載入 <0.3 秒。
-> - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)。
-> - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、任務層級可見權限過濾、語系字典 (zh-TW / vi-VN)。
-
----
-
-## 🗄️ 2. Google Sheets 雲端資料庫架構
-
 👉 **[官方雲端資料庫 Google Sheets 連結](https://docs.google.com/spreadsheets/d/19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk/edit)**
 
 | 工作表 (Sheet) | 作用 (Purpose) | 核心欄位結構 (Key Schema) |
@@ -128,3 +107,9 @@
   - **案件出發日自愈與升序排列**：在 `Cases` 工作表新增第 7 欄 `reference_date`；支援於編輯案件彈窗內調整出發日；實作「雙模智慧解析自愈引擎」，自動匹配標準日期格式或團號編碼格式（如 `JX260916A` 提取為 `2026-09-16`），在載入時自動寫回補齊舊有資料，並按出發日由近到遠排序，且在樹狀圖中直顯出發日小標籤。
   - **老舊數據自動兼容升級**：後端 `ensureTemplatesSheets` 升級為 6 欄位，自動為舊 CaseTemplates 補齊 `default_description` 與 `briefing_options` 欄位標題，老舊數據無痛直升。
   - **全自動代部署協議**：與 AI 達成全權代理部署協議，代碼修正後由 AI 自動完成 clasp push、clasp deploy、git commit 與 git push，使用者僅於最終環境進行驗證。
+- **📅 2026-08-27 (第二部分：Google SSO 實名綁定登入與權限鎖定防禦)**：
+  - **Google 原生 SSO 登入驗證**：利用 GAS 後端 `Session.getActiveUser().getEmail()` 取得登入者帳戶，安全匹配 `Users` 中的 `google_email` 進行防禦過濾。
+  - **超級管理員 Email 首次登入自動綁定 (First-login Auto-binding)**：若 `Users` 資料庫中超級管理員 (Martin) 的 Email 欄位為空，系統在 Martin 首次登入時會自動抓取其 Email 並寫回 Sheets 綁定，完美自癒免手動修改。
+  - **權限鎖定與 dropdown 隱藏**：一般同仁進站後，頂端 Navbar 與側邊欄的「人員切換」選單會被徹底隱藏鎖死，改為靜態頭像與 `Username [Role]` 標示，並強制前端 `currentUserId` 鎖定為真實登入 ID；管理員 Martin 則保留切換選單以便巡邏與視角測試。
+  - **後端閉環過濾 (Impersonation Defense)**：後端介面拒絕前端 `user_id` 越權請求。若非 Super Master，後端強制覆蓋請求 ID 為真實登入 ID，防範駭客修改前端 JS 代碼。
+  - **未授權毛玻璃阻斷頁面**：若使用者以未在 `Users` 綁定的外部 Google 帳戶進站，頁面會彈出極致精美的玻璃質感阻斷畫面，顯示其 Email 並引導聯繫 Martin 授權開通。
