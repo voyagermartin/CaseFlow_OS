@@ -2463,11 +2463,18 @@
 
                             const workingDaysHtml = getWorkingDaysLeftSpan(t);
                             taskItem.innerHTML = `
-                                <div class="flex items-center gap-3 flex-1 min-w-0">
-                                    <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">
-                                    <span class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
-                                        ${t.title}${workingDaysHtml}
-                                    </span>
+                                <div class="flex items-start gap-3 flex-1 min-w-0">
+                                    <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">
+                                    <div class="flex flex-col min-w-0 flex-1">
+                                        <span class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
+                                            ${t.title}${workingDaysHtml}
+                                        </span>
+                                        ${t.notes && t.notes.trim() ? `
+                                            <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 bg-slate-950/30 border border-slate-850/50 px-2.5 py-1.5 rounded-lg hover:bg-slate-900/50 hover:border-slate-800 transition-colors w-fit max-w-[95%] select-none" onclick="openTaskDrawer(${t.id})" style="cursor: pointer;" title="點擊查看完整備註與討論">
+                                                📝 ${escapeHtml(t.notes)}
+                                            </p>
+                                        ` : ''}
+                                    </div>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0">
                                     ${dueBadge}
