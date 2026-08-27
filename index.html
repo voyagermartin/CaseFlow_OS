@@ -1955,10 +1955,10 @@
         }
 
         // Load active view data
-        async function reloadAllViews() {
+        async function reloadAllViews(silent = false) {
             if (!currentUserId) return;
             
-            showLoading(true);
+            if (!silent) showLoading(true);
             try {
                 const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
                     apiRequest('getUsers', null, 'GET', true),
@@ -1974,7 +1974,7 @@
             } catch (e) {
                 console.error("並行加載失敗:", e);
             } finally {
-                showLoading(false);
+                if (!silent) showLoading(false);
             }
             
             updateUserIndicatorAndLanguage();
@@ -4223,7 +4223,7 @@
                 }
             }
 
-            await reloadAllViews();
+            await reloadAllViews(true);
         }
 
         async function deleteTemplateAction(id) {
@@ -4234,7 +4234,7 @@
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
             
             const confirmMsg = lang === 'vi-VN'
-                ? `Bạn có chắc muốn xóa mẫu "${t.template_name}"?\nTất cả công việc mặc định liên quan sẽ bị xóa vĩnh viễn!`
+                ? `Bạn có chắc muốn xóa mẫu "${t.template_name}"?\nTất cả công việc mặc định liên quan sẽ bị xóa vễn viễn!`
                 : `您確定要刪除範本「${t.template_name}」嗎？\n該範本底下的所有預設子任務將被永久刪除！此操作無法復原。`;
                 
             if (!confirm(confirmMsg)) return;
@@ -4245,7 +4245,7 @@
             renderTemplateControl();
 
             const res = await apiRequest('deleteTemplate', { templateId: id }, 'POST', true);
-            await reloadAllViews();
+            await reloadAllViews(true);
         }
 
         // --- Template Task Modal ---
@@ -4374,7 +4374,7 @@
                 }
             }
 
-            await reloadAllViews();
+            await reloadAllViews(true);
         }
 
         async function deleteTemplateTaskAction(taskId) {
@@ -4391,7 +4391,7 @@
             renderTemplateControl();
 
             const res = await apiRequest('deleteTemplateTask', { taskId: taskId }, 'POST', true);
-            await reloadAllViews();
+            await reloadAllViews(true);
         }
     </script>
 </body>
