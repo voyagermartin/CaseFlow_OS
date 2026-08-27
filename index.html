@@ -179,6 +179,7 @@
                 <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer">
                     <!-- User options loaded dynamically -->
                 </select>
+                <span id="user-static-label" class="text-sm text-slate-200 font-semibold hidden"></span>
                 <div id="user-avatar-indicator" class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold uppercase transition-all duration-300">
                     -
                 </div>
@@ -911,6 +912,41 @@
         </div>
     </div>
 
+    <!-- Unauthorized User Blocking Overlay -->
+    <div id="unauthorized-overlay" class="fixed inset-0 flex items-center justify-center z-[200] bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 text-center shadow-2xl space-y-6 relative overflow-hidden">
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl"></div>
+            
+            <div class="mx-auto w-16 h-16 bg-rose-500/15 border border-rose-500/20 text-rose-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-rose-500/5">
+                ⚠️
+            </div>
+            
+            <div class="space-y-2 relative z-10">
+                <h3 class="text-xl font-bold text-slate-100">存取受限：未授權的帳戶</h3>
+                <p class="text-xs text-slate-400">Access Restricted: Unauthorized Account</p>
+            </div>
+            
+            <div class="bg-slate-950/60 border border-slate-850 p-4 rounded-xl text-left space-y-3 relative z-10">
+                <div class="text-xs text-slate-400 leading-relaxed">
+                    您的 Google 帳號 Email 為：
+                    <div id="unauthorized-email-display" class="font-mono text-indigo-300 font-semibold bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg mt-1 break-all select-all">
+                        unknown@gmail.com
+                    </div>
+                </div>
+                <div class="text-xs text-slate-400 leading-relaxed">
+                    本系統 (CaseFlow OS) 目前僅開放給受邀的團隊成員進站。請聯繫您的系統管理員 **Martin** 將此 Email 開通綁定至您的成員帳號中。
+                </div>
+            </div>
+            
+            <div class="pt-2 relative z-10">
+                <a href="https://mail.google.com" target="_blank" class="w-full block bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200">
+                    前往 Gmail 收信 / 切換帳戶
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- Role Create/Edit Modal -->
     <div id="role-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
         <div onclick="closeRoleModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
@@ -1205,6 +1241,7 @@
         let originalDueDate = '';
         let allTemplates = [];
         let selectedTemplateId = null;
+        let loginUser = null;
 
         // On Document Ready - Optimized parallel batch initial load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1215,6 +1252,15 @@
 
                 // Single unified batch API request with backward-compatible fallback
                 let initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
+                
+                // Check if user is unauthorized
+                if (initialRes && initialRes.status === "unauthorized") {
+                    document.getElementById('unauthorized-email-display').textContent = initialRes.email || "未知 Google 帳戶";
+                    document.getElementById('unauthorized-overlay').classList.remove('hidden');
+                    showLoading(false);
+                    return;
+                }
+
                 if (!initialRes || !initialRes.users || initialRes.users.length === 0) {
                     const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
                         apiRequest('getUsers', null, 'GET', true),
@@ -1231,16 +1277,31 @@
                     allRoles = initialRes.roles || [];
                     allCases = initialRes.cases || [];
                     allTemplates = initialRes.templates || [];
+                    loginUser = initialRes.loginUser || null;
                 }
 
-                // Determine active user ID safely
-                if (allUsers.some(u => u.id == targetUserId)) {
-                    currentUserId = targetUserId;
-                } else if (allUsers.length > 0) {
-                    currentUserId = allUsers[0].id;
-                    localStorage.setItem('activeUserId', currentUserId);
-                    // If targetUserId was invalid or deleted, refetch cases for fallback user
-                    allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
+                // If logged-in user is not Super Master, enforce their own ID
+                if (loginUser) {
+                    if (loginUser.is_super_master === true || loginUser.id === 1) {
+                        // Keep targetUserId for testing impersonation
+                        if (allUsers.some(u => u.id == targetUserId)) {
+                            currentUserId = targetUserId;
+                        } else {
+                            currentUserId = loginUser.id;
+                        }
+                    } else {
+                        // Lock non-super-master to their own ID
+                        currentUserId = loginUser.id;
+                        localStorage.setItem('activeUserId', currentUserId);
+                    }
+                } else {
+                    // Fallback if loginUser is missing (legacy compat)
+                    if (allUsers.some(u => u.id == targetUserId)) {
+                        currentUserId = targetUserId;
+                    } else if (allUsers.length > 0) {
+                        currentUserId = allUsers[0].id;
+                        localStorage.setItem('activeUserId', currentUserId);
+                    }
                 }
 
                 updateUserIndicatorAndLanguage();
@@ -1936,6 +1997,20 @@
 
         function updateUserIndicatorAndLanguage() {
             renderUserSwitcher();
+            
+            const switcher = document.getElementById('user-switcher');
+            const staticLabel = document.getElementById('user-static-label');
+            if (switcher && staticLabel) {
+                if (loginUser && (loginUser.is_super_master === true || loginUser.id === 1)) {
+                    switcher.classList.remove('hidden');
+                    staticLabel.classList.add('hidden');
+                } else if (loginUser) {
+                    switcher.classList.add('hidden');
+                    staticLabel.classList.remove('hidden');
+                    staticLabel.textContent = `${loginUser.username} [${loginUser.role_name}]`;
+                }
+            }
+
             const user = allUsers.find(u => u.id == currentUserId);
             const indicator = document.getElementById('user-avatar-indicator');
             if (user) {

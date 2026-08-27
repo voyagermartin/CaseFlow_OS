@@ -306,19 +306,67 @@ function handleRequest(action, params) {
     return isNaN(parsed) ? null : parsed;
   }
 
-  if (action === "getInitialData") {
-    const userId = getInt(params.user_id) || 1;
-    return getInitialData(userId);
-  } else if (action === "getUsers") {
-    return getUsers();
-  } else if (action === "getRoles") {
-    return getRoles();
-  } else if (action === "getCases") {
-    const userId = getInt(params.user_id);
-    if (userId === null) {
-      throw new Error("Missing or invalid user_id parameter");
+  const ss = getSpreadsheet();
+  const users = getUsers(ss);
+  
+  let activeEmail = Session.getActiveUser().getEmail();
+  activeEmail = activeEmail ? activeEmail.toLowerCase().trim() : "";
+
+  let trueUser = null;
+  if (activeEmail) {
+    trueUser = users.find(u => u.google_email && u.google_email.toLowerCase().trim() === activeEmail);
+  }
+
+  // Self-healing for Martin (ID=1)
+  if (!trueUser && activeEmail) {
+    const martinUser = users.find(u => u.id === 1);
+    if (martinUser && (!martinUser.google_email || martinUser.google_email.trim() === "")) {
+      const sheet = ss.getSheetByName("Users");
+      if (sheet) {
+        const values = sheet.getDataRange().getValues();
+        for (let i = 1; i < values.length; i++) {
+          if (parseInt(values[i][0]) === 1) {
+            sheet.getRange(i + 1, 6).setValue(activeEmail); // F column (google_email)
+            SpreadsheetApp.flush();
+            martinUser.google_email = activeEmail;
+            trueUser = martinUser;
+            break;
+          }
+        }
+      }
     }
-    return getCasesForUser(userId);
+  }
+
+  if (!trueUser) {
+    if (action === "getInitialData") {
+      return {
+        status: "unauthorized",
+        email: activeEmail,
+        users: users,
+        roles: getRoles(ss)
+      };
+    }
+    throw new Error("Unauthorized user access: " + activeEmail);
+  }
+
+  // Impersonation & Security Enforcement
+  let impersonatedUserId = trueUser.id;
+  const isSuper = trueUser.is_super_master === true || trueUser.id === 1 || trueUser.username === "Martin";
+  
+  if (isSuper) {
+    if (params.user_id !== undefined && params.user_id !== null && params.user_id !== "") {
+      impersonatedUserId = parseInt(params.user_id);
+    }
+  }
+
+  if (action === "getInitialData") {
+    return getInitialData(impersonatedUserId, trueUser);
+  } else if (action === "getUsers") {
+    return users;
+  } else if (action === "getRoles") {
+    return getRoles(ss);
+  } else if (action === "getCases") {
+    return getCasesForUser(impersonatedUserId, ss);
   } else if (action === "getTemplates") {
     return getTemplates();
   } else if (action === "toggleTask") {
@@ -1217,7 +1265,7 @@ function getTemplates(ss) {
   return templates;
 }
 
-function getInitialData(userId) {
+function getInitialData(userId, trueUser) {
   const ss = getSpreadsheet();
   const users = getUsers(ss);
   const roles = getRoles(ss);
@@ -1227,7 +1275,8 @@ function getInitialData(userId) {
     users: users,
     roles: roles,
     cases: cases,
-    templates: templates
+    templates: templates,
+    loginUser: trueUser || null
   };
 }
 
