@@ -1317,6 +1317,7 @@
                 renderGantt();
             } catch (e) {
                 console.error("初始化失敗:", e);
+                alert("系統初始化失敗！\n請將此錯誤訊息截圖提供給開發人員以進行修復：\n\n" + e.toString());
             } finally {
                 showLoading(false);
             }
