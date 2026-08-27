@@ -19,13 +19,34 @@
 
 ## 🗄️ 2. Google Sheets 雲端資料庫架構
 
+# 📖 CaseFlow OS 員工操作與技術手冊 (Employee & Dev Handbook)
+
+歡迎來到 **CaseFlow OS**！本手冊為新進夥伴、實習生與團隊成員提供系統設計、雲端資料庫架構、視圖操作、部署方式與完整開發日誌。
+
+---
+
+## 🌟 1. 核心定位與技術規格
+
+**CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層資料庫、由 **Google Apps Script (GAS)** 直接託管與 **GitHub Pages** 雙軌部署的事件驅動專案 OS (Event-Driven OS)。
+
+> 🛠️ **技術與架構規格 (Phase 5 Milestone Checkpoint)**
+> - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表 (7 大核心工作表)。
+> - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
+> - **效能與極速載入**：單一通道首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援，首頁載入 <0.3 秒。
+> - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)。
+> - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、任務層級可見權限過濾、語系字典 (zh-TW / vi-VN)。
+
+---
+
+## 🗄️ 2. Google Sheets 雲端資料庫架構
+
 👉 **[官方雲端資料庫 Google Sheets 連結](https://docs.google.com/spreadsheets/d/19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk/edit)**
 
 | 工作表 (Sheet) | 作用 (Purpose) | 核心欄位結構 (Key Schema) |
 | :--- | :--- | :--- |
 | **`Users`** | 成員帳號、角色、顏色與語系 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
 | **`Roles`** | 角色與權限定義 | `id`, `role_name`, `can_create_case` |
-| **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names` |
+| **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date` |
 | **`Tasks`** | 待辦細項、死線與權限過濾 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
 | **`Comments`** | 任務討論串與留言板 | `id`, `task_id`, `user_id`, `content`, `created_at` |
 | **`CaseTemplates`**| 案件 SOP 範本設定 | `id`, `template_name`, `description`, `group_names`, `default_description`, `briefing_options` |
@@ -100,9 +121,10 @@
   - 後端全面 **`SpreadsheetApp.flush()` 強制實體落盤**，消除 F5 重新整理數據丟失。
   - 背景同步 **`silent = true` 靜音執行**，徹底消除快速新增與狀態核取時的轉圈遮罩。
   - **刪除操作優雅防護 (`deleteUser` / `deleteRole`)**、**`renderUserSwitcher` 選單鎖定** 與 **`getSanitizedKey` 安全組名轉義**。
-- **📅 2026-08-27 (案件樹狀討論直顯、留言編輯/刪除 CRUD 與 SOP 範本 Briefing 勾選代入)**：
+- **📅 2026-08-27 (案件樹狀討論直顯、留言編輯/刪除 CRUD、SOP 範本 Briefing 勾選代入與出發日自愈排序)**：
   - **任務備註與最新留言預覽直顯**：在案件樹狀中直接渲染任務備註，並引入「最新留言氣泡預覽 (Recent Comment Balloon Preview)」，展示最新討論作者頭像與字數防護，以靛藍色調與靜態備註做視覺區隔，提供 +X 則歷史討論徽章。
   - **留言編輯與刪除 (Comments CRUD)**：留言卡片支援權限偵測，發言者與管理員可點擊 ✏️ 原地 inline 編輯留言（無彈窗打擾）與 🗑️ 刪除留言，全站樹狀圖與抽屜留言即時連動。
-  - **SOP 範本預置描述與注意事項勾選代入**：範本設定新增「預置描述」與「備選注意事項清單（每行一筆 `主題 | 內容`）」；新增案件選取範本時，會動態展開靛藍色的注意事項核取面板，勾選時即時動態合成 structured Briefing Markdown 文字寫入描述框。
+  - **SOP 範本預置描述與注意事項勾選代入**：範本設定新增「預置描述」與「備選注意事項清單（每行一筆 `主題 | 內容`）」；新增案件選取範本時，會動態展開靛藍色的注意事項核取面板，勾選時即時動態合成 structured Briefing Markdown text 寫入描述框。
+  - **案件出發日自愈與升序排列**：在 `Cases` 工作表新增第 7 欄 `reference_date`；支援於編輯案件彈窗內調整出發日；實作「雙模智慧解析自愈引擎」，自動匹配標準日期格式或團號編碼格式（如 `JX260916A` 提取為 `2026-09-16`），在載入時自動寫回補齊舊有資料，並按出發日由近到遠排序，且在樹狀圖中直顯出發日小標籤。
   - **老舊數據自動兼容升級**：後端 `ensureTemplatesSheets` 升級為 6 欄位，自動為舊 CaseTemplates 補齊 `default_description` 與 `briefing_options` 欄位標題，老舊數據無痛直升。
   - **全自動代部署協議**：與 AI 達成全權代理部署協議，代碼修正後由 AI 自動完成 clasp push、clasp deploy、git commit 與 git push，使用者僅於最終環境進行驗證。
