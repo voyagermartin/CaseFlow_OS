@@ -2462,6 +2462,27 @@
                             }
 
                             const workingDaysHtml = getWorkingDaysLeftSpan(t);
+
+                            // Recent comment preview bubble (designed with a subtle indigo style to contrast with static notes)
+                            let commentsHtml = '';
+                            if (t.comments && t.comments.length > 0) {
+                                const latestComment = t.comments[t.comments.length - 1];
+                                const commenter = allUsers.find(u => u.id === latestComment.user_id) || { username: 'Unknown', avatar_color: '#94a3b8' };
+                                const otherCount = t.comments.length - 1;
+                                commentsHtml = `
+                                    <div class="flex items-center gap-2 mt-1.5 bg-indigo-950/20 border border-indigo-900/30 px-2.5 py-1 rounded-lg hover:bg-indigo-950/40 hover:border-indigo-800 transition-colors w-fit max-w-[95%] select-none cursor-pointer" onclick="openTaskDrawer(${t.id}); event.stopPropagation()" title="點擊查看完整討論與回覆">
+                                        <span class="h-4 w-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white uppercase shrink-0" style="background-color: ${commenter.avatar_color}">
+                                            ${commenter.username.charAt(0)}
+                                        </span>
+                                        <span class="text-[10px] text-indigo-300 font-semibold shrink-0">${commenter.username}:</span>
+                                        <span class="text-[10px] text-slate-350 truncate flex-1 min-w-0">${escapeHtml(latestComment.content)}</span>
+                                        ${otherCount > 0 ? `
+                                            <span class="text-[8px] bg-indigo-900/60 text-indigo-200 px-1.5 py-0.5 rounded-full shrink-0 font-medium">+${otherCount} 則討論</span>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }
+
                             taskItem.innerHTML = `
                                 <div class="flex items-start gap-3 flex-1 min-w-0">
                                     <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">
@@ -2474,6 +2495,7 @@
                                                 📝 ${escapeHtml(t.notes)}
                                             </p>
                                         ` : ''}
+                                        ${commentsHtml}
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0">
