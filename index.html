@@ -841,6 +841,10 @@
                     <input type="text" id="edit-case-drive-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="https://drive.google.com/drive/folders/...">
                 </div>
                 <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">出發日期 / 基準日 (Reference Date)</label>
+                    <input type="date" id="edit-case-ref-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
@@ -2343,7 +2347,17 @@
                 return;
             }
 
-            allCases.forEach(c => {
+            // Sort cases by reference_date ascending (empty dates sorted to the end)
+            const sortedCases = [...allCases].sort((a, b) => {
+                const dateA = a.reference_date || "";
+                const dateB = b.reference_date || "";
+                if (dateA === "" && dateB === "") return 0;
+                if (dateA === "") return 1;
+                if (dateB === "") return -1;
+                return dateA.localeCompare(dateB);
+            });
+
+            sortedCases.forEach(c => {
                 const caseCard = document.createElement('div');
                 caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
                 
@@ -2368,8 +2382,13 @@
                         <div class="flex items-center gap-3">
                             <span class="text-2xl">📁</span>
                             <div>
-                                <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
-                                    ${c.title}
+                                <h3 class="text-xl font-bold text-slate-100 flex items-center flex-wrap gap-2">
+                                    <span>${escapeHtml(c.title)}</span>
+                                    ${c.reference_date ? `
+                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-indigo-950/80 border border-indigo-900/60 text-indigo-300 flex items-center gap-1 shrink-0">
+                                            📅 出發日: ${c.reference_date}
+                                        </span>
+                                    ` : ''}
                                 </h3>
                                 <p class="text-sm text-slate-400 mt-0.5">${c.description || ''}</p>
                             </div>
@@ -3935,6 +3954,7 @@
             document.getElementById('edit-case-title').value = caseObj.title;
             document.getElementById('edit-case-desc').value = caseObj.description || '';
             document.getElementById('edit-case-drive-url').value = caseObj.drive_url || '';
+            document.getElementById('edit-case-ref-date').value = caseObj.reference_date || '';
             document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
 
             document.getElementById('edit-case-modal').classList.remove('hidden');
@@ -3949,6 +3969,7 @@
             const titleInput = document.getElementById('edit-case-title');
             const descInput = document.getElementById('edit-case-desc');
             const driveUrlInput = document.getElementById('edit-case-drive-url');
+            const refDateInput = document.getElementById('edit-case-ref-date');
             const groupsInput = document.getElementById('edit-case-groups');
 
             const caseId = parseInt(idInput.value);
@@ -3958,6 +3979,7 @@
                 return;
             }
 
+            const referenceDate = refDateInput ? refDateInput.value : '';
             const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
             let caseObj = allCases.find(c => c.id === caseId);
@@ -3965,6 +3987,7 @@
                 caseObj.title = title;
                 caseObj.description = descInput.value.trim();
                 caseObj.drive_url = driveUrlInput.value.trim();
+                caseObj.reference_date = referenceDate;
                 
                 const oldGroups = [...caseObj.groups];
                 caseObj.groups = groups.map((gn, index) => {
@@ -3987,6 +4010,7 @@
                 title: title,
                 description: descInput.value.trim(),
                 driveUrl: driveUrlInput.value.trim(),
+                reference_date: referenceDate,
                 groups: groups
             };
 

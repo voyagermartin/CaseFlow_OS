@@ -227,9 +227,9 @@ function initDatabase() {
   userSheet.appendRow([4, "Local_Nguyen", 4, "#10b981", "vi-VN", "", false]);
 
   // 3. Cases Sheet
-  const caseHeaders = ["id", "title", "description", "owner_id", "drive_url", "group_names"];
+  const caseHeaders = ["id", "title", "description", "owner_id", "drive_url", "group_names", "reference_date"];
   const caseSheet = setupSheet("Cases", caseHeaders);
-  caseSheet.appendRow([1, "2026/09/15 馬航怡保專案", "本次怡保出團之完整追蹤與住宿協調工作", 1, "https://drive.google.com/drive/folders/mock-id", "票務與交通, LOCAL 與 住宿, 名單與證件"]);
+  caseSheet.appendRow([1, "2026/09/15 馬航怡保專案", "本次怡保出團之完整追蹤與住宿協調工作", 1, "https://drive.google.com/drive/folders/mock-id", "票務與交通, LOCAL 與 住宿, 名單與證件", "2026-09-15"]);
 
   // 4. Tasks Sheet
   const taskHeaders = ["id", "case_id", "group_name", "title", "due_date", "start_date", "is_completed", "notes", "visible_user_ids"];
@@ -407,7 +407,8 @@ function handleRequest(action, params) {
       params.title,
       params.description,
       params.driveUrl,
-      groups
+      groups,
+      params.reference_date
     );
   } else if (action === "deleteCase") {
     return deleteCase(getInt(params.caseId));
@@ -617,8 +618,27 @@ function getCasesForUser(userId, ss) {
     tasksByCaseId[caseId].push(taskObj);
   }
 
+  // Helper to extract date from case title for self-healing
+  function extractDateFromTitle(t) {
+    if (!t) return "";
+    const match = t.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+    if (match) {
+      const y = match[1];
+      const m = match[2].padStart(2, '0');
+      const d = match[3].padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return "";
+  }
+
   // Load all cases
   const casesSheet = ss.getSheetByName("Cases");
+  if (casesSheet) {
+    // Legacy sheets self-healing header check
+    if (casesSheet.getLastColumn() < 7 || casesSheet.getRange(1, 7).getValue() === "") {
+      casesSheet.getRange(1, 7).setValue("reference_date");
+    }
+  }
   const caseValues = casesSheet ? casesSheet.getDataRange().getValues() : [];
   const cases = [];
   for (let i = 1; i < caseValues.length; i++) {
@@ -628,6 +648,17 @@ function getCasesForUser(userId, ss) {
     const ownerId = parseInt(caseValues[i][3]);
     const driveUrl = caseValues[i][4];
     const groupNamesStr = caseValues[i][5] || "";
+    
+    // Auto self-healing for legacy cases
+    const rawRefDate = caseValues[i][6];
+    let referenceDate = rawRefDate ? formatDateString(rawRefDate) : "";
+    if (!referenceDate) {
+      const extracted = extractDateFromTitle(title);
+      if (extracted) {
+        referenceDate = extracted;
+        casesSheet.getRange(i + 1, 7).setValue(extracted);
+      }
+    }
     
     const groupNames = parseGroupNames(groupNamesStr);
     const caseTasks = tasksByCaseId[cId] || [];
@@ -667,6 +698,7 @@ function getCasesForUser(userId, ss) {
       owner_id: ownerId,
       owner: userMap[ownerId] || { username: "System", role: "" },
       drive_url: driveUrl,
+      reference_date: referenceDate,
       groups: groups
     });
   }
@@ -767,7 +799,8 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
   const nextId = getNextId(sheet);
   const groupsStr = parseGroupNames(groups).join(", ");
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
-  sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr]);
+  sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr, referenceDate || ""]);
+  SpreadsheetApp.flush();
 
   // If template is selected and reference date is provided, auto-create tasks
   if (templateId && referenceDate) {
@@ -925,7 +958,7 @@ function deleteTaskComments(taskId) {
   }
 }
 
-function updateCase(caseId, title, description, driveUrl, groups) {
+function updateCase(caseId, title, description, driveUrl, groups, referenceDate) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
@@ -940,6 +973,10 @@ function updateCase(caseId, title, description, driveUrl, groups) {
         const groupsStr = parseGroupNames(groups).join(", ");
         sheet.getRange(i + 1, 6).setValue(groupsStr);
       }
+      if (referenceDate !== undefined) {
+        sheet.getRange(i + 1, 7).setValue(referenceDate);
+      }
+      SpreadsheetApp.flush();
       return { status: "success", caseId: caseId };
     }
   }
