@@ -28,7 +28,7 @@
 | **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names` |
 | **`Tasks`** | 待辦細項、死線與權限過濾 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
 | **`Comments`** | 任務討論串與留言板 | `id`, `task_id`, `user_id`, `content`, `created_at` |
-| **`CaseTemplates`**| 案件 SOP 範本設定 | `id`, `template_name`, `description`, `group_names` |
+| **`CaseTemplates`**| 案件 SOP 範本設定 | `id`, `template_name`, `description`, `group_names`, `default_description`, `briefing_options` |
 | **`TemplateTasks`**| 範本標準待辦項目 | `id`, `template_id`, `group_name`, `title`, `start_day_offset`, `due_day_offset`, `notes` |
 
 ---
@@ -100,3 +100,9 @@
   - 後端全面 **`SpreadsheetApp.flush()` 強制實體落盤**，消除 F5 重新整理數據丟失。
   - 背景同步 **`silent = true` 靜音執行**，徹底消除快速新增與狀態核取時的轉圈遮罩。
   - **刪除操作優雅防護 (`deleteUser` / `deleteRole`)**、**`renderUserSwitcher` 選單鎖定** 與 **`getSanitizedKey` 安全組名轉義**。
+- **📅 2026-08-27 (案件樹狀討論直顯、留言編輯/刪除 CRUD 與 SOP 範本 Briefing 勾選代入)**：
+  - **任務備註與最新留言預覽直顯**：在案件樹狀中直接渲染任務備註，並引入「最新留言氣泡預覽 (Recent Comment Balloon Preview)」，展示最新討論作者頭像與字數防護，以靛藍色調與靜態備註做視覺區隔，提供 +X 則歷史討論徽章。
+  - **留言編輯與刪除 (Comments CRUD)**：留言卡片支援權限偵測，發言者與管理員可點擊 ✏️ 原地 inline 編輯留言（無彈窗打擾）與 🗑️ 刪除留言，全站樹狀圖與抽屜留言即時連動。
+  - **SOP 範本預置描述與注意事項勾選代入**：範本設定新增「預置描述」與「備選注意事項清單（每行一筆 `主題 | 內容`）」；新增案件選取範本時，會動態展開靛藍色的注意事項核取面板，勾選時即時動態合成 structured Briefing Markdown 文字寫入描述框。
+  - **老舊數據自動兼容升級**：後端 `ensureTemplatesSheets` 升級為 6 欄位，自動為舊 CaseTemplates 補齊 `default_description` 與 `briefing_options` 欄位標題，老舊數據無痛直升。
+  - **全自動代部署協議**：與 AI 達成全權代理部署協議，代碼修正後由 AI 自動完成 clasp push、clasp deploy、git commit 與 git push，使用者僅於最終環境進行驗證。
