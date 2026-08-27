@@ -492,9 +492,16 @@
     <!-- Task Detail Drawer / Modal (Right Side Drawer style) -->
     <div id="task-drawer" class="fixed inset-y-0 right-0 w-[450px] bg-slate-900 border-l border-slate-800 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
         <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-            <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2" data-i18n="taskDetailTitle">
-                📋 任務詳情
-            </h3>
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2" data-i18n="taskDetailTitle">
+                    📋 任務詳情
+                </h3>
+                <!-- Sync status indicator -->
+                <div id="drawer-sync-status" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 border border-slate-850 text-[10px] font-medium text-slate-400">
+                    <span id="drawer-sync-dot" class="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    <span id="drawer-sync-text">已自動同步</span>
+                </div>
+            </div>
             <div class="flex items-center gap-3">
                 <button onclick="deleteTask(selectedTaskId)" class="text-rose-500 hover:text-rose-400 p-1.5 rounded hover:bg-rose-500/10 transition-colors" title="刪除待辦事項">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -529,9 +536,6 @@
                         <input type="date" id="drawer-task-due-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                 </div>
-                <button onclick="saveTaskDates()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                    儲存時程與日期
-                </button>
             </div>
 
             <!-- Notes Section -->
@@ -541,9 +545,6 @@
                     <span class="text-[9px] text-emerald-500 font-medium">(移開焦點自動儲存)</span>
                 </div>
                 <textarea id="drawer-task-notes" onblur="saveTaskNotes(true)" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300 focus:outline-none focus:border-brand-500 transition-colors" data-i18n="notesPlaceholder" placeholder="請在此填寫訂購代碼等備註..."></textarea>
-                <button onclick="saveTaskNotes()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="saveNotesBtn">
-                    儲存備註
-                </button>
             </div>
 
             <!-- Visibility / Assignee Config -->
@@ -1941,12 +1942,14 @@
             
             showLoading(true);
             try {
-                const [rolesRes, casesRes, templatesRes] = await Promise.all([
+                const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
+                    apiRequest('getUsers', null, 'GET', true),
                     apiRequest('getRoles', null, 'GET', true),
                     apiRequest('getCases', { user_id: currentUserId }, 'GET', true),
                     apiRequest('getTemplates', null, 'GET', true)
                 ]);
                 
+                allUsers = usersRes || [];
                 allRoles = rolesRes || [];
                 allCases = casesRes || [];
                 allTemplates = templatesRes || [];
@@ -2934,6 +2937,14 @@
                 newTask.id = res.taskId;
                 if (selectedTaskId === tempId) {
                     selectedTaskId = res.taskId;
+                    // If the drawer for this temporary task is open, switch status to success and unlock inputs!
+                    showDrawerSyncStatus('success');
+                    const commentInput = document.getElementById('new-comment-input');
+                    const commentBtn = document.getElementById('new-comment-input')?.nextElementSibling;
+                    if (commentInput) commentInput.disabled = false;
+                    if (commentBtn) commentBtn.disabled = false;
+                    const saveVisBtn = document.getElementById('drawer-save-vis-btn');
+                    if (saveVisBtn) saveVisBtn.disabled = false;
                 }
                 renderCalendar();
                 renderCaseTree();
@@ -2972,6 +2983,24 @@
             originalNotes = taskObj.notes || '';
             originalStartDate = taskObj.start_date || '';
             originalDueDate = taskObj.due_date || '';
+
+            // Handle UI elements when task is still syncing with cloud
+            const commentInput = document.getElementById('new-comment-input');
+            const commentBtn = document.getElementById('new-comment-input')?.nextElementSibling;
+            if (taskId > 1000000000000) {
+                showDrawerSyncStatus('syncing', "任務正在雲端創建中...");
+                if (commentInput) commentInput.disabled = true;
+                if (commentBtn) commentBtn.disabled = true;
+            } else {
+                // Ensure sync status is hidden
+                const el = document.getElementById('drawer-sync-status');
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                }
+                if (commentInput) commentInput.disabled = false;
+                if (commentBtn) commentBtn.disabled = false;
+            }
             
             // Build visible users checklist
             const visContainer = document.getElementById('drawer-task-visibility');
@@ -2997,6 +3026,7 @@
             if (saveVisBtn) {
                 if (hasPerm) {
                     saveVisBtn.classList.remove('hidden');
+                    saveVisBtn.disabled = (taskId > 1000000000000);
                 } else {
                     saveVisBtn.classList.add('hidden');
                 }
@@ -3013,6 +3043,48 @@
             selectedTaskId = null;
             document.getElementById('task-drawer').classList.add('translate-x-full');
             document.getElementById('drawer-backdrop').classList.add('hidden');
+            // Hide sync status
+            const el = document.getElementById('drawer-sync-status');
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        }
+
+        function showDrawerSyncStatus(status, message = "") {
+            const el = document.getElementById('drawer-sync-status');
+            const dot = document.getElementById('drawer-sync-dot');
+            const text = document.getElementById('drawer-sync-text');
+            if (!el || !dot || !text) return;
+            
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+            el.style.opacity = '1';
+            el.style.transition = 'none'; // reset transition
+            
+            if (status === 'syncing') {
+                dot.className = "h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse";
+                text.textContent = "同步中...";
+            } else if (status === 'success') {
+                dot.className = "h-1.5 w-1.5 rounded-full bg-emerald-500";
+                text.textContent = "已儲存";
+                setTimeout(() => {
+                    // Check if drawer is still open and status hasn't changed to syncing again
+                    if (text.textContent === "已儲存") {
+                        el.style.transition = 'opacity 0.5s ease';
+                        el.style.opacity = '0';
+                        setTimeout(() => {
+                            if (el.style.opacity === '0') {
+                                el.classList.add('hidden');
+                                el.classList.remove('flex');
+                            }
+                        }, 500);
+                    }
+                }, 2000);
+            } else if (status === 'error') {
+                dot.className = "h-1.5 w-1.5 rounded-full bg-rose-500";
+                text.textContent = message || "同步失敗";
+            }
         }
 
         function renderDrawerComments(comments) {
@@ -3048,15 +3120,16 @@
             });
         }
 
-        async function saveTaskNotes(silent = false) {
-            if (!selectedTaskId) return;
-            if (selectedTaskId > 1000000000000) {
+        async function saveTaskNotes(silent = true) {
+            const taskId = selectedTaskId;
+            if (!taskId) return;
+            if (taskId > 1000000000000) {
                 if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const notes = document.getElementById('drawer-task-notes').value.trim();
             
-            if (silent && notes === originalNotes.trim()) {
+            if (notes === originalNotes.trim()) {
                 return;
             }
             originalNotes = notes;
@@ -3069,31 +3142,36 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    const found = g.tasks.find(t => t.id === taskId);
                     if (found) taskObj = found;
                 });
             });
             if (taskObj) taskObj.notes = notes;
 
-            const res = await apiRequest('updateTask', { taskId: selectedTaskId, notes: notes }, 'POST', silent);
+            showDrawerSyncStatus('syncing');
+            const res = await apiRequest('updateTask', { taskId: taskId, notes: notes }, 'POST', silent);
             if (res) {
+                showDrawerSyncStatus('success');
                 if (!silent) alert(tText.successSaveNotes);
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+            } else {
+                showDrawerSyncStatus('error', '同步失敗');
             }
         }
 
-        async function saveTaskDates(silent = false) {
-            if (!selectedTaskId) return;
-            if (selectedTaskId > 1000000000000) {
+        async function saveTaskDates(silent = true) {
+            const taskId = selectedTaskId;
+            if (!taskId) return;
+            if (taskId > 1000000000000) {
                 if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const startDate = document.getElementById('drawer-task-start-date').value || null;
             const dueDate = document.getElementById('drawer-task-due-date').value || null;
 
-            if (silent && startDate === originalStartDate && dueDate === originalDueDate) {
+            if (startDate === originalStartDate && dueDate === originalDueDate) {
                 return;
             }
             originalStartDate = startDate || '';
@@ -3107,7 +3185,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    const found = g.tasks.find(t => t.id === taskId);
                     if (found) taskObj = found;
                 });
             });
@@ -3116,23 +3194,28 @@
                 taskObj.due_date = dueDate;
             }
 
+            showDrawerSyncStatus('syncing');
             const res = await apiRequest('updateTask', { 
-                taskId: selectedTaskId, 
+                taskId: taskId, 
                 start_date: startDate, 
                 due_date: dueDate 
             }, 'POST', silent);
             
             if (res) {
+                showDrawerSyncStatus('success');
                 if (!silent) alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+            } else {
+                showDrawerSyncStatus('error', '同步失敗');
             }
         }
 
         async function saveTaskVisibility() {
-            if (!selectedTaskId) return;
-            if (selectedTaskId > 1000000000000) {
+            const taskId = selectedTaskId;
+            if (!taskId) return;
+            if (taskId > 1000000000000) {
                 alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
@@ -3147,7 +3230,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    const found = g.tasks.find(t => t.id === taskId);
                     if (found) taskObj = found;
                 });
             });
@@ -3156,14 +3239,18 @@
                 taskObj.visible_users = visible_user_ids.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
             }
 
-            const res = await apiRequest('updateTask', { taskId: selectedTaskId, visible_user_ids: visible_user_ids }, 'POST', true);
+            showDrawerSyncStatus('syncing');
+            const res = await apiRequest('updateTask', { taskId: taskId, visible_user_ids: visible_user_ids }, 'POST', true);
             if (res) {
+                showDrawerSyncStatus('success');
                 alert(tText.successSaveVis);
                 // Silent full reload in background because visibility changes what this user can see
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+            } else {
+                showDrawerSyncStatus('error', '同步失敗');
             }
         }
 

@@ -69,7 +69,8 @@
 3. 前端 [index.html](file:///f:/Projects/CaseFlow_OS/index.html) 內設定 `GAS_API_URL` 即可完成雙向連線。
 
 ### 🤝 AI 開發與測試約定
-- **自力測試原則**：AI 在交付功能時提供詳細的手動測試步驟指引與 Walkthrough，由使用者自行驗證，減少不必要的代理資源消耗。
+- **自力測試原則**：AI 在交付功能時提供詳細的手動測試步驟指引與 Walkthrough，由使用者於最終環境自行驗證，以節省資源。
+- **全權代理部署**：AI 在完成任何程式碼修正與優化後，無須詢問或等待許可，應直接幫忙執行 <code>git commit</code>、<code>git push</code>、<code>clasp push</code> 以及 <code>clasp deploy</code> 部署流程，將最新程式碼直接同步並發佈至雲端與遠端儲存庫，使用者僅於最終環境進行測試。
 
 ---
 

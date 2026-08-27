@@ -363,6 +363,10 @@ function handleRequest(action, params) {
     );
   } else if (action === "deleteTask") {
     return deleteTask(getInt(params.taskId));
+  } else if (action === "dumpTasks") {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName("Tasks");
+    return sheet ? sheet.getDataRange().getValues() : [];
   } else if (action === "updateCase") {
     let groups = params.groups;
     if (typeof groups === "string") {
