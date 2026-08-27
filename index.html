@@ -1338,28 +1338,51 @@
             });
         }
 
+        function waitForGoogleScript() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const check = () => {
+                    if (typeof google !== 'undefined' && google.script && google.script.run) {
+                        resolve(true);
+                    } else if (attempts > 50) {
+                        resolve(false);
+                    } else {
+                        attempts++;
+                        setTimeout(check, 50);
+                    }
+                };
+                check();
+            });
+        }
+
         // Global Request Wrapper
         async function apiRequest(action, payload = null, method = 'GET', silent = false) {
             if (!silent) showLoading(true);
 
-            // If running inside Google Apps Script (HTML Service container), use native google.script.run
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                return new Promise((resolve, reject) => {
-                    google.script.run
-                        .withSuccessHandler((res) => {
-                            if (!silent) showLoading(false);
-                            if (res && res.status === 'error') {
-                                reject(new Error(res.message));
-                            } else {
-                                resolve(res);
-                            }
-                        })
-                        .withFailureHandler((err) => {
-                            if (!silent) showLoading(false);
-                            reject(err);
-                        })
-                        .apiCall(action, payload);
-                });
+            // If running inside Google Apps Script (HTML Service container), wait for injection and use native google.script.run
+            const isGASContainer = window.location.hostname.includes('google.com') || window.location.hostname.includes('googleusercontent.com');
+            if (isGASContainer) {
+                const available = await waitForGoogleScript();
+                if (available) {
+                    return new Promise((resolve, reject) => {
+                        google.script.run
+                            .withSuccessHandler((res) => {
+                                if (!silent) showLoading(false);
+                                if (res && res.status === 'error') {
+                                    reject(new Error(res.message));
+                                } else {
+                                    resolve(res);
+                                }
+                            })
+                            .withFailureHandler((err) => {
+                                if (!silent) showLoading(false);
+                                reject(err);
+                            })
+                            .apiCall(action, payload);
+                    });
+                } else {
+                    console.warn("google.script.run not ready in time. Falling back to fetch.");
+                }
             }
 
             try {
