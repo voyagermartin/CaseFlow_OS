@@ -174,11 +174,14 @@ function ensureTemplatesSheets(ss) {
   let tSheet = ss.getSheetByName("CaseTemplates");
   if (!tSheet) {
     tSheet = ss.insertSheet("CaseTemplates");
-    tSheet.appendRow(["id", "template_name", "description", "group_names", "default_description"]);
+    tSheet.appendRow(["id", "template_name", "description", "group_names", "default_description", "briefing_options"]);
   } else {
-    // Robustness: ensure column 5 header is set for legacy sheets upgrade
+    // Robustness: ensure column 5 and column 6 headers are set for legacy sheets upgrade
     if (tSheet.getLastColumn() < 5 || tSheet.getRange(1, 5).getValue() === "") {
       tSheet.getRange(1, 5).setValue("default_description");
+    }
+    if (tSheet.getLastColumn() < 6 || tSheet.getRange(1, 6).getValue() === "") {
+      tSheet.getRange(1, 6).setValue("briefing_options");
     }
   }
   let taskSheet = ss.getSheetByName("TemplateTasks");
@@ -243,21 +246,23 @@ function initDatabase() {
   commentSheet.appendRow([2, 2, 4, "Đã xác nhận phòng với khách sạn rồi nhé!", "2026-08-15 15:30:00"]);
 
   // 6. CaseTemplates Sheet
-  const templateHeaders = ["id", "template_name", "description", "group_names", "default_description"];
+  const templateHeaders = ["id", "template_name", "description", "group_names", "default_description", "briefing_options"];
   const templateSheet = setupSheet("CaseTemplates", templateHeaders);
   templateSheet.appendRow([
     1, 
     "馬航怡保 5 天團範本", 
     "馬來西亞怡保 5 天團之標準作業流程模板", 
     "票務與交通, LOCAL 與 住宿, 名單與證件",
-    "怡保出團預置事項：\n- 飯店：已核對 Ascott 房型無誤\n- 交通：接送機司機電話確認完畢\n- 證件：團員護照正本已收齊"
+    "怡保出團基礎預置事項：\n- 飯店：已核對 Ascott 房型無誤",
+    "機票注意事項 | 航司使用 MH，票期為 14 天，開票日為出發前 30 天。\nLOCAL注意事項 | 導遊與司機資訊需提前 5 天確認，並派發分房表。\n證件注意事項 | 團員護照正本已收齊，請業務確實辦理馬來西亞 MDAC 申報。"
   ]);
   templateSheet.appendRow([
     2, 
     "日本賞櫻 5 天團範本", 
     "日本賞櫻團之標準作業流程模板", 
     "機票組, 飯店與行程, 簽證與保險",
-    "日本賞櫻團預置事項：\n- 行程：東京上野公園與新宿御苑花況確認\n- 飯店：箱根溫泉飯店晚餐已預訂\n- 保險：全體團員旅遊平安險已投保"
+    "日本賞櫻團基礎預置事項：\n- 行程：東京上野公園與新宿御苑花況確認",
+    "航司注意事項 | 使用星宇航空 (JX)，票期為 7 天，團體切位開票後不可退票。\n保險注意事項 | 提醒業務確實為旅客投保旅行平安險與海外醫療險。\n氣溫注意事項 | 箱根與富士山地區早晚溫差大，提醒團員攜帶保暖防風衣物。"
   ]);
 
   // 7. TemplateTasks Sheet
@@ -336,9 +341,9 @@ function handleRequest(action, params) {
       params.reference_date
     );
   } else if (action === "createTemplate") {
-    return createTemplate(params.template_name, params.description, params.group_names, params.default_description);
+    return createTemplate(params.template_name, params.description, params.group_names, params.default_description, params.briefing_options);
   } else if (action === "updateTemplate") {
-    return updateTemplate(getInt(params.templateId), params.template_name, params.description, params.group_names, params.default_description);
+    return updateTemplate(getInt(params.templateId), params.template_name, params.description, params.group_names, params.default_description, params.briefing_options);
   } else if (action === "deleteTemplate") {
     return deleteTemplate(getInt(params.templateId));
   } else if (action === "createTemplateTask") {
@@ -1139,6 +1144,7 @@ function getTemplates(ss) {
     const groupsStr = tValues[i][3] || "";
     const groupNames = groupsStr ? groupsStr.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
     const defaultDesc = tValues[i][4] || "";
+    const briefingOpts = tValues[i][5] || "";
     
     templates.push({
       id: tId,
@@ -1146,6 +1152,7 @@ function getTemplates(ss) {
       description: desc || "",
       group_names: groupNames,
       default_description: defaultDesc,
+      briefing_options: briefingOpts,
       tasks: tasksByTemplateId[tId] || []
     });
   }
@@ -1166,18 +1173,18 @@ function getInitialData(userId) {
   };
 }
 
-function createTemplate(name, description, groups, defaultDescription) {
+function createTemplate(name, description, groups, defaultDescription, briefingOptions) {
   const ss = getSpreadsheet();
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
   const nextId = getNextId(sheet);
   const groupsStr = parseGroupNames(groups).join(", ");
-  sheet.appendRow([nextId, name, description || "", groupsStr, defaultDescription || ""]);
+  sheet.appendRow([nextId, name, description || "", groupsStr, defaultDescription || "", briefingOptions || ""]);
   SpreadsheetApp.flush();
   return { status: "success", templateId: nextId };
 }
 
-function updateTemplate(templateId, name, description, groups, defaultDescription) {
+function updateTemplate(templateId, name, description, groups, defaultDescription, briefingOptions) {
   const ss = getSpreadsheet();
   ensureTemplatesSheets(ss);
   const sheet = ss.getSheetByName("CaseTemplates");
@@ -1189,6 +1196,7 @@ function updateTemplate(templateId, name, description, groups, defaultDescriptio
       sheet.getRange(i + 1, 3).setValue(description || "");
       sheet.getRange(i + 1, 4).setValue(groupsStr);
       sheet.getRange(i + 1, 5).setValue(defaultDescription || "");
+      sheet.getRange(i + 1, 6).setValue(briefingOptions || "");
       SpreadsheetApp.flush();
       return { status: "success", templateId: templateId };
     }
