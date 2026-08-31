@@ -25,7 +25,7 @@
 | :--- | :--- | :--- |
 | **`Users`** | 成員帳號、角色、顏色與語系 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
 | **`Roles`** | 角色與權限定義 | `id`, `role_name`, `can_create_case` |
-| **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date` |
+| **`Cases`** | 專案總表與 Drive 掛載點 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date`, `is_archived` |
 | **`Tasks`** | 待辦細項、死線與權限過濾 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
 | **`Comments`** | 任務討論串與留言板 | `id`, `task_id`, `user_id`, `content`, `created_at` |
 | **`CaseTemplates`**| 案件 SOP 範本設定 | `id`, `template_name`, `description`, `group_names`, `default_description`, `briefing_options` |
@@ -47,6 +47,7 @@
 - **卡片層級與預設收合**：案件標題採用升級版 `text-xl font-bold` (20px) 醒目字型，預設收合帶有 `openCaseIds` 展開記憶。
 - **靜音快速新增待辦**：支援組名安全脫逸 (`getSanitizedKey`) 與動態組別自動創建；純樂觀 UI 0ms 秒發秒顯，背景靜默配發 ID。
 - **自動儲存與工作天提示**：抽屜日期與備註支援失去焦點/變更自動儲存 (`onchange` / `onblur`)；標題自動顯示排除週末與國定假日的剩餘工作天數提示（如 `(剩 3 工作天)`）。
+- **案件封存與解除封存**：案件卡片管理按鈕增設「📦 封存」與「🔓 解封」操作。封存之案件預設由儀表板、日曆、甘特圖中過濾隱藏，並可在樹狀頂端勾選「顯示已封存案件」進行檢視，已封存案件呈半透明顯示且帶有 `📦 已封存` 徽章。
 
 ### 📊 D. 甘特圖模式 (Gantt View)
 - **全景時程地圖**：提供日/週/月檢視切換，在深色高對比度模式下清晰呈現專案跨度與進度百分比 (%)。
@@ -114,3 +115,8 @@
   - **後端安全防鎖死 (Soft Fallback)**：當後端接收不到 Email（如跨域 anonymous）或 Email 不在 `Users` 資料表中時，自動改為寬鬆放行模式（不彈出毛玻璃阻斷遮罩），並自動導向至選取的人員 ID 或預設 ID 1 (Martin) 進站，保障系統不論何種連線環境都不會鎖死。
   - **浮動除錯面板 (Developer Debugger)**：在網頁右下角新增一個獨立的浮動除錯面板，即時呈現 Hostname、Is GAS Container、loggedInUserEmail、allUsers.length、currentUserId、loginUser、allCases.length 與 Status，以方便開發與測試診斷。
   - **LocalStorage F5 記憶功能**：在寬鬆免登入模式下，LocalStorage 會正常儲存並於 F5 重新整理時還原使用者所選擇的人員 ID，保證當前人員不會再次遺失。
+- **📅 2026-08-31 (案件封存與解除封存機制、多維檢視過濾與 Mock API 補齊)**：
+  - **資料表欄位擴充**：於 `Cases` 數據表中導入第 8 欄位 `is_archived`，實作表頭自愈機制與老舊數據的無痛相容（預設為 `false`）。
+  - **多維度過濾過篩**：已封存之案件，其子任務項目將自動從個人待辦儀表板（包括統計卡片與待辦清單）、日曆模式、甘特圖模式中過濾隱藏，維持日常工作畫面清爽。
+  - **案件樹狀操作升級**：案件卡片管理按鈕增設「📦 封存」與「🔓 解封」按鈕；支援樂觀更新與物理實體同步；樹狀頂端配置「顯示已封存案件 (Show Archived)」Checkbox 開關，已封存案件呈現半透明與 `📦 已封存` 徽章。
+  - **Mock 引擎補齊**：於 `runMockApi` 新增 `updateCase` (含 `is_archived`) 與 `deleteCase` 的模擬資料引擎，確保本地與 GitHub Pages 獨立測試環境功能 100% 正常。
