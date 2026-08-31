@@ -910,7 +910,11 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
   }
 
   const nextId = getNextId(sheet);
-  const groupsStr = parseGroupNames(groups).join(", ");
+  let finalGroups = parseGroupNames(groups);
+  if (finalGroups.length === 0) {
+    finalGroups = ["一般待辦"];
+  }
+  const groupsStr = finalGroups.join(", ");
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
   sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr, referenceDate || "", false]);
   SpreadsheetApp.flush();
@@ -1083,7 +1087,11 @@ function updateCase(caseId, title, description, driveUrl, groups, referenceDate,
       if (description !== undefined) sheet.getRange(i + 1, 3).setValue(description);
       if (driveUrl !== undefined) sheet.getRange(i + 1, 5).setValue(driveUrl);
       if (groups !== undefined) {
-        const groupsStr = parseGroupNames(groups).join(", ");
+        let finalGroups = parseGroupNames(groups);
+        if (finalGroups.length === 0) {
+          finalGroups = ["一般待辦"];
+        }
+        const groupsStr = finalGroups.join(", ");
         sheet.getRange(i + 1, 6).setValue(groupsStr);
       }
       if (referenceDate !== undefined) {

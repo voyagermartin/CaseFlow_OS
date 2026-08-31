@@ -1627,7 +1627,11 @@
                             }
                         } else if (action === 'createCase') {
                             const nextId = mockCases.length > 0 ? Math.max(...mockCases.map(x => x.id)) + 1 : 1;
-                            const groupsStr = parseGroupNames(payload.groups).join(', ');
+                            let finalGroups = parseGroupNames(payload.groups);
+                            if (finalGroups.length === 0) {
+                                finalGroups = ["一般待辦"];
+                            }
+                            const groupsStr = finalGroups.join(', ');
                             
                             let finalTitle = (payload.title || '').trim();
                             if (payload.template_id) {
@@ -1688,7 +1692,13 @@
                                 if (payload.title !== undefined) c.title = payload.title;
                                 if (payload.description !== undefined) c.description = payload.description;
                                 if (payload.driveUrl !== undefined) c.drive_url = payload.driveUrl;
-                                if (payload.groups !== undefined) c.group_names = parseGroupNames(payload.groups).join(', ');
+                                if (payload.groups !== undefined) {
+                                    let finalGroups = parseGroupNames(payload.groups);
+                                    if (finalGroups.length === 0) {
+                                        finalGroups = ["一般待辦"];
+                                    }
+                                    c.group_names = finalGroups.join(', ');
+                                }
                                 if (payload.reference_date !== undefined) c.reference_date = payload.reference_date;
                                 if (payload.is_archived !== undefined) c.is_archived = payload.is_archived === true || payload.is_archived === "true";
                                 resolve({ status: 'success', caseId: c.id });
@@ -3932,7 +3942,10 @@
                 return;
             }
 
-            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            let groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (groups.length === 0) {
+                groups = ["一般待辦"];
+            }
 
             const payload = {
                 title: title,
@@ -4238,7 +4251,10 @@
             }
 
             const referenceDate = refDateInput ? refDateInput.value : '';
-            const groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            let groups = groupsInput.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (groups.length === 0) {
+                groups = ["一般待辦"];
+            }
 
             let caseObj = allCases.find(c => c.id === caseId);
             if (caseObj) {
