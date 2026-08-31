@@ -1268,7 +1268,7 @@
         let loginUser = null;
 
         // On Document Ready - Optimized parallel batch initial load
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function initApp() {
             showLoading(true);
 
             // Update debug hostname and container flag
@@ -1374,7 +1374,13 @@
             } finally {
                 showLoading(false);
             }
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
 
 
         // Run UI Multilingual Translation
