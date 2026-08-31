@@ -873,6 +873,61 @@
         </div>
     </div>
 
+    <!-- Batch Task Visibility Modal -->
+    <div id="batch-vis-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" onclick="closeBatchVisibilityModal()"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative z-10">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                        <span>👥 案件人員權限批量設定</span>
+                    </h3>
+                    <p id="batch-vis-case-title" class="text-xs text-indigo-400 font-semibold mt-0.5"></p>
+                </div>
+                <button onclick="closeBatchVisibilityModal()" class="text-slate-400 hover:text-slate-200 text-lg">✕</button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400 font-semibold">請選取要調整的人員：</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleAllBatchVisCheckboxes(true)" class="text-[10px] text-indigo-400 hover:underline font-semibold">全選</button>
+                        <span class="text-slate-600 text-xs">|</span>
+                        <button onclick="toggleAllBatchVisCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline font-semibold">取消全選</button>
+                    </div>
+                </div>
+                
+                <div id="batch-vis-users-list" class="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 bg-slate-950/50 rounded-xl border border-slate-850">
+                    <!-- User checkboxes populated dynamically -->
+                </div>
+            </div>
+
+            <div class="space-y-2 border-t border-slate-800 pt-4">
+                <span class="text-xs text-slate-400 font-semibold block mb-1">對此案件中所有待辦事項執行：</span>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="applyBatchTaskVisibility('add')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
+                        <span class="text-xs font-bold">➕ 批量加入</span>
+                        <span class="text-[9px] text-indigo-200 font-normal">加到所有任務</span>
+                    </button>
+                    <button onclick="applyBatchTaskVisibility('remove')" class="bg-rose-950/80 border border-rose-900/60 hover:bg-rose-900/80 text-rose-300 text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
+                        <span class="text-xs font-bold">➖ 批量移除</span>
+                        <span class="text-[9px] text-rose-300/80 font-normal">從所有任務移除</span>
+                    </button>
+                    <button onclick="applyBatchTaskVisibility('overwrite')" class="bg-amber-950/80 border border-amber-900/60 hover:bg-amber-900/80 text-amber-300 text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
+                        <span class="text-xs font-bold">🔄 覆蓋重設</span>
+                        <span class="text-[9px] text-amber-300/80 font-normal">全替換為選取</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+                <button onclick="closeBatchVisibilityModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-semibold transition-colors">
+                    關閉視窗
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- User Create/Edit Modal -->
     <div id="user-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
         <div onclick="closeUserModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
@@ -1801,6 +1856,23 @@
                             } else {
                                 resolve({ status: 'error', message: 'Task not found' });
                             }
+                        } else if (action === 'batchUpdateCaseTaskVisibility') {
+                            const targetCaseId = parseInt(payload.caseId);
+                            const userIds = (Array.isArray(payload.userIds) ? payload.userIds : String(payload.userIds || '').split(',')).map(n => parseInt(n)).filter(n => !isNaN(n));
+                            const mode = payload.mode;
+                            mockTasks.forEach(t => {
+                                if (t.case_id === targetCaseId) {
+                                    let currentVis = Array.isArray(t.visible_user_ids) ? [...t.visible_user_ids] : String(t.visible_user_ids || '').split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
+                                    if (mode === 'add') {
+                                        t.visible_user_ids = Array.from(new Set([...currentVis, ...userIds]));
+                                    } else if (mode === 'remove') {
+                                        t.visible_user_ids = currentVis.filter(id => !userIds.includes(id));
+                                    } else if (mode === 'set' || mode === 'overwrite') {
+                                        t.visible_user_ids = Array.from(new Set(userIds));
+                                    }
+                                }
+                            });
+                            resolve({ status: 'success', caseId: targetCaseId });
                         } else if (action === 'addComment') {
                             const nextId = mockComments.length > 0 ? Math.max(...mockComments.map(x => x.id)) + 1 : 1;
                             const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
@@ -2698,6 +2770,9 @@
                 const currentUser = allUsers.find(u => u.id === currentUserId);
                 const canManage = currentUser && (isSuperMaster(currentUser) || (c.owner_id === currentUserId && hasCreateCasePermission(currentUser)));
                 const manageButtons = canManage ? `
+                    <button onclick="openBatchVisibilityModal(${c.id}); event.stopPropagation()" class="text-xs bg-indigo-950/80 hover:bg-indigo-900/90 border border-indigo-800/80 px-2.5 py-1 rounded-lg text-indigo-300 hover:text-indigo-100 transition-colors flex items-center gap-1 font-medium" title="批量設定此案件所有任務的可見人員">
+                        👥 批次人員
+                    </button>
                     <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
                         ✏️ 編輯
                     </button>

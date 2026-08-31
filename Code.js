@@ -481,6 +481,12 @@ function handleRequest(action, params) {
     );
   } else if (action === "deleteCase") {
     return deleteCase(getInt(params.caseId));
+  } else if (action === "batchUpdateCaseTaskVisibility") {
+    return batchUpdateCaseTaskVisibility(
+      getInt(params.caseId),
+      params.userIds,
+      params.mode
+    );
   } else if (action === "addComment") {
     return addComment(
       getInt(params.taskId),
@@ -1000,6 +1006,44 @@ function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
     }
   }
   throw new Error("Task with ID " + taskId + " not found");
+}
+
+function batchUpdateCaseTaskVisibility(caseId, userIds, mode) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet) throw new Error("Tasks sheet not initialized");
+
+  let targetIds = [];
+  if (Array.isArray(userIds)) {
+    targetIds = userIds.map(n => parseInt(n)).filter(n => !isNaN(n));
+  } else if (userIds) {
+    targetIds = parseUserIds(userIds).split(",").map(n => parseInt(n)).filter(n => !isNaN(n));
+  }
+
+  const values = sheet.getDataRange().getValues();
+  let updatedCount = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][1]) === parseInt(caseId)) { // Col 2 is case_id
+      let currentVisStr = values[i][8] ? String(values[i][8]) : "";
+      let currentVis = parseUserIds(currentVisStr).split(",").map(n => parseInt(n)).filter(n => !isNaN(n));
+      let newVis = [];
+
+      if (mode === "add") {
+        newVis = Array.from(new Set([...currentVis, ...targetIds]));
+      } else if (mode === "remove") {
+        newVis = currentVis.filter(id => !targetIds.includes(id));
+      } else if (mode === "set" || mode === "overwrite") {
+        newVis = Array.from(new Set(targetIds));
+      }
+
+      const newVisStr = newVis.join(",");
+      sheet.getRange(i + 1, 9).setValue(newVisStr);
+      updatedCount++;
+    }
+  }
+  SpreadsheetApp.flush();
+  return { status: "success", caseId: caseId, updatedCount: updatedCount };
 }
 
 function addComment(taskId, userId, content) {
