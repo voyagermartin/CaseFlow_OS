@@ -221,7 +221,7 @@ function initDatabase() {
   // 2. Users Sheet
   const userHeaders = ["id", "username", "role_id", "avatar_color", "language", "google_email", "is_super_master"];
   const userSheet = setupSheet("Users", userHeaders);
-  userSheet.appendRow([1, "Martin", 1, "#4f46e5", "zh-TW", "martin@example.com", true]);
+  userSheet.appendRow([1, "Martin", 1, "#4f46e5", "zh-TW", "voyager.martin@gmail.com", true]);
   userSheet.appendRow([2, "OP_Ning", 2, "#0ea5e9", "zh-TW", "", false]);
   userSheet.appendRow([3, "Sales_Yang", 3, "#f59e0b", "zh-TW", "", false]);
   userSheet.appendRow([4, "Local_Nguyen", 4, "#10b981", "vi-VN", "", false]);
@@ -620,7 +620,11 @@ function getUsers(ss) {
       canCreateCase = roleObj.can_create_case;
     }
 
-    const isSuper = (values[i][6] === true || values[i][6] === "TRUE" || uId === 1 || uName === "Martin");
+    let userEmail = values[i][5] ? String(values[i][5]).trim() : "";
+    if (isSuper && (!userEmail || userEmail === "martin@example.com")) {
+      userEmail = "voyager.martin@gmail.com";
+      sheet.getRange(i + 1, 6).setValue("voyager.martin@gmail.com");
+    }
 
     users.push({
       id: uId,
@@ -630,7 +634,7 @@ function getUsers(ss) {
       can_create_case: canCreateCase || isSuper,
       avatar_color: values[i][3],
       language: values[i][4],
-      google_email: values[i][5] || "",
+      google_email: userEmail,
       is_super_master: isSuper
     });
   }

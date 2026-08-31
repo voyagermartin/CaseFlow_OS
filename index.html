@@ -980,7 +980,7 @@
             <div class="space-y-3 relative z-10 text-left">
                 <div class="space-y-1.5">
                     <label class="text-xs text-slate-400 font-semibold uppercase">授權 Google Email</label>
-                    <input type="email" id="login-email-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-brand-500 font-mono" placeholder="martin@example.com">
+                    <input type="email" id="login-email-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-brand-500 font-mono" placeholder="voyager.martin@gmail.com">
                 </div>
                 
                 <!-- Admin PIN Input (Hidden by default, shown when Super Master email matched) -->
@@ -1286,7 +1286,7 @@
         ];
 
         let mockUsers = [
-            { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "martin@example.com", is_super_master: true },
+            { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "voyager.martin@gmail.com", is_super_master: true },
             { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "ning@example.com", is_super_master: false },
             { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "yang@example.com", is_super_master: false },
             { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "nguyen@example.com", is_super_master: false }
@@ -2287,7 +2287,12 @@
             }
 
             // Find user matching google_email (case-insensitive)
-            const matchedUser = allUsers.find(u => u.google_email && u.google_email.trim().toLowerCase() === inputEmail);
+            let matchedUser = allUsers.find(u => u.google_email && u.google_email.trim().toLowerCase() === inputEmail);
+
+            // Auto-fallback match for Martin admin email
+            if (!matchedUser && (inputEmail === "voyager.martin@gmail.com" || inputEmail === "martin@example.com")) {
+                matchedUser = allUsers.find(u => isSuperMaster(u) || u.id === 1);
+            }
 
             if (!matchedUser) {
                 if (errorMsg) {
