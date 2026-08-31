@@ -129,3 +129,4 @@
 - **📅 2026-08-31 (第二部分：待辦勾選極速響應優化與抽屜日期按鈕批次儲存)**：
   - **待辦勾選 0ms 極速響應 (`renderActiveViewOnly` + `requestAnimationFrame`)**：優化 `toggleTask` 切換邏輯，移除每次勾選時同步銷毀與重繪全站 4 大視圖 DOM 的高耗能行為；改為透過 `requestAnimationFrame` 讓瀏覽器原生 Checkbox 勾選動畫先瞬時完成，並實作視圖按需懶加載 (Lazy Refresh)，僅即時更新當前 Active View（隱藏視圖延遲至切換 Tab 時重繪），徹底解決打勾反應卡頓問題。
   - **抽屜日期批次儲存按鈕 (`drawer-save-dates-btn`)**：將待辦抽屜中「開始日期」與「截止日期」各改一次就觸發一次 HTTP POST 上傳的舊有行為，改為在欄位下方配置專屬的「📅 儲存日期時程」按鈕 (`saveTaskDates`)，使用者可一次調整開始與截止日期後點擊按鈕一次性完成同步，節省網路請求與上傳等待時間。
+  - **重複變數修復 (`activeView`)**：修復 `let activeView` 重複宣告導致的語法錯誤 (`SyntaxError`)，確保全站主 JavaScript 腳本與除錯面板 100% 正常初始化與執行。
