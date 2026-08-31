@@ -864,66 +864,47 @@
                     <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
+
+                <!-- Member Visibility Section in Edit Case Modal -->
+                <div class="space-y-2 border-t border-slate-800 pt-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs text-indigo-400 font-bold uppercase flex items-center gap-1">
+                            <span>👥 案件人員權限與可見設定</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="toggleAllEditCaseUserCheckboxes(true)" class="text-[10px] text-indigo-400 hover:underline font-semibold">全選</button>
+                            <span class="text-slate-600 text-xs">|</span>
+                            <button type="button" onclick="toggleAllEditCaseUserCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline font-semibold">取消全選</button>
+                        </div>
+                    </div>
+                    
+                    <div id="edit-case-users-list" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1.5 bg-slate-950/60 rounded-xl border border-slate-800">
+                        <!-- User checkboxes populated dynamically -->
+                    </div>
+
+                    <div class="space-y-1 pt-1">
+                        <span class="text-[10px] text-slate-400 font-semibold block">選擇同步至此案件所有待辦事項的方式：</span>
+                        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-slate-850">
+                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
+                                <input type="radio" name="edit-case-vis-mode" value="add" checked class="text-brand-600 focus:ring-brand-500">
+                                <span>➕ 批量加入 (預設)</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
+                                <input type="radio" name="edit-case-vis-mode" value="overwrite" class="text-brand-600 focus:ring-brand-500">
+                                <span>🔄 覆蓋重設</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
+                                <input type="radio" name="edit-case-vis-mode" value="none" class="text-brand-600 focus:ring-brand-500">
+                                <span>⏸️ 不變更現有待辦</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
                 <button onclick="closeEditCaseModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
                 <button onclick="submitEditCase()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存修改</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Batch Task Visibility Modal -->
-    <div id="batch-vis-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" onclick="closeBatchVisibilityModal()"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative z-10">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div>
-                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-                        <span>👥 案件人員權限批量設定</span>
-                    </h3>
-                    <p id="batch-vis-case-title" class="text-xs text-indigo-400 font-semibold mt-0.5"></p>
-                </div>
-                <button onclick="closeBatchVisibilityModal()" class="text-slate-400 hover:text-slate-200 text-lg">✕</button>
-            </div>
-            
-            <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-slate-400 font-semibold">請選取要調整的人員：</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="toggleAllBatchVisCheckboxes(true)" class="text-[10px] text-indigo-400 hover:underline font-semibold">全選</button>
-                        <span class="text-slate-600 text-xs">|</span>
-                        <button onclick="toggleAllBatchVisCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline font-semibold">取消全選</button>
-                    </div>
-                </div>
-                
-                <div id="batch-vis-users-list" class="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 bg-slate-950/50 rounded-xl border border-slate-850">
-                    <!-- User checkboxes populated dynamically -->
-                </div>
-            </div>
-
-            <div class="space-y-2 border-t border-slate-800 pt-4">
-                <span class="text-xs text-slate-400 font-semibold block mb-1">對此案件中所有待辦事項執行：</span>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="applyBatchTaskVisibility('add')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
-                        <span class="text-xs font-bold">➕ 批量加入</span>
-                        <span class="text-[9px] text-indigo-200 font-normal">加到所有任務</span>
-                    </button>
-                    <button onclick="applyBatchTaskVisibility('remove')" class="bg-rose-950/80 border border-rose-900/60 hover:bg-rose-900/80 text-rose-300 text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
-                        <span class="text-xs font-bold">➖ 批量移除</span>
-                        <span class="text-[9px] text-rose-300/80 font-normal">從所有任務移除</span>
-                    </button>
-                    <button onclick="applyBatchTaskVisibility('overwrite')" class="bg-amber-950/80 border border-amber-900/60 hover:bg-amber-900/80 text-amber-300 text-xs font-semibold py-2.5 px-2 rounded-xl transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
-                        <span class="text-xs font-bold">🔄 覆蓋重設</span>
-                        <span class="text-[9px] text-amber-300/80 font-normal">全替換為選取</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex justify-end pt-1">
-                <button onclick="closeBatchVisibilityModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-semibold transition-colors">
-                    關閉視窗
-                </button>
             </div>
         </div>
     </div>
@@ -2770,9 +2751,6 @@
                 const currentUser = allUsers.find(u => u.id === currentUserId);
                 const canManage = currentUser && (isSuperMaster(currentUser) || (c.owner_id === currentUserId && hasCreateCasePermission(currentUser)));
                 const manageButtons = canManage ? `
-                    <button onclick="openBatchVisibilityModal(${c.id}); event.stopPropagation()" class="text-xs bg-indigo-950/80 hover:bg-indigo-900/90 border border-indigo-800/80 px-2.5 py-1 rounded-lg text-indigo-300 hover:text-indigo-100 transition-colors flex items-center gap-1 font-medium" title="批量設定此案件所有任務的可見人員">
-                        👥 批次人員
-                    </button>
                     <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
                         ✏️ 編輯
                     </button>
@@ -4364,6 +4342,11 @@
         }
 
         // --- Case Operations (Edit & Delete Case) ---
+        function toggleAllEditCaseUserCheckboxes(checked) {
+            const boxes = document.querySelectorAll('.edit-case-user-chk');
+            boxes.forEach(cb => cb.checked = checked);
+        }
+
         function openEditCaseModal(caseId) {
             const caseObj = allCases.find(c => c.id === caseId);
             if (!caseObj) return;
@@ -4374,6 +4357,35 @@
             document.getElementById('edit-case-drive-url').value = caseObj.drive_url || '';
             document.getElementById('edit-case-ref-date').value = caseObj.reference_date || '';
             document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
+
+            // Collect existing visible user IDs across tasks of this case
+            const existingVisUserIds = new Set();
+            caseObj.groups.forEach(g => {
+                g.tasks.forEach(t => {
+                    if (Array.isArray(t.visible_user_ids)) {
+                        t.visible_user_ids.forEach(uId => existingVisUserIds.add(uId));
+                    }
+                });
+            });
+
+            // Populate user checklist in Edit Case Modal
+            const userContainer = document.getElementById('edit-case-users-list');
+            if (userContainer) {
+                userContainer.innerHTML = '';
+                allUsers.forEach(u => {
+                    const isChecked = existingVisUserIds.has(u.id);
+                    userContainer.innerHTML += `
+                        <label class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs cursor-pointer hover:bg-slate-800/80 transition-colors">
+                            <input type="checkbox" value="${u.id}" ${isChecked ? 'checked' : ''} class="edit-case-user-chk rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500">
+                            <span class="h-2 w-2 rounded-full shrink-0" style="background-color: ${u.avatar_color}"></span>
+                            <span class="truncate text-slate-200">${u.username} <span class="text-[10px] text-slate-500 font-normal">(${u.role_name})</span></span>
+                        </label>
+                    `;
+                });
+            }
+
+            const defaultModeRadio = document.querySelector('input[name="edit-case-vis-mode"][value="add"]');
+            if (defaultModeRadio) defaultModeRadio.checked = true;
 
             document.getElementById('edit-case-modal').classList.remove('hidden');
         }
@@ -4403,6 +4415,12 @@
                 groups = ["一般待辦"];
             }
 
+            // Collect selected users & sync mode
+            const checkedBoxes = document.querySelectorAll('.edit-case-user-chk:checked');
+            const selectedUserIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+            const visModeEl = document.querySelector('input[name="edit-case-vis-mode"]:checked');
+            const visMode = visModeEl ? visModeEl.value : 'add';
+
             let caseObj = allCases.find(c => c.id === caseId);
             if (caseObj) {
                 caseObj.title = title;
@@ -4419,12 +4437,27 @@
                         tasks: existingGroup ? existingGroup.tasks : []
                     };
                 });
+
+                // Optimistically update tasks visibility if sync mode is not 'none'
+                if (visMode !== 'none') {
+                    caseObj.groups.forEach(g => {
+                        g.tasks.forEach(t => {
+                            let currentVis = Array.isArray(t.visible_user_ids) ? [...t.visible_user_ids] : [];
+                            let newVis = [];
+                            if (visMode === 'add') {
+                                newVis = Array.from(new Set([...currentVis, ...selectedUserIds]));
+                            } else if (visMode === 'overwrite') {
+                                newVis = Array.from(new Set(selectedUserIds));
+                            }
+                            t.visible_user_ids = newVis;
+                            t.visible_users = newVis.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
+                        });
+                    });
+                }
             }
 
             closeEditCaseModal();
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
+            renderActiveViewOnly();
 
             const payload = {
                 caseId: caseId,
@@ -4436,17 +4469,21 @@
             };
 
             const res = await apiRequest('updateCase', payload, 'POST', true);
+            if (visMode !== 'none') {
+                await apiRequest('batchUpdateCaseTaskVisibility', {
+                    caseId: caseId,
+                    userIds: selectedUserIds,
+                    mode: visMode
+                }, 'POST', true);
+            }
+
             if (res) {
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             } else {
                 alert("更新案件失敗，已還原。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             }
         }
 
