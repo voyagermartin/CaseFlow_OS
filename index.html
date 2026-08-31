@@ -335,6 +335,15 @@
 
             <!-- Case Tree View Container -->
             <div id="view-case" class="w-full hidden space-y-6">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        📋 案件清單
+                    </h3>
+                    <label class="flex items-center gap-2 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors text-xs text-slate-350 select-none">
+                        <input type="checkbox" id="show-archived-cases-chk" onchange="toggleShowArchivedCases(this.checked)" class="rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3.5 h-3.5">
+                        <span>顯示已封存案件 (Show Archived)</span>
+                    </label>
+                </div>
                 <div id="cases-tree-container" class="space-y-6">
                     <!-- Dynamic case cards go here -->
                 </div>
@@ -1194,7 +1203,7 @@
         ];
 
         let mockCases = [
-            { id: 1, title: "2026/09/15 馬航怡保專案", description: "本次怡保出團之完整追蹤與住宿協調工作", owner_id: 1, drive_url: "https://drive.google.com/drive/folders/mock-id", group_names: "票務與交通, LOCAL 與 住宿, 名單與證件" }
+            { id: 1, title: "2026/09/15 馬航怡保專案", description: "本次怡保出團之完整追蹤與住宿協調工作", owner_id: 1, drive_url: "https://drive.google.com/drive/folders/mock-id", group_names: "票務與交通, LOCAL 與 住宿, 名單與證件", is_archived: false }
         ];
 
         let mockTasks = [
@@ -1235,6 +1244,7 @@
         let allUsers = [];
         let allRoles = [];
         let allCases = [];
+        let showArchivedCases = false;
         let activeView = 'dashboard';
         let calendar = null;
         let gantt = null;
@@ -1636,7 +1646,8 @@
                                 description: payload.description,
                                 owner_id: payload.owner_id,
                                 drive_url: "https://drive.google.com/drive/folders/mock-id",
-                                group_names: groupsStr
+                                group_names: groupsStr,
+                                is_archived: false
                             });
                             
                             // Generate template tasks if selected
@@ -1671,6 +1682,23 @@
                                 });
                             }
                             resolve({ status: 'success', caseId: nextId });
+                        } else if (action === 'updateCase') {
+                            const c = mockCases.find(x => x.id === payload.caseId);
+                            if (c) {
+                                if (payload.title !== undefined) c.title = payload.title;
+                                if (payload.description !== undefined) c.description = payload.description;
+                                if (payload.driveUrl !== undefined) c.drive_url = payload.driveUrl;
+                                if (payload.groups !== undefined) c.group_names = parseGroupNames(payload.groups).join(', ');
+                                if (payload.reference_date !== undefined) c.reference_date = payload.reference_date;
+                                if (payload.is_archived !== undefined) c.is_archived = payload.is_archived === true || payload.is_archived === "true";
+                                resolve({ status: 'success', caseId: c.id });
+                            } else {
+                                resolve({ status: 'error', message: 'Case not found' });
+                            }
+                        } else if (action === 'deleteCase') {
+                            mockCases = mockCases.filter(x => x.id !== payload.caseId);
+                            mockTasks = mockTasks.filter(x => x.case_id !== payload.caseId);
+                            resolve({ status: 'success', caseId: payload.caseId });
                         } else if (action === 'createTemplate') {
                             const nextId = mockTemplates.length > 0 ? Math.max(...mockTemplates.map(x => x.id)) + 1 : 1;
                             const groupsStr = parseGroupNames(payload.group_names).join(', ');
@@ -1918,6 +1946,7 @@
                 cases.push({
                     ...c,
                     owner: userMap[c.owner_id] || { username: 'System', role: '' },
+                    is_archived: c.is_archived === true,
                     groups: groups
                 });
             });
@@ -2452,6 +2481,7 @@
             const events = [];
             
             allCases.forEach(c => {
+                if (c.is_archived) return;
                 c.groups.forEach(g => {
                     const groupColor = getGroupColor(g.name);
 
@@ -2552,17 +2582,19 @@
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
             const tText = i18n[lang];
 
-            if (allCases.length === 0) {
+            const filteredCases = allCases.filter(c => showArchivedCases || !c.is_archived);
+
+            if (filteredCases.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-12 border border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
-                        <p class="text-slate-400">${tText.noPermissionCases}</p>
+                        <p class="text-slate-400">${showArchivedCases ? "沒有任何已封存的案件。" : tText.noPermissionCases}</p>
                     </div>
                 `;
                 return;
             }
 
             // Sort cases by reference_date ascending (empty dates sorted to the end)
-            const sortedCases = [...allCases].sort((a, b) => {
+            const sortedCases = [...filteredCases].sort((a, b) => {
                 const dateA = a.reference_date || "";
                 const dateB = b.reference_date || "";
                 if (dateA === "" && dateB === "") return 0;
@@ -2573,13 +2605,17 @@
 
             sortedCases.forEach(c => {
                 const caseCard = document.createElement('div');
-                caseCard.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50";
+                const opacityClass = c.is_archived ? "opacity-75 hover:opacity-100 transition-opacity duration-200" : "";
+                caseCard.className = `bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50 ${opacityClass}`;
                 
                 const currentUser = allUsers.find(u => u.id === currentUserId);
                 const canManage = currentUser && (isSuperMaster(currentUser) || (c.owner_id === currentUserId && hasCreateCasePermission(currentUser)));
                 const manageButtons = canManage ? `
                     <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
                         ✏️ 編輯
+                    </button>
+                    <button onclick="toggleArchiveCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-amber-400 hover:text-amber-200 transition-colors" title="${c.is_archived ? '解除封存' : '封存案件'}">
+                        ${c.is_archived ? '🔓 解封' : '📦 封存'}
                     </button>
                     <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
                         🗑️ 刪除
@@ -2598,12 +2634,17 @@
                             <div>
                                 <h3 class="text-xl font-bold text-slate-100 flex items-center flex-wrap gap-2">
                                     <span>${escapeHtml(c.title)}</span>
+                                    ${c.is_archived ? `
+                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-850 border border-slate-755 text-slate-400 flex items-center gap-1 shrink-0">
+                                            📦 已封存
+                                        </span>
+                                    ` : ''}
                                     ${c.reference_date ? `
                                         <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-indigo-950/80 border border-indigo-900/60 text-indigo-300 flex items-center gap-1 shrink-0">
                                             📅 出發日: ${c.reference_date}
                                         </span>
                                     ` : ''}
-                                    ${getCaseWorkingDaysLeftSpan(c)}
+                                    ${c.is_archived ? '' : getCaseWorkingDaysLeftSpan(c)}
                                 </h3>
                                 <p class="text-sm text-slate-400 mt-0.5">${c.description || ''}</p>
                             </div>
@@ -2792,6 +2833,7 @@
 
             const tasks = [];
             allCases.forEach(c => {
+                if (c.is_archived) return;
                 // Find start & end date bounds
                 let minDate = null;
                 let maxDate = null;
@@ -2900,6 +2942,7 @@
             const now = new Date();
 
             allCases.forEach(c => {
+                if (c.is_archived) return;
                 c.groups.forEach(g => {
                     g.tasks.forEach(t => {
                         if (t.visible_user_ids && t.visible_user_ids.includes(currentUserId)) {
@@ -4270,6 +4313,45 @@
                 renderCalendar();
                 renderCaseTree();
                 renderGantt();
+            }
+        }
+
+        function toggleShowArchivedCases(checked) {
+            showArchivedCases = checked;
+            renderCaseTree();
+        }
+
+        async function toggleArchiveCaseAction(caseId) {
+            const caseObj = allCases.find(c => c.id === caseId);
+            if (!caseObj) return;
+
+            const user = allUsers.find(u => u.id === currentUserId);
+            const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+
+            const isArchived = !caseObj.is_archived;
+            const confirmMsg = lang === 'vi-VN'
+                ? (isArchived ? `Bạn có chắc muốn lưu trữ dự án "${caseObj.title}"?` : `Bạn có chắc muốn mở khóa lưu trữ dự án "${caseObj.title}"?`)
+                : (isArchived 
+                    ? `確定要封存案件「${caseObj.title}」嗎？\n封存後該案件將預設隱藏，不會顯示在儀表板、日曆與甘特圖中。`
+                    : `確定要解除封存案件「${caseObj.title}」嗎？`);
+            
+            if (!confirm(confirmMsg)) return;
+
+            // Optimistic UI update
+            caseObj.is_archived = isArchived;
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+            renderDashboard();
+
+            const res = await apiRequest('updateCase', { caseId: caseId, is_archived: isArchived }, 'POST', true);
+            if (!res) {
+                alert(lang === 'vi-VN' ? "Lỗi đồng bộ lưu trữ!" : "切換封存狀態失敗，已重整頁面。");
+                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                renderDashboard();
             }
         }
 

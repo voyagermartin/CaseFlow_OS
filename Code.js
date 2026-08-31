@@ -227,9 +227,9 @@ function initDatabase() {
   userSheet.appendRow([4, "Local_Nguyen", 4, "#10b981", "vi-VN", "", false]);
 
   // 3. Cases Sheet
-  const caseHeaders = ["id", "title", "description", "owner_id", "drive_url", "group_names", "reference_date"];
+  const caseHeaders = ["id", "title", "description", "owner_id", "drive_url", "group_names", "reference_date", "is_archived"];
   const caseSheet = setupSheet("Cases", caseHeaders);
-  caseSheet.appendRow([1, "2026/09/15 馬航怡保專案", "本次怡保出團之完整追蹤與住宿協調工作", 1, "https://drive.google.com/drive/folders/mock-id", "票務與交通, LOCAL 與 住宿, 名單與證件", "2026-09-15"]);
+  caseSheet.appendRow([1, "2026/09/15 馬航怡保專案", "本次怡保出團之完整追蹤與住宿協調工作", 1, "https://drive.google.com/drive/folders/mock-id", "票務與交通, LOCAL 與 住宿, 名單與證件", "2026-09-15", false]);
 
   // 4. Tasks Sheet
   const taskHeaders = ["id", "case_id", "group_name", "title", "due_date", "start_date", "is_completed", "notes", "visible_user_ids"];
@@ -476,7 +476,8 @@ function handleRequest(action, params) {
       params.description,
       params.driveUrl,
       groups,
-      params.reference_date
+      params.reference_date,
+      params.is_archived
     );
   } else if (action === "deleteCase") {
     return deleteCase(getInt(params.caseId));
@@ -517,6 +518,11 @@ function doGet(e) {
       const rawSig = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, activeEmail, SPREADSHEET_ID);
       signature = Utilities.base64Encode(rawSig);
     }
+
+    // Run diagnostic tests
+    try {
+      testDebug();
+    } catch(err) {}
 
     const template = HtmlService.createTemplateFromFile("index");
     template.userEmail = activeEmail;
@@ -739,6 +745,9 @@ function getCasesForUser(userId, ss) {
     if (casesSheet.getLastColumn() < 7 || casesSheet.getRange(1, 7).getValue() === "") {
       casesSheet.getRange(1, 7).setValue("reference_date");
     }
+    if (casesSheet.getLastColumn() < 8 || casesSheet.getRange(1, 8).getValue() === "") {
+      casesSheet.getRange(1, 8).setValue("is_archived");
+    }
   }
   const caseValues = casesSheet ? casesSheet.getDataRange().getValues() : [];
   const cases = [];
@@ -760,6 +769,8 @@ function getCasesForUser(userId, ss) {
         casesSheet.getRange(i + 1, 7).setValue(extracted);
       }
     }
+    
+    const isArchived = caseValues[i].length > 7 ? (caseValues[i][7] === true || caseValues[i][7] === "TRUE") : false;
     
     const groupNames = parseGroupNames(groupNamesStr);
     const caseTasks = tasksByCaseId[cId] || [];
@@ -800,6 +811,7 @@ function getCasesForUser(userId, ss) {
       owner: userMap[ownerId] || { username: "System", role: "" },
       drive_url: driveUrl,
       reference_date: referenceDate,
+      is_archived: isArchived,
       groups: groups
     });
   }
@@ -900,7 +912,7 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
   const nextId = getNextId(sheet);
   const groupsStr = parseGroupNames(groups).join(", ");
   const driveUrl = "https://drive.google.com/drive/folders/mock-id";
-  sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr, referenceDate || ""]);
+  sheet.appendRow([nextId, finalTitle, description || "", ownerId, driveUrl, groupsStr, referenceDate || "", false]);
   SpreadsheetApp.flush();
 
   // If template is selected and reference date is provided, auto-create tasks
@@ -1059,7 +1071,7 @@ function deleteTaskComments(taskId) {
   }
 }
 
-function updateCase(caseId, title, description, driveUrl, groups, referenceDate) {
+function updateCase(caseId, title, description, driveUrl, groups, referenceDate, isArchived) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
@@ -1076,6 +1088,9 @@ function updateCase(caseId, title, description, driveUrl, groups, referenceDate)
       }
       if (referenceDate !== undefined) {
         sheet.getRange(i + 1, 7).setValue(referenceDate);
+      }
+      if (isArchived !== undefined) {
+        sheet.getRange(i + 1, 8).setValue(isArchived === true || isArchived === "true" || isArchived === "TRUE");
       }
       SpreadsheetApp.flush();
       return { status: "success", caseId: caseId };
@@ -1417,4 +1432,34 @@ function deleteTemplateTask(taskId) {
  */
 function apiCall(action, params) {
   return handleRequest(action, params);
+}
+
+function testDebug() {
+  const ss = getSpreadsheet();
+  let debugSheet = ss.getSheetByName("DebugLog");
+  if (!debugSheet) {
+    debugSheet = ss.insertSheet("DebugLog");
+  }
+  debugSheet.clear();
+  
+  try {
+    const users = getUsers(ss);
+    const roles = getRoles(ss);
+    const cases = getCasesForUser(1, ss);
+    const templates = getTemplates(ss);
+    
+    debugSheet.appendRow(["Timestamp", new Date().toString()]);
+    debugSheet.appendRow(["Users Count", users.length]);
+    debugSheet.appendRow(["Roles Count", roles.length]);
+    debugSheet.appendRow(["Cases Count", cases.length]);
+    debugSheet.appendRow(["Templates Count", templates.length]);
+    
+    if (users.length > 0) {
+      debugSheet.appendRow(["First User ID", users[0].id]);
+      debugSheet.appendRow(["First User Name", users[0].username]);
+      debugSheet.appendRow(["First User Email", users[0].google_email]);
+    }
+  } catch (e) {
+    debugSheet.appendRow(["Error", e.toString()]);
+  }
 }
