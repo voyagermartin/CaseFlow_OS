@@ -13,6 +13,7 @@
 > - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
 > - **效能與極速載入**：單一通道首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援，首頁載入 <0.3 秒；待辦勾選採用 `requestAnimationFrame` 0ms 影格異步響應與 `renderActiveViewOnly` 視圖懶加載。
 > - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)；`initApp` 支援 `document.readyState` 雙重保險強健啟動。
+> - **門禁與權限控管**：`google_email` 全站白名單門禁驗證 Modal (`#login-modal`)、管理員單向密碼鎖 (`ADMIN_PASSCODE` + `sessionStorage`)、頂端安全身分指示器與登出機制。
 > - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、案件封存/解封、編輯案件內建批量人員權限設定 (`batchUpdateCaseTaskVisibility`)、抽屜日期批次儲存按鈕、語系字典 (zh-TW / vi-VN)。
 
 ---
@@ -58,11 +59,13 @@
 
 ---
 
-## 🎨 4. 任務組配色、語系 (i18n) 與人員切換
+## 🎨 4. 任務組配色、語系 (i18n) 與 Email 門禁登入 / 身分防護
 
+- **🔑 人員控管 Email 白名單門禁 (`#login-modal`)**：系統以「Users」工作表中的 `google_email` 為唯一進站門禁白名單。初次訪問全螢幕彈出驗證 Modal（`handleEmailLogin`），未在名單內之信箱無法查看背景任何系統內容。
+- **🔒 管理員單向密碼鎖 (`ADMIN_PASSCODE`)**：比對為 Super Master (`Martin`) 信箱時，必須額外輸入解鎖密碼（預設 PIN: `8888`，登錄標記紀錄於 `sessionStorage`），密碼正確方可開啟權限控管與範本管理頁籤。
+- **🚪 頂端身分指示器與登出按鈕**：移除舊有可隨意切換身分之下拉選單，改為渲染「`👤 當前登入：[username] ([role_name]) ｜ 🚪 登出/切換帳號`」。點擊登出會安全清除 `localStorage` 並自動跳出登入門禁彈窗。
 - **自訂任務組配色**：點擊「🎨 任務組配色設定」可新增、編輯或刪除組別代表色，自動記憶於 `localStorage`。
-- **多國語言 (i18n) 雙向切換**：頂端選單切換人員時，介面會根據該使用者偏好語系（如繁中 `zh-TW` 或越南文 `vi-VN`）自動翻譯。
-- **選單絕對綁定 (`renderUserSwitcher`)**：頂端人員下拉選單與頭像指示器 100% 強制同步，若無效或已刪除 ID 自動備援至第一位可用成員。
+- **多國語言 (i18n) 雙向切換**：登入時系統會根據該使用者偏好語系（如繁中 `zh-TW` 或越南文 `vi-VN`）自動進行全站介面翻譯。
 
 ---
 
@@ -119,12 +122,13 @@
   - **後端安全防鎖死 (Soft Fallback)**：當後端接收不到 Email（如跨域 anonymous）或 Email 不在 `Users` 資料表中時，自動改為寬鬆放行模式（不彈出毛玻璃阻斷遮罩），並自動導向至選取的人員 ID 或預設 ID 1 (Martin) 進站，保障系統不論何種連線環境都不會鎖死。
   - **浮動除錯面板 (Developer Debugger)**：在網頁右下角新增一個獨立的浮動除錯面板，即時呈現 Hostname、Is GAS Container、loggedInUserEmail、allUsers.length、currentUserId、loginUser、allCases.length 與 Status，以方便開發與測試診斷。
   - **LocalStorage F5 記憶功能**：在寬鬆免登入模式下，LocalStorage 會正常儲存並於 F5 重新整理時還原使用者所選擇的人員 ID，保證當前人員不會再次遺失。
-- **📅 2026-08-31 (Phase 6: 案件封存解封、極速勾選響應、抽屜日期批次儲存、編輯案件內建人員權限批量設定與啟動防禦全面升級)**：
+- **📅 2026-08-31 (Phase 6: 案件封存解封、極速勾選響應、抽屜日期批次儲存、編輯案件內建人員權限批量設定、Email 白名單門禁與防禦全面升級)**：
   - **案件封存與解封機制 (Case Archiving)**：`Cases` 表導入 `is_archived` 欄位與自動表頭修復；已封存案件自動從個人待辦儀表板、日曆、甘特圖中過濾隱藏；案件卡片增設「📦 封存」與「🔓 解封」操作按鈕及「顯示已封存案件 (Show Archived)」檢視開關。
   - **待辦勾選 0ms 極速響應 (`renderActiveViewOnly` + `requestAnimationFrame`)**：優化 `toggleTask` 切換邏輯，解耦同步重繪全站 4 大視圖 DOM 的高耗能行為；改為透過 `requestAnimationFrame` 讓瀏覽器原生 Checkbox 勾選動畫先瞬時完成，並實作視圖按需懶加載 (Lazy Refresh)，僅即時更新當前 Active View（隱藏視圖延遲至切換 Tab 時重繪），徹底解決打勾反應卡頓問題。
   - **抽屜日期批次儲存按鈕 (`drawer-save-dates-btn`)**：將待辦抽屜中「開始日期」與「截止日期」改一次傳一次的舊行為，改為欄位下方配置專屬「📅 儲存日期時程」按鈕 (`saveTaskDates`)，一次調整完點擊按鈕批量同步上傳，大幅節省網路傳輸等待時間。
   - **👥 編輯案件內建批量人員權限設定 (`batchUpdateCaseTaskVisibility`)**：將人員權限批量設定直接內嵌至「✏️ 編輯案件」彈窗內。開啟編輯時即可直接勾選/取消人員（支援全選/取消全選），並提供「➕ 批量加入 (預設)」、「🔄 覆蓋重設」與「⏸️ 不變更現有待辦」同步選項，儲存案件時一鍵將權限變更批量套用到該案件下的所有待辦事項。
+  - **🔑 人員控管 Email 白名單門禁 (`#login-modal` + `google_email`)**：以 `Users` 表格內的 `google_email` 為全站唯一進站門禁白名單。初次訪問彈出毛玻璃 Email 驗證 Modal（`handleEmailLogin`）；比對成功之一般成員自動進入對應視圖；Super Master (`Martin`) 需另外通過 `ADMIN_PASSCODE` (預設 PIN: `8888`) 驗證解鎖；提供管理員信箱 `voyager.martin@gmail.com` 異步載入終極自動配對防鎖死機制。
+  - **🚪 頂端身分指示器與登出按鈕**：移除舊有可自由切換身分之下拉選單，改為渲染「`👤 當前登入：[username] ([role_name]) ｜ 🚪 登出/切換帳號`」。點擊登出安全清除 `localStorage` 並自動跳出登入門禁彈窗。
   - **強健初始化與語法修復 (`initApp` + `document.readyState`)**：修復 `let activeView` 重複宣告導致的 `SyntaxError`；將 DOM 加載引擎升級為 `document.readyState` 雙重保險判定，徹底解決快取與容器環境下 `DOMContentLoaded` 失效導致系統未初始化的問題。
   - **防禦性組別回退與日期防誤判校正**：新增或編輯案件不填組別時自動 fallback 至「一般待辦」組別；當日截止日時間上限精確解析至 23:59:59 消除下午逾期誤判；快速新增待辦起始日與截止日同步預設同一天。
   - **Mock API 引擎完整補齊**：於 `runMockApi` 新增 `batchUpdateCaseTaskVisibility` 與 `updateCase` (含 `is_archived`) 等模擬引擎，確保本地與 GitHub Pages 獨立測試環境功能 100% 正常。
-  - **🔑 人員控管 Email 白名單門禁 (`#login-modal` + `google_email`)**：全站以 `Users` 表格內的 `google_email` 為唯一白名單。初次進站預設彈出毛玻璃 Email 驗證 Modal（`handleEmailLogin`）；比對成功之一般成員自動進入對應視圖；Super Master (`Martin`) 需另外通過 `ADMIN_PASSCODE` (預設 `8888`) 驗證。頂端選單改為「👤 當前登入：[username] ([role_name]) ｜ 🚪 登出/切換帳號」安全防護結構。
