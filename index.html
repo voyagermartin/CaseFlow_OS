@@ -2047,6 +2047,13 @@
             return isForward ? count : -count;
         }
 
+        function getDueDateTime(dueDateStr) {
+            if (!dueDateStr) return null;
+            const parts = dueDateStr.split('-');
+            if (parts.length !== 3) return new Date(dueDateStr);
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59, 999);
+        }
+
         function getWorkingDaysLeftSpan(task) {
             if (task.is_completed || !task.due_date) return "";
             
@@ -2502,7 +2509,7 @@
                         let statusIcon = '🟢';
                         if (!t.is_completed) {
                             const now = new Date();
-                            const dueDate = new Date(t.due_date);
+                            const dueDate = getDueDateTime(t.due_date);
                             const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
                             
                             if (hoursDiff < 0) {
@@ -2963,7 +2970,7 @@
                                 completedCount++;
                             } else {
                                 if (t.due_date) {
-                                    const dueDate = new Date(t.due_date);
+                                    const dueDate = getDueDateTime(t.due_date);
                                     hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
                                     if (hoursDiff < 0) {
                                         status = 'red';
