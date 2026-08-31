@@ -947,8 +947,47 @@
                         </div>
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase">偏好語系</label>
-                        <select id="user-lang-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
+                                   系統授權名單中尚無您的資料。請連繫系統管理員（Martin）將您的帳戶新增至「Users」工作表後再試。
+                </div>
+            </div>
+            
+            <div class="pt-2">
+                <button onclick="window.location.reload()" class="w-full bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white font-semibold py-3 px-4 rounded-xl transition-colors text-xs border border-slate-700">
+                    🔄 重新整理頁面 (Refresh Page)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin PIN Lock Modal -->
+    <div id="admin-pin-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div onclick="closeAdminPinModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[400px] p-6 relative z-10 shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span>🔒 管理員密碼驗證</span>
+                </h3>
+                <button onclick="closeAdminPinModal()" class="text-slate-400 hover:text-slate-200">✕</button>
+            </div>
+            
+            <div class="space-y-3">
+                <p class="text-xs text-slate-300">切換至管理員視角 (Martin) 需要輸入密碼解鎖：</p>
+                <div class="space-y-1">
+                    <input type="password" id="admin-pin-input" onkeyup="if(event.key==='Enter') submitAdminPin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 tracking-widest text-center" placeholder="請輸入管理員密碼 (預設: 8888)">
+                    <p id="admin-pin-error" class="text-xs text-rose-500 hidden font-semibold text-center mt-1">⚠️ 密碼錯誤，請重新輸入！</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-1">
+                <button onclick="closeAdminPinModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-semibold transition-colors">
+                    取消
+                </button>
+                <button onclick="submitAdminPin()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold transition-colors">
+                    解鎖驗證
+                </button>
+            </div>
+        </div>
+    </div>te-100 focus:outline-none focus:border-brand-500">
                             <option value="zh-TW">繁體中文 (zh-TW)</option>
                             <option value="vi-VN">越南文 (vi-VN)</option>
                         </select>
@@ -1375,6 +1414,19 @@
                     } else if (allUsers.length > 0) {
                         currentUserId = allUsers[0].id;
                         localStorage.setItem('activeUserId', currentUserId);
+                    }
+                }
+
+                // Page Refresh (F5) Protection for Super Master / Admin PIN Lock
+                const selectedUserObj = allUsers.find(u => u.id == currentUserId);
+                if (selectedUserObj && isSuperMaster(selectedUserObj)) {
+                    const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
+                    if (!isUnlocked) {
+                        const normalUser = allUsers.find(u => !isSuperMaster(u));
+                        if (normalUser) {
+                            currentUserId = normalUser.id;
+                            localStorage.setItem('activeUserId', currentUserId);
+                        }
                     }
                 }
 
@@ -2199,8 +2251,81 @@
             renderUserSwitcher();
         }
 
+        // ==========================================
+        // 🔑 管理員密碼設定 (Admin PIN Passcode)
+        // Martin 可依需求在此修改預設密碼 (預設: '8888')
+        // ==========================================
+        const ADMIN_PASSCODE = '8888';
+        let pendingAdminUserId = null;
+
+        function openAdminPinModal(targetUserId) {
+            pendingAdminUserId = targetUserId;
+            const modal = document.getElementById('admin-pin-modal');
+            const input = document.getElementById('admin-pin-input');
+            const err = document.getElementById('admin-pin-error');
+            
+            if (input) input.value = '';
+            if (err) err.classList.add('hidden');
+            if (modal) modal.classList.remove('hidden');
+
+            setTimeout(() => {
+                if (input) input.focus();
+            }, 100);
+        }
+
+        function closeAdminPinModal() {
+            const modal = document.getElementById('admin-pin-modal');
+            if (modal) modal.classList.add('hidden');
+            
+            // Revert dropdown UI back to currentUserId
+            const switcher = document.getElementById('user-switcher');
+            if (switcher && currentUserId) {
+                switcher.value = String(currentUserId);
+            }
+            pendingAdminUserId = null;
+        }
+
+        function submitAdminPin() {
+            const input = document.getElementById('admin-pin-input');
+            const err = document.getElementById('admin-pin-error');
+            const pinVal = input ? input.value.trim() : '';
+
+            if (pinVal === ADMIN_PASSCODE) {
+                sessionStorage.setItem('isAdminUnlocked', 'true');
+                if (err) err.classList.add('hidden');
+                
+                const targetId = pendingAdminUserId;
+                closeAdminPinModal();
+
+                if (targetId) {
+                    executeUserSwitch(targetId);
+                }
+            } else {
+                if (err) err.classList.remove('hidden');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
         // Switch active user & update i18n
         async function switchUser(userId) {
+            const targetUserId = parseInt(userId);
+            const targetUser = allUsers.find(u => u.id === targetUserId);
+
+            if (targetUser && isSuperMaster(targetUser)) {
+                const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
+                if (!isUnlocked) {
+                    openAdminPinModal(targetUserId);
+                    return;
+                }
+            }
+
+            await executeUserSwitch(targetUserId);
+        }
+
+        async function executeUserSwitch(userId) {
             currentUserId = parseInt(userId);
             localStorage.setItem('activeUserId', currentUserId);
             updateUserIndicatorAndLanguage();
