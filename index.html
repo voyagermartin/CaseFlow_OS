@@ -3208,7 +3208,7 @@
             if (!title) return;
 
             const dueDate = dueInput ? dueInput.value || null : null;
-            const startDate = dueDate ? new Date(new Date(dueDate).getTime() - 86400000 * 10).toISOString().split('T')[0] : null;
+            const startDate = dueDate;
 
             // Get selected user IDs for visibility
             const checkedBoxes = document.querySelectorAll(`.quick-task-vis-${safeKey}:checked`);
