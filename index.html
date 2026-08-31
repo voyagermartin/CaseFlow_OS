@@ -535,17 +535,23 @@
 
             <!-- Dates Section -->
             <div class="space-y-2">
-                <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
+                <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
+                    <span class="text-[9px] text-slate-400 font-normal">(選取後點擊儲存按鈕)</span>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">開始日期 (Start Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
-                        <input type="date" id="drawer-task-start-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">開始日期 (Start Date)</span>
+                        <input type="date" id="drawer-task-start-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">截止日期 (Due Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
-                        <input type="date" id="drawer-task-due-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">截止日期 (Due Date)</span>
+                        <input type="date" id="drawer-task-due-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                 </div>
+                <button id="drawer-save-dates-btn" onclick="saveTaskDates()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 mt-1" data-i18n="saveDatesBtn">
+                    📅 儲存日期時程
+                </button>
             </div>
 
             <!-- Notes Section -->
@@ -1035,6 +1041,7 @@
                 notesLabel: "執行備註 (Notes)",
                 notesPlaceholder: "請在此填寫訂購代碼、廠商聯絡電話、對帳細節等備註...",
                 saveNotesBtn: "儲存備註",
+                saveDatesBtn: "📅 儲存日期時程",
                 visibilityLabel: "可見人員設定 (誰能看見此任務與留言)",
                 updateVisBtn: "更新可見權限",
                 commentLabel: "項目級討論留言 (@精準對象)",
@@ -1055,6 +1062,7 @@
                 addBtn: "新增",
                 noComments: "尚無留言討論。",
                 successSaveNotes: "備註儲存成功！",
+                successSaveDates: "時程與日期儲存成功！",
                 successSaveVis: "可見權限更新成功！",
                 alertFillCaseName: "請填寫案件名稱！",
                 overdueBadge: "截止",
@@ -1122,6 +1130,7 @@
                 notesLabel: "Ghi chú thực hiện (Notes)",
                 notesPlaceholder: "Vui lòng nhập mã đặt chỗ, số điện thoại nhà cung cấp...",
                 saveNotesBtn: "Lưu ghi chú",
+                saveDatesBtn: "📅 Lưu thời gian",
                 visibilityLabel: "Thành viên xem (Ai có thể xem việc này & thảo luận)",
                 updateVisBtn: "Cập nhật quyền xem",
                 commentLabel: "Thảo luận chi tiết công việc (@đối tượng chính xác)",
@@ -1142,6 +1151,7 @@
                 addBtn: "Thêm",
                 noComments: "Chưa có thảo luận nào.",
                 successSaveNotes: "Lưu ghi chú thành công!",
+                successSaveDates: "Lưu thời gian thành công!",
                 successSaveVis: "Cập nhật quyền xem thành công!",
                 alertFillCaseName: "Vui lòng điền tên dự án!",
                 overdueBadge: "Hạn chót",
@@ -2254,7 +2264,42 @@
             }
         }
 
-        // Tab views navigation
+        // Tab views navigation & Deferred View Refresh Flags
+        let activeView = 'dashboard';
+        let needsCalendarRefresh = false;
+        let needsGanttRefresh = false;
+        let needsCaseTreeRefresh = false;
+        let needsDashboardRefresh = false;
+
+        function renderActiveViewOnly() {
+            if (activeView === 'dashboard') {
+                renderDashboard();
+                needsCalendarRefresh = true;
+                needsGanttRefresh = true;
+                needsCaseTreeRefresh = true;
+            } else if (activeView === 'case') {
+                renderCaseTree();
+                needsDashboardRefresh = true;
+                needsCalendarRefresh = true;
+                needsGanttRefresh = true;
+            } else if (activeView === 'calendar') {
+                renderCalendar();
+                needsDashboardRefresh = true;
+                needsCaseTreeRefresh = true;
+                needsGanttRefresh = true;
+            } else if (activeView === 'gantt') {
+                renderGantt();
+                needsDashboardRefresh = true;
+                needsCaseTreeRefresh = true;
+                needsCalendarRefresh = true;
+            } else {
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                renderDashboard();
+            }
+        }
+
         function switchView(viewName) {
             activeView = viewName;
             
@@ -2280,16 +2325,36 @@
                 activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
             }
             
-            if (viewName === 'calendar' && calendar) {
-                calendar.updateSize();
+            if (viewName === 'calendar') {
+                if (needsCalendarRefresh || !calendar) {
+                    renderCalendar();
+                    needsCalendarRefresh = false;
+                } else if (calendar) {
+                    calendar.updateSize();
+                }
             } else if (viewName === 'gantt') {
-                renderGantt();
+                if (needsGanttRefresh) {
+                    renderGantt();
+                    needsGanttRefresh = false;
+                } else {
+                    renderGantt();
+                }
             } else if (viewName === 'user-control') {
                 renderUserControl();
             } else if (viewName === 'template-control') {
                 renderTemplateControl();
             } else if (viewName === 'dashboard') {
-                renderDashboard();
+                if (needsDashboardRefresh) {
+                    renderDashboard();
+                    needsDashboardRefresh = false;
+                } else {
+                    renderDashboard();
+                }
+            } else if (viewName === 'case') {
+                if (needsCaseTreeRefresh) {
+                    renderCaseTree();
+                    needsCaseTreeRefresh = false;
+                }
             }
         }
 
@@ -3132,21 +3197,17 @@
             // Optimistic update
             taskObj.is_completed = !taskObj.is_completed;
             
-            // Re-render UI immediately
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-            renderDashboard();
+            // Defer re-rendering to next animation frame so native checkbox toggle finishes instantly
+            requestAnimationFrame(() => {
+                renderActiveViewOnly();
+            });
 
             // Background API call (silent)
             const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST', true);
             if (!res) {
                 // Rollback if failed
                 taskObj.is_completed = !taskObj.is_completed;
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                renderDashboard();
+                renderActiveViewOnly();
                 alert("切換任務狀態失敗，已恢復原狀態。");
             }
         }
@@ -3629,11 +3690,11 @@
             }
         }
 
-        async function saveTaskDates(silent = true) {
+        async function saveTaskDates(silent = false) {
             const taskId = selectedTaskId;
             if (!taskId) return;
             if (taskId > 1000000000000) {
-                if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const startDate = document.getElementById('drawer-task-start-date').value || null;
@@ -3662,7 +3723,7 @@
                 taskObj.due_date = dueDate;
             }
 
-            showDrawerSyncStatus('syncing');
+            showDrawerSyncStatus('syncing', "正在儲存日期時程...");
             const res = await apiRequest('updateTask', { 
                 taskId: taskId, 
                 start_date: startDate, 
@@ -3672,11 +3733,10 @@
             if (res) {
                 showDrawerSyncStatus('success');
                 if (!silent) alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             } else {
                 showDrawerSyncStatus('error', '同步失敗');
+                alert(lang === 'vi-VN' ? "Lưu thời gian thất bại!" : "儲存日期時程失敗，請再試一次。");
             }
         }
 
