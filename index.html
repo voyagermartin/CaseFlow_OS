@@ -171,18 +171,17 @@
             </div>
         </div>
 
-        <!-- Active User Switcher & Action Button -->
+        <!-- Active User Display & Action Button -->
         <div class="flex items-center gap-4">
-            <!-- Active User Switcher -->
-            <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
-                <span class="text-xs text-slate-400 font-medium" data-i18n="activeUser">當前人員:</span>
-                <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer">
-                    <!-- User options loaded dynamically -->
-                </select>
-                <span id="user-static-label" class="text-sm text-slate-200 font-semibold hidden"></span>
+            <!-- Active User Display -->
+            <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 px-3.5 py-1.5 rounded-xl">
                 <div id="user-avatar-indicator" class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold uppercase transition-all duration-300">
                     -
                 </div>
+                <span id="user-display-info" class="text-xs text-slate-200 font-bold">👤 未登入</span>
+                <button onclick="handleLogout()" class="ml-2 text-xs bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-700 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 font-semibold" title="登出並切換帳號">
+                    🚪 登出/切換帳號
+                </button>
             </div>
 
             <!-- Action Button -->
@@ -947,47 +946,8 @@
                         </div>
                     </div>
                     <div class="space-y-1.5">
-                                   系統授權名單中尚無您的資料。請連繫系統管理員（Martin）將您的帳戶新增至「Users」工作表後再試。
-                </div>
-            </div>
-            
-            <div class="pt-2">
-                <button onclick="window.location.reload()" class="w-full bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white font-semibold py-3 px-4 rounded-xl transition-colors text-xs border border-slate-700">
-                    🔄 重新整理頁面 (Refresh Page)
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Admin PIN Lock Modal -->
-    <div id="admin-pin-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-        <div onclick="closeAdminPinModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[400px] p-6 relative z-10 shadow-2xl space-y-5">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-                    <span>🔒 管理員密碼驗證</span>
-                </h3>
-                <button onclick="closeAdminPinModal()" class="text-slate-400 hover:text-slate-200">✕</button>
-            </div>
-            
-            <div class="space-y-3">
-                <p class="text-xs text-slate-300">切換至管理員視角 (Martin) 需要輸入密碼解鎖：</p>
-                <div class="space-y-1">
-                    <input type="password" id="admin-pin-input" onkeyup="if(event.key==='Enter') submitAdminPin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500 tracking-widest text-center" placeholder="請輸入管理員密碼 (預設: 8888)">
-                    <p id="admin-pin-error" class="text-xs text-rose-500 hidden font-semibold text-center mt-1">⚠️ 密碼錯誤，請重新輸入！</p>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-1">
-                <button onclick="closeAdminPinModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-semibold transition-colors">
-                    取消
-                </button>
-                <button onclick="submitAdminPin()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold transition-colors">
-                    解鎖驗證
-                </button>
-            </div>
-        </div>
-    </div>te-100 focus:outline-none focus:border-brand-500">
+                        <label class="text-xs text-slate-400 font-semibold uppercase">偏好語系</label>
+                        <select id="user-lang-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                             <option value="zh-TW">繁體中文 (zh-TW)</option>
                             <option value="vi-VN">越南文 (vi-VN)</option>
                         </select>
@@ -998,6 +958,51 @@
             <div class="flex justify-end gap-3 pt-2">
                 <button onclick="closeUserModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
                 <button onclick="submitUserForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Whitelist Login Gate Modal -->
+    <div id="login-modal" class="fixed inset-0 flex items-center justify-center z-[150] bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 text-center shadow-2xl space-y-6 relative overflow-hidden">
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            
+            <div class="mx-auto w-16 h-16 bg-brand-500/15 border border-brand-500/20 text-brand-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-brand-500/10">
+                🔑
+            </div>
+            
+            <div class="space-y-1.5 relative z-10">
+                <h3 class="text-xl font-bold text-slate-100">CaseFlow OS 系統門禁驗證</h3>
+                <p class="text-xs text-slate-400">請輸入您在系統「人員控管」登記的 Google Email 登入</p>
+            </div>
+            
+            <div class="space-y-3 relative z-10 text-left">
+                <div class="space-y-1.5">
+                    <label class="text-xs text-slate-400 font-semibold uppercase">授權 Google Email</label>
+                    <input type="email" id="login-email-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-brand-500 font-mono" placeholder="martin@example.com">
+                </div>
+                
+                <!-- Admin PIN Input (Hidden by default, shown when Super Master email matched) -->
+                <div id="login-admin-pass-container" class="space-y-1.5 hidden">
+                    <label class="text-xs text-amber-400 font-bold uppercase flex items-center gap-1">
+                        <span>🔒 管理員解鎖密碼 (Admin PIN)</span>
+                    </label>
+                    <input type="password" id="login-admin-pass-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-amber-900/60 rounded-xl px-4 py-2.5 text-sm text-amber-200 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center" placeholder="請輸入管理員密碼 (預設: 8888)">
+                </div>
+
+                <div id="login-error-msg" class="text-xs text-rose-500 font-semibold hidden bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-xl text-center">
+                    ⚠️ 此信箱未在授權名單中，無法存取系統！
+                </div>
+            </div>
+
+            <div class="pt-2 relative z-10">
+                <button onclick="handleEmailLogin()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all text-sm flex items-center justify-center gap-2">
+                    <span>確認進入系統</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
@@ -1282,9 +1287,9 @@
 
         let mockUsers = [
             { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "martin@example.com", is_super_master: true },
-            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "", is_super_master: false },
-            { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "", is_super_master: false },
-            { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "", is_super_master: false }
+            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "ning@example.com", is_super_master: false },
+            { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "yang@example.com", is_super_master: false },
+            { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "nguyen@example.com", is_super_master: false }
         ];
 
         let mockCases = [
@@ -1359,10 +1364,10 @@
             if (debugStatusEl) debugStatusEl.textContent = "Loading API...";
             try {
                 const savedUserId = localStorage.getItem('activeUserId');
-                let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
+                let targetUserId = savedUserId ? parseInt(savedUserId) : null;
 
                 // Single unified batch API request with backward-compatible fallback
-                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
+                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId || 1 }, 'GET', true);
                 
                 // Check if user is unauthorized
                 if (initialRes && initialRes.status === "unauthorized") {
@@ -1376,7 +1381,7 @@
                     const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
                         apiRequest('getUsers', null, 'GET', true),
                         apiRequest('getRoles', null, 'GET', true),
-                        apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
+                        apiRequest('getCases', { user_id: targetUserId || 1 }, 'GET', true),
                         apiRequest('getTemplates', null, 'GET', true)
                     ]);
                     allUsers = usersRes || [];
@@ -1391,43 +1396,30 @@
                     loginUser = initialRes.loginUser || null;
                 }
 
-                // Check if we are running in authenticated Web App mode
-                const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
+                // Verify logged-in user against allUsers
+                const matchedUser = allUsers.find(u => u.id === targetUserId);
 
-                if (loginUser && isAuthenticatedMode) {
-                    if (loginUser.is_super_master === true || loginUser.id === 1) {
-                        // Keep targetUserId for testing impersonation
-                        if (allUsers.some(u => u.id == targetUserId)) {
-                            currentUserId = targetUserId;
-                        } else {
-                            currentUserId = loginUser.id;
-                        }
+                if (!matchedUser) {
+                    // No valid user stored in localStorage -> Show Email Whitelist Login Gate Modal
+                    currentUserId = null;
+                    showLoginModal(true);
+                } else if (isSuperMaster(matchedUser)) {
+                    // Super Master F5 protection: check if session is unlocked
+                    const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
+                    if (isUnlocked) {
+                        currentUserId = matchedUser.id;
+                        showLoginModal(false);
                     } else {
-                        // Lock non-super-master to their own ID
-                        currentUserId = loginUser.id;
-                        localStorage.setItem('activeUserId', currentUserId);
+                        // Locked -> Prompt Login Modal with email pre-filled for convenience
+                        currentUserId = null;
+                        showLoginModal(true);
+                        const emailInput = document.getElementById('login-email-input');
+                        if (emailInput) emailInput.value = matchedUser.google_email || '';
                     }
                 } else {
-                    // Local / GitHub Pages development mode: bypass locking, always allow switching
-                    if (allUsers.some(u => u.id == targetUserId)) {
-                        currentUserId = targetUserId;
-                    } else if (allUsers.length > 0) {
-                        currentUserId = allUsers[0].id;
-                        localStorage.setItem('activeUserId', currentUserId);
-                    }
-                }
-
-                // Page Refresh (F5) Protection for Super Master / Admin PIN Lock
-                const selectedUserObj = allUsers.find(u => u.id == currentUserId);
-                if (selectedUserObj && isSuperMaster(selectedUserObj)) {
-                    const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
-                    if (!isUnlocked) {
-                        const normalUser = allUsers.find(u => !isSuperMaster(u));
-                        if (normalUser) {
-                            currentUserId = normalUser.id;
-                            localStorage.setItem('activeUserId', currentUserId);
-                        }
-                    }
+                    // Normal user logged in -> Direct silent entry!
+                    currentUserId = matchedUser.id;
+                    showLoginModal(false);
                 }
 
                 updateUserIndicatorAndLanguage();
@@ -2252,114 +2244,122 @@
         }
 
         // ==========================================
-        // 🔑 管理員密碼設定 (Admin PIN Passcode)
+        // 🔑 門禁密碼與狀態常數 (Admin PIN Passcode)
         // Martin 可依需求在此修改預設密碼 (預設: '8888')
         // ==========================================
         const ADMIN_PASSCODE = '8888';
-        let pendingAdminUserId = null;
+        let pendingMatchedUser = null;
 
-        function openAdminPinModal(targetUserId) {
-            pendingAdminUserId = targetUserId;
-            const modal = document.getElementById('admin-pin-modal');
-            const input = document.getElementById('admin-pin-input');
-            const err = document.getElementById('admin-pin-error');
-            
-            if (input) input.value = '';
-            if (err) err.classList.add('hidden');
-            if (modal) modal.classList.remove('hidden');
+        function showLoginModal(show = true) {
+            const modal = document.getElementById('login-modal');
+            const emailInput = document.getElementById('login-email-input');
+            const passContainer = document.getElementById('login-admin-pass-container');
+            const passInput = document.getElementById('login-admin-pass-input');
+            const errorMsg = document.getElementById('login-error-msg');
 
-            setTimeout(() => {
-                if (input) input.focus();
-            }, 100);
-        }
-
-        function closeAdminPinModal() {
-            const modal = document.getElementById('admin-pin-modal');
-            if (modal) modal.classList.add('hidden');
-            
-            // Revert dropdown UI back to currentUserId
-            const switcher = document.getElementById('user-switcher');
-            if (switcher && currentUserId) {
-                switcher.value = String(currentUserId);
-            }
-            pendingAdminUserId = null;
-        }
-
-        function submitAdminPin() {
-            const input = document.getElementById('admin-pin-input');
-            const err = document.getElementById('admin-pin-error');
-            const pinVal = input ? input.value.trim() : '';
-
-            if (pinVal === ADMIN_PASSCODE) {
-                sessionStorage.setItem('isAdminUnlocked', 'true');
-                if (err) err.classList.add('hidden');
-                
-                const targetId = pendingAdminUserId;
-                closeAdminPinModal();
-
-                if (targetId) {
-                    executeUserSwitch(targetId);
-                }
+            if (show) {
+                if (modal) modal.classList.remove('hidden');
+                if (passContainer) passContainer.classList.add('hidden');
+                if (errorMsg) errorMsg.classList.add('hidden');
+                if (passInput) passInput.value = '';
+                pendingMatchedUser = null;
+                setTimeout(() => {
+                    if (emailInput) emailInput.focus();
+                }, 100);
             } else {
-                if (err) err.classList.remove('hidden');
-                if (input) {
-                    input.value = '';
-                    input.focus();
-                }
+                if (modal) modal.classList.add('hidden');
             }
         }
 
-        // Switch active user & update i18n
-        async function switchUser(userId) {
-            const targetUserId = parseInt(userId);
-            const targetUser = allUsers.find(u => u.id === targetUserId);
+        async function handleEmailLogin() {
+            const emailInput = document.getElementById('login-email-input');
+            const passContainer = document.getElementById('login-admin-pass-container');
+            const passInput = document.getElementById('login-admin-pass-input');
+            const errorMsg = document.getElementById('login-error-msg');
 
-            if (targetUser && isSuperMaster(targetUser)) {
-                const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
-                if (!isUnlocked) {
-                    openAdminPinModal(targetUserId);
+            const inputEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
+            if (!inputEmail) {
+                if (errorMsg) {
+                    errorMsg.textContent = '⚠️ 請輸入您的授權 Email！';
+                    errorMsg.classList.remove('hidden');
+                }
+                return;
+            }
+
+            // Find user matching google_email (case-insensitive)
+            const matchedUser = allUsers.find(u => u.google_email && u.google_email.trim().toLowerCase() === inputEmail);
+
+            if (!matchedUser) {
+                if (errorMsg) {
+                    errorMsg.textContent = '⚠️ 此信箱未在授權名單中，無法存取系統！';
+                    errorMsg.classList.remove('hidden');
+                }
+                return;
+            }
+
+            // If matched user is Super Master (Martin)
+            if (isSuperMaster(matchedUser)) {
+                if (passContainer.classList.contains('hidden')) {
+                    // Reveal password input field
+                    pendingMatchedUser = matchedUser;
+                    passContainer.classList.remove('hidden');
+                    if (errorMsg) errorMsg.classList.add('hidden');
+                    setTimeout(() => {
+                        if (passInput) passInput.focus();
+                    }, 100);
                     return;
                 }
+
+                // Verify Admin Passcode
+                const passVal = passInput ? passInput.value.trim() : '';
+                if (passVal !== ADMIN_PASSCODE) {
+                    if (errorMsg) {
+                        errorMsg.textContent = '⚠️ 管理員密碼錯誤，請重新輸入！';
+                        errorMsg.classList.remove('hidden');
+                    }
+                    if (passInput) {
+                        passInput.value = '';
+                        passInput.focus();
+                    }
+                    return;
+                }
+
+                // Password correct for Admin
+                sessionStorage.setItem('isAdminUnlocked', 'true');
             }
 
-            await executeUserSwitch(targetUserId);
-        }
-
-        async function executeUserSwitch(userId) {
-            currentUserId = parseInt(userId);
+            // Authentication succeeded!
+            currentUserId = matchedUser.id;
             localStorage.setItem('activeUserId', currentUserId);
+            if (errorMsg) errorMsg.classList.add('hidden');
+            showLoginModal(false);
+
             updateUserIndicatorAndLanguage();
             await reloadAllViews();
         }
 
-        function updateUserIndicatorAndLanguage() {
-            renderUserSwitcher();
-            
-            const switcher = document.getElementById('user-switcher');
-            const staticLabel = document.getElementById('user-static-label');
-            const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
-            if (switcher && staticLabel) {
-                if (isAuthenticatedMode && loginUser) {
-                    if (loginUser.is_super_master === true || loginUser.id === 1) {
-                        switcher.classList.remove('hidden');
-                        staticLabel.classList.add('hidden');
-                    } else {
-                        switcher.classList.add('hidden');
-                        staticLabel.classList.remove('hidden');
-                        staticLabel.textContent = `${loginUser.username} [${loginUser.role_name}]`;
-                    }
-                } else {
-                    // Local / dev fallback: always show switcher
-                    switcher.classList.remove('hidden');
-                    staticLabel.classList.add('hidden');
-                }
-            }
+        function handleLogout() {
+            if (!confirm('確定要登出並切換帳號嗎？')) return;
+            localStorage.removeItem('activeUserId');
+            sessionStorage.removeItem('isAdminUnlocked');
+            currentUserId = null;
+            updateUserIndicatorAndLanguage();
+            showLoginModal(true);
+        }
 
+        function updateUserIndicatorAndLanguage() {
             const user = allUsers.find(u => u.id == currentUserId);
             const indicator = document.getElementById('user-avatar-indicator');
+            const displayInfo = document.getElementById('user-display-info');
+
             if (user) {
-                indicator.textContent = user.username.charAt(0);
-                indicator.style.backgroundColor = user.avatar_color;
+                if (indicator) {
+                    indicator.textContent = user.username.charAt(0);
+                    indicator.style.backgroundColor = user.avatar_color;
+                }
+                if (displayInfo) {
+                    displayInfo.textContent = `👤 當前登入：${user.username} (${user.role_name})`;
+                }
                 
                 // Translate language
                 translateUI(user.language || 'zh-TW');

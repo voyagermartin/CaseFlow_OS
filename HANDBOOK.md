@@ -127,4 +127,4 @@
   - **強健初始化與語法修復 (`initApp` + `document.readyState`)**：修復 `let activeView` 重複宣告導致的 `SyntaxError`；將 DOM 加載引擎升級為 `document.readyState` 雙重保險判定，徹底解決快取與容器環境下 `DOMContentLoaded` 失效導致系統未初始化的問題。
   - **防禦性組別回退與日期防誤判校正**：新增或編輯案件不填組別時自動 fallback 至「一般待辦」組別；當日截止日時間上限精確解析至 23:59:59 消除下午逾期誤判；快速新增待辦起始日與截止日同步預設同一天。
   - **Mock API 引擎完整補齊**：於 `runMockApi` 新增 `batchUpdateCaseTaskVisibility` 與 `updateCase` (含 `is_archived`) 等模擬引擎，確保本地與 GitHub Pages 獨立測試環境功能 100% 正常。
-  - **🔒 管理員單向密碼鎖 (`ADMIN_PASSCODE` + `sessionStorage`)**：切換一般成員全無阻（免密碼、不彈窗）；切換至 Super Master (`Martin`) 必須通過 Tailwind 密碼彈窗驗證（預設 PIN: `8888`，解鎖標記記錄於 `sessionStorage`）；網頁重整 (F5) 若無解鎖標記將自動安全回退至一般成員，防止越權防護漏洞。
+  - **🔑 人員控管 Email 白名單門禁 (`#login-modal` + `google_email`)**：全站以 `Users` 表格內的 `google_email` 為唯一白名單。初次進站預設彈出毛玻璃 Email 驗證 Modal（`handleEmailLogin`）；比對成功之一般成員自動進入對應視圖；Super Master (`Martin`) 需另外通過 `ADMIN_PASSCODE` (預設 `8888`) 驗證。頂端選單改為「👤 當前登入：[username] ([role_name]) ｜ 🚪 登出/切換帳號」安全防護結構。
