@@ -171,17 +171,18 @@
             </div>
         </div>
 
-        <!-- Active User Display & Action Button -->
+        <!-- Active User Switcher & Action Button -->
         <div class="flex items-center gap-4">
-            <!-- Active User Display -->
-            <div class="flex items-center gap-2.5 bg-slate-950/60 border border-slate-800 px-3.5 py-1.5 rounded-xl">
+            <!-- Active User Switcher -->
+            <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <span class="text-xs text-slate-400 font-medium" data-i18n="activeUser">當前人員:</span>
+                <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer">
+                    <!-- User options loaded dynamically -->
+                </select>
+                <span id="user-static-label" class="text-sm text-slate-200 font-semibold hidden"></span>
                 <div id="user-avatar-indicator" class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold uppercase transition-all duration-300">
                     -
                 </div>
-                <span id="user-display-info" class="text-xs text-slate-200 font-bold">👤 未登入</span>
-                <button onclick="handleLogout()" class="ml-2 text-xs bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-700 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 font-semibold" title="登出並切換帳號">
-                    🚪 登出/切換帳號
-                </button>
             </div>
 
             <!-- Action Button -->
@@ -534,23 +535,17 @@
 
             <!-- Dates Section -->
             <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
-                    <span class="text-[9px] text-slate-400 font-normal">(選取後點擊儲存按鈕)</span>
-                </div>
+                <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">開始日期 (Start Date)</span>
-                        <input type="date" id="drawer-task-start-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">開始日期 (Start Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
+                        <input type="date" id="drawer-task-start-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                     <div class="space-y-1">
-                        <span class="text-[10px] text-slate-400">截止日期 (Due Date)</span>
-                        <input type="date" id="drawer-task-due-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                        <span class="text-[10px] text-slate-400">截止日期 (Due Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
+                        <input type="date" id="drawer-task-due-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
                     </div>
                 </div>
-                <button id="drawer-save-dates-btn" onclick="saveTaskDates()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 mt-1" data-i18n="saveDatesBtn">
-                    📅 儲存日期時程
-                </button>
             </div>
 
             <!-- Notes Section -->
@@ -864,37 +859,39 @@
                     <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
 
-                <!-- Member Visibility Section in Edit Case Modal -->
-                <div class="space-y-2 border-t border-slate-800 pt-3">
-                    <div class="flex items-center justify-between">
-                        <label class="text-xs text-indigo-400 font-bold uppercase flex items-center gap-1">
-                            <span>👥 案件人員權限與可見設定</span>
+                <!-- Member Visibility & Permission Settings -->
+                <div class="space-y-2 pt-3 border-t border-slate-800/80">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs text-slate-300 font-bold uppercase flex items-center gap-1.5">
+                            <span>🔒 案件可見成員設定</span>
+                            <span class="text-[10px] text-slate-500 font-normal">(誰能看見此專案與任務)</span>
                         </label>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="toggleAllEditCaseUserCheckboxes(true)" class="text-[10px] text-indigo-400 hover:underline font-semibold">全選</button>
-                            <span class="text-slate-600 text-xs">|</span>
-                            <button type="button" onclick="toggleAllEditCaseUserCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline font-semibold">取消全選</button>
+                        <div class="flex gap-2 text-[11px]">
+                            <button type="button" onclick="toggleAllEditCaseUsers(true)" class="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">全選</button>
+                            <span class="text-slate-600">|</span>
+                            <button type="button" onclick="toggleAllEditCaseUsers(false)" class="text-slate-400 hover:text-slate-300 transition-colors font-medium">取消全選</button>
                         </div>
                     </div>
                     
-                    <div id="edit-case-users-list" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1.5 bg-slate-950/60 rounded-xl border border-slate-800">
-                        <!-- User checkboxes populated dynamically -->
+                    <div id="edit-case-users-list" class="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1">
+                        <!-- Populated dynamically with checkboxes -->
                     </div>
 
-                    <div class="space-y-1 pt-1">
-                        <span class="text-[10px] text-slate-400 font-semibold block">選擇同步至此案件所有待辦事項的方式：</span>
-                        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-slate-850">
-                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
-                                <input type="radio" name="edit-case-vis-mode" value="add" checked class="text-brand-600 focus:ring-brand-500">
-                                <span>➕ 批量加入 (預設)</span>
+                    <!-- Sync Mode Selector -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
+                        <span class="text-slate-400 font-semibold block">同步套用模式：</span>
+                        <div class="space-y-1.5">
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-200 text-slate-300">
+                                <input type="radio" name="edit-case-vis-mode" value="append" checked class="text-brand-600 bg-slate-900 border-slate-700 focus:ring-brand-500">
+                                <span>➕ <b>批量加入</b> <span class="text-slate-500">(將所選人員加入此案件的所有待辦，保留原有人員)</span></span>
                             </label>
-                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
-                                <input type="radio" name="edit-case-vis-mode" value="overwrite" class="text-brand-600 focus:ring-brand-500">
-                                <span>🔄 覆蓋重設</span>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-200 text-slate-300">
+                                <input type="radio" name="edit-case-vis-mode" value="overwrite" class="text-brand-600 bg-slate-900 border-slate-700 focus:ring-brand-500">
+                                <span>🔄 <b>覆蓋重設</b> <span class="text-slate-500">(將所有待辦的可見人員統一替換為所選名單)</span></span>
                             </label>
-                            <label class="flex items-center gap-1.5 cursor-pointer hover:text-white">
-                                <input type="radio" name="edit-case-vis-mode" value="none" class="text-brand-600 focus:ring-brand-500">
-                                <span>⏸️ 不變更現有待辦</span>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-200 text-slate-400">
+                                <input type="radio" name="edit-case-vis-mode" value="none" class="text-brand-600 bg-slate-900 border-slate-700 focus:ring-brand-500">
+                                <span>⏸️ <b>不變更</b> <span class="text-slate-500">(僅修改案件基本資訊，不改動現有待辦權限)</span></span>
                             </label>
                         </div>
                     </div>
@@ -958,51 +955,6 @@
             <div class="flex justify-end gap-3 pt-2">
                 <button onclick="closeUserModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
                 <button onclick="submitUserForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Email Whitelist Login Gate Modal -->
-    <div id="login-modal" class="fixed inset-0 flex items-center justify-center z-[150] bg-slate-950/90 backdrop-blur-md hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 text-center shadow-2xl space-y-6 relative overflow-hidden">
-            <div class="absolute -top-10 -left-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
-            
-            <div class="mx-auto w-16 h-16 bg-brand-500/15 border border-brand-500/20 text-brand-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-brand-500/10">
-                🔑
-            </div>
-            
-            <div class="space-y-1.5 relative z-10">
-                <h3 class="text-xl font-bold text-slate-100">CaseFlow OS 系統門禁驗證</h3>
-                <p class="text-xs text-slate-400">請輸入您在系統「人員控管」登記的 Google Email 登入</p>
-            </div>
-            
-            <div class="space-y-3 relative z-10 text-left">
-                <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">授權 Google Email</label>
-                    <input type="email" id="login-email-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-brand-500 font-mono" placeholder="voyager.martin@gmail.com">
-                </div>
-                
-                <!-- Admin PIN Input (Hidden by default, shown when Super Master email matched) -->
-                <div id="login-admin-pass-container" class="space-y-1.5 hidden">
-                    <label class="text-xs text-amber-400 font-bold uppercase flex items-center gap-1">
-                        <span>🔒 管理員解鎖密碼 (Admin PIN)</span>
-                    </label>
-                    <input type="password" id="login-admin-pass-input" onkeyup="if(event.key==='Enter') handleEmailLogin()" class="w-full bg-slate-950 border border-amber-900/60 rounded-xl px-4 py-2.5 text-sm text-amber-200 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center" placeholder="請輸入管理員密碼 (預設: 8888)">
-                </div>
-
-                <div id="login-error-msg" class="text-xs text-rose-500 font-semibold hidden bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-xl text-center">
-                    ⚠️ 此信箱未在授權名單中，無法存取系統！
-                </div>
-            </div>
-
-            <div class="pt-2 relative z-10">
-                <button onclick="handleEmailLogin()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-500/25 transition-all text-sm flex items-center justify-center gap-2">
-                    <span>確認進入系統</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                    </svg>
-                </button>
             </div>
         </div>
     </div>
@@ -1121,7 +1073,6 @@
                 notesLabel: "執行備註 (Notes)",
                 notesPlaceholder: "請在此填寫訂購代碼、廠商聯絡電話、對帳細節等備註...",
                 saveNotesBtn: "儲存備註",
-                saveDatesBtn: "📅 儲存日期時程",
                 visibilityLabel: "可見人員設定 (誰能看見此任務與留言)",
                 updateVisBtn: "更新可見權限",
                 commentLabel: "項目級討論留言 (@精準對象)",
@@ -1142,7 +1093,6 @@
                 addBtn: "新增",
                 noComments: "尚無留言討論。",
                 successSaveNotes: "備註儲存成功！",
-                successSaveDates: "時程與日期儲存成功！",
                 successSaveVis: "可見權限更新成功！",
                 alertFillCaseName: "請填寫案件名稱！",
                 overdueBadge: "截止",
@@ -1210,7 +1160,6 @@
                 notesLabel: "Ghi chú thực hiện (Notes)",
                 notesPlaceholder: "Vui lòng nhập mã đặt chỗ, số điện thoại nhà cung cấp...",
                 saveNotesBtn: "Lưu ghi chú",
-                saveDatesBtn: "📅 Lưu thời gian",
                 visibilityLabel: "Thành viên xem (Ai có thể xem việc này & thảo luận)",
                 updateVisBtn: "Cập nhật quyền xem",
                 commentLabel: "Thảo luận chi tiết công việc (@đối tượng chính xác)",
@@ -1231,7 +1180,6 @@
                 addBtn: "Thêm",
                 noComments: "Chưa có thảo luận nào.",
                 successSaveNotes: "Lưu ghi chú thành công!",
-                successSaveDates: "Lưu thời gian thành công!",
                 successSaveVis: "Cập nhật quyền xem thành công!",
                 alertFillCaseName: "Vui lòng điền tên dự án!",
                 overdueBadge: "Hạn chót",
@@ -1286,10 +1234,10 @@
         ];
 
         let mockUsers = [
-            { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "voyager.martin@gmail.com", is_super_master: true },
-            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "ning@example.com", is_super_master: false },
-            { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "yang@example.com", is_super_master: false },
-            { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "nguyen@example.com", is_super_master: false }
+            { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "martin@example.com", is_super_master: true },
+            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "", is_super_master: false },
+            { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "", is_super_master: false },
+            { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "", is_super_master: false }
         ];
 
         let mockCases = [
@@ -1348,7 +1296,7 @@
         let loginUser = null;
 
         // On Document Ready - Optimized parallel batch initial load
-        async function initApp() {
+        document.addEventListener('DOMContentLoaded', async () => {
             showLoading(true);
 
             // Update debug hostname and container flag
@@ -1364,10 +1312,10 @@
             if (debugStatusEl) debugStatusEl.textContent = "Loading API...";
             try {
                 const savedUserId = localStorage.getItem('activeUserId');
-                let targetUserId = savedUserId ? parseInt(savedUserId) : null;
+                let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
 
                 // Single unified batch API request with backward-compatible fallback
-                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId || 1 }, 'GET', true);
+                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
                 
                 // Check if user is unauthorized
                 if (initialRes && initialRes.status === "unauthorized") {
@@ -1381,7 +1329,7 @@
                     const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
                         apiRequest('getUsers', null, 'GET', true),
                         apiRequest('getRoles', null, 'GET', true),
-                        apiRequest('getCases', { user_id: targetUserId || 1 }, 'GET', true),
+                        apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
                         apiRequest('getTemplates', null, 'GET', true)
                     ]);
                     allUsers = usersRes || [];
@@ -1396,30 +1344,30 @@
                     loginUser = initialRes.loginUser || null;
                 }
 
-                // Verify logged-in user against allUsers
-                const matchedUser = allUsers.find(u => u.id === targetUserId);
+                // Check if we are running in authenticated Web App mode
+                const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
 
-                if (!matchedUser) {
-                    // No valid user stored in localStorage -> Show Email Whitelist Login Gate Modal
-                    currentUserId = null;
-                    showLoginModal(true);
-                } else if (isSuperMaster(matchedUser)) {
-                    // Super Master F5 protection: check if session is unlocked
-                    const isUnlocked = (sessionStorage.getItem('isAdminUnlocked') === 'true');
-                    if (isUnlocked) {
-                        currentUserId = matchedUser.id;
-                        showLoginModal(false);
+                if (loginUser && isAuthenticatedMode) {
+                    if (loginUser.is_super_master === true || loginUser.id === 1) {
+                        // Keep targetUserId for testing impersonation
+                        if (allUsers.some(u => u.id == targetUserId)) {
+                            currentUserId = targetUserId;
+                        } else {
+                            currentUserId = loginUser.id;
+                        }
                     } else {
-                        // Locked -> Prompt Login Modal with email pre-filled for convenience
-                        currentUserId = null;
-                        showLoginModal(true);
-                        const emailInput = document.getElementById('login-email-input');
-                        if (emailInput) emailInput.value = matchedUser.google_email || '';
+                        // Lock non-super-master to their own ID
+                        currentUserId = loginUser.id;
+                        localStorage.setItem('activeUserId', currentUserId);
                     }
                 } else {
-                    // Normal user logged in -> Direct silent entry!
-                    currentUserId = matchedUser.id;
-                    showLoginModal(false);
+                    // Local / GitHub Pages development mode: bypass locking, always allow switching
+                    if (allUsers.some(u => u.id == targetUserId)) {
+                        currentUserId = targetUserId;
+                    } else if (allUsers.length > 0) {
+                        currentUserId = allUsers[0].id;
+                        localStorage.setItem('activeUserId', currentUserId);
+                    }
                 }
 
                 updateUserIndicatorAndLanguage();
@@ -1454,13 +1402,7 @@
             } finally {
                 showLoading(false);
             }
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
+        });
 
 
         // Run UI Multilingual Translation
@@ -1797,10 +1739,47 @@
                                 }
                                 if (payload.reference_date !== undefined) c.reference_date = payload.reference_date;
                                 if (payload.is_archived !== undefined) c.is_archived = payload.is_archived === true || payload.is_archived === "true";
+                                
+                                if (payload.visibility_mode && payload.visibility_mode !== 'none' && payload.visible_user_ids) {
+                                    const targetUserIds = Array.isArray(payload.visible_user_ids) ? payload.visible_user_ids : parseUserIds(payload.visible_user_ids).split(',').map(s => parseInt(s)).filter(n => !isNaN(n));
+                                    mockTasks.forEach(t => {
+                                        if (t.case_id === c.id) {
+                                            if (payload.visibility_mode === 'overwrite') {
+                                                t.visible_user_ids = [...targetUserIds];
+                                            } else if (payload.visibility_mode === 'append') {
+                                                const currentVis = t.visible_user_ids ? [...t.visible_user_ids] : [];
+                                                targetUserIds.forEach(uid => {
+                                                    if (!currentVis.includes(uid)) currentVis.push(uid);
+                                                });
+                                                t.visible_user_ids = currentVis;
+                                            }
+                                        }
+                                    });
+                                }
                                 resolve({ status: 'success', caseId: c.id });
                             } else {
                                 resolve({ status: 'error', message: 'Case not found' });
                             }
+                        } else if (action === 'batchUpdateCaseTaskVisibility') {
+                            const caseId = payload.caseId || payload.case_id;
+                            const targetUserIds = Array.isArray(payload.visible_user_ids) ? payload.visible_user_ids : parseUserIds(payload.visible_user_ids).split(',').map(s => parseInt(s)).filter(n => !isNaN(n));
+                            const mode = payload.mode || payload.visibility_mode || 'append';
+                            if (mode !== 'none') {
+                                mockTasks.forEach(t => {
+                                    if (t.case_id === caseId) {
+                                        if (mode === 'overwrite') {
+                                            t.visible_user_ids = [...targetUserIds];
+                                        } else if (mode === 'append') {
+                                            const currentVis = t.visible_user_ids ? [...t.visible_user_ids] : [];
+                                            targetUserIds.forEach(uid => {
+                                                if (!currentVis.includes(uid)) currentVis.push(uid);
+                                            });
+                                            t.visible_user_ids = currentVis;
+                                        }
+                                    }
+                                });
+                            }
+                            resolve({ status: 'success', caseId: caseId });
                         } else if (action === 'deleteCase') {
                             mockCases = mockCases.filter(x => x.id !== payload.caseId);
                             mockTasks = mockTasks.filter(x => x.case_id !== payload.caseId);
@@ -1881,23 +1860,6 @@
                             } else {
                                 resolve({ status: 'error', message: 'Task not found' });
                             }
-                        } else if (action === 'batchUpdateCaseTaskVisibility') {
-                            const targetCaseId = parseInt(payload.caseId);
-                            const userIds = (Array.isArray(payload.userIds) ? payload.userIds : String(payload.userIds || '').split(',')).map(n => parseInt(n)).filter(n => !isNaN(n));
-                            const mode = payload.mode;
-                            mockTasks.forEach(t => {
-                                if (t.case_id === targetCaseId) {
-                                    let currentVis = Array.isArray(t.visible_user_ids) ? [...t.visible_user_ids] : String(t.visible_user_ids || '').split(',').map(n => parseInt(n)).filter(n => !isNaN(n));
-                                    if (mode === 'add') {
-                                        t.visible_user_ids = Array.from(new Set([...currentVis, ...userIds]));
-                                    } else if (mode === 'remove') {
-                                        t.visible_user_ids = currentVis.filter(id => !userIds.includes(id));
-                                    } else if (mode === 'set' || mode === 'overwrite') {
-                                        t.visible_user_ids = Array.from(new Set(userIds));
-                                    }
-                                }
-                            });
-                            resolve({ status: 'success', caseId: targetCaseId });
                         } else if (action === 'addComment') {
                             const nextId = mockComments.length > 0 ? Math.max(...mockComments.map(x => x.id)) + 1 : 1;
                             const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
@@ -2243,139 +2205,42 @@
             renderUserSwitcher();
         }
 
-        // ==========================================
-        // 🔑 門禁密碼與狀態常數 (Admin PIN Passcode)
-        // Martin 可依需求在此修改預設密碼 (預設: '8888')
-        // ==========================================
-        const ADMIN_PASSCODE = '8888';
-        let pendingMatchedUser = null;
-
-        function showLoginModal(show = true) {
-            const modal = document.getElementById('login-modal');
-            const emailInput = document.getElementById('login-email-input');
-            const passContainer = document.getElementById('login-admin-pass-container');
-            const passInput = document.getElementById('login-admin-pass-input');
-            const errorMsg = document.getElementById('login-error-msg');
-
-            if (show) {
-                if (modal) modal.classList.remove('hidden');
-                if (passContainer) passContainer.classList.add('hidden');
-                if (errorMsg) errorMsg.classList.add('hidden');
-                if (passInput) passInput.value = '';
-                pendingMatchedUser = null;
-                setTimeout(() => {
-                    if (emailInput) emailInput.focus();
-                }, 100);
-            } else {
-                if (modal) modal.classList.add('hidden');
-            }
-        }
-
-        async function handleEmailLogin() {
-            const emailInput = document.getElementById('login-email-input');
-            const passContainer = document.getElementById('login-admin-pass-container');
-            const passInput = document.getElementById('login-admin-pass-input');
-            const errorMsg = document.getElementById('login-error-msg');
-
-            const inputEmail = emailInput ? emailInput.value.trim().toLowerCase() : '';
-            if (!inputEmail) {
-                if (errorMsg) {
-                    errorMsg.textContent = '⚠️ 請輸入您的授權 Email！';
-                    errorMsg.classList.remove('hidden');
-                }
-                return;
-            }
-
-            // Find user matching google_email (case-insensitive) across allUsers or mockUsers
-            const pool = (allUsers && allUsers.length > 0) ? allUsers : mockUsers;
-            let matchedUser = pool.find(u => u.google_email && u.google_email.trim().toLowerCase() === inputEmail);
-
-            // Ultimate fallback for Martin admin email (voyager.martin@gmail.com)
-            if (!matchedUser && (inputEmail === "voyager.martin@gmail.com" || inputEmail === "martin@example.com")) {
-                matchedUser = pool.find(u => isSuperMaster(u) || u.id === 1) || {
-                    id: 1,
-                    username: "Martin",
-                    role_id: 1,
-                    role_name: "Owner/Admin",
-                    can_create_case: true,
-                    avatar_color: "#4f46e5",
-                    language: "zh-TW",
-                    google_email: "voyager.martin@gmail.com",
-                    is_super_master: true
-                };
-            }
-
-            if (!matchedUser) {
-                if (errorMsg) {
-                    errorMsg.textContent = '⚠️ 此信箱未在授權名單中，無法存取系統！';
-                    errorMsg.classList.remove('hidden');
-                }
-                return;
-            }
-
-            // If matched user is Super Master (Martin)
-            if (isSuperMaster(matchedUser)) {
-                if (passContainer.classList.contains('hidden')) {
-                    // Reveal password input field
-                    pendingMatchedUser = matchedUser;
-                    passContainer.classList.remove('hidden');
-                    if (errorMsg) errorMsg.classList.add('hidden');
-                    setTimeout(() => {
-                        if (passInput) passInput.focus();
-                    }, 100);
-                    return;
-                }
-
-                // Verify Admin Passcode
-                const passVal = passInput ? passInput.value.trim() : '';
-                if (passVal !== ADMIN_PASSCODE) {
-                    if (errorMsg) {
-                        errorMsg.textContent = '⚠️ 管理員密碼錯誤，請重新輸入！';
-                        errorMsg.classList.remove('hidden');
-                    }
-                    if (passInput) {
-                        passInput.value = '';
-                        passInput.focus();
-                    }
-                    return;
-                }
-
-                // Password correct for Admin
-                sessionStorage.setItem('isAdminUnlocked', 'true');
-            }
-
-            // Authentication succeeded!
-            currentUserId = matchedUser.id;
+        // Switch active user & update i18n
+        async function switchUser(userId) {
+            currentUserId = parseInt(userId);
             localStorage.setItem('activeUserId', currentUserId);
-            if (errorMsg) errorMsg.classList.add('hidden');
-            showLoginModal(false);
-
             updateUserIndicatorAndLanguage();
             await reloadAllViews();
         }
 
-        function handleLogout() {
-            if (!confirm('確定要登出並切換帳號嗎？')) return;
-            localStorage.removeItem('activeUserId');
-            sessionStorage.removeItem('isAdminUnlocked');
-            currentUserId = null;
-            updateUserIndicatorAndLanguage();
-            showLoginModal(true);
-        }
-
         function updateUserIndicatorAndLanguage() {
+            renderUserSwitcher();
+            
+            const switcher = document.getElementById('user-switcher');
+            const staticLabel = document.getElementById('user-static-label');
+            const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
+            if (switcher && staticLabel) {
+                if (isAuthenticatedMode && loginUser) {
+                    if (loginUser.is_super_master === true || loginUser.id === 1) {
+                        switcher.classList.remove('hidden');
+                        staticLabel.classList.add('hidden');
+                    } else {
+                        switcher.classList.add('hidden');
+                        staticLabel.classList.remove('hidden');
+                        staticLabel.textContent = `${loginUser.username} [${loginUser.role_name}]`;
+                    }
+                } else {
+                    // Local / dev fallback: always show switcher
+                    switcher.classList.remove('hidden');
+                    staticLabel.classList.add('hidden');
+                }
+            }
+
             const user = allUsers.find(u => u.id == currentUserId);
             const indicator = document.getElementById('user-avatar-indicator');
-            const displayInfo = document.getElementById('user-display-info');
-
             if (user) {
-                if (indicator) {
-                    indicator.textContent = user.username.charAt(0);
-                    indicator.style.backgroundColor = user.avatar_color;
-                }
-                if (displayInfo) {
-                    displayInfo.textContent = `👤 當前登入：${user.username} (${user.role_name})`;
-                }
+                indicator.textContent = user.username.charAt(0);
+                indicator.style.backgroundColor = user.avatar_color;
                 
                 // Translate language
                 translateUI(user.language || 'zh-TW');
@@ -2464,41 +2329,7 @@
             }
         }
 
-        // Tab views navigation & Deferred View Refresh Flags
-        let needsCalendarRefresh = false;
-        let needsGanttRefresh = false;
-        let needsCaseTreeRefresh = false;
-        let needsDashboardRefresh = false;
-
-        function renderActiveViewOnly() {
-            if (activeView === 'dashboard') {
-                renderDashboard();
-                needsCalendarRefresh = true;
-                needsGanttRefresh = true;
-                needsCaseTreeRefresh = true;
-            } else if (activeView === 'case') {
-                renderCaseTree();
-                needsDashboardRefresh = true;
-                needsCalendarRefresh = true;
-                needsGanttRefresh = true;
-            } else if (activeView === 'calendar') {
-                renderCalendar();
-                needsDashboardRefresh = true;
-                needsCaseTreeRefresh = true;
-                needsGanttRefresh = true;
-            } else if (activeView === 'gantt') {
-                renderGantt();
-                needsDashboardRefresh = true;
-                needsCaseTreeRefresh = true;
-                needsCalendarRefresh = true;
-            } else {
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                renderDashboard();
-            }
-        }
-
+        // Tab views navigation
         function switchView(viewName) {
             activeView = viewName;
             
@@ -2524,36 +2355,16 @@
                 activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
             }
             
-            if (viewName === 'calendar') {
-                if (needsCalendarRefresh || !calendar) {
-                    renderCalendar();
-                    needsCalendarRefresh = false;
-                } else if (calendar) {
-                    calendar.updateSize();
-                }
+            if (viewName === 'calendar' && calendar) {
+                calendar.updateSize();
             } else if (viewName === 'gantt') {
-                if (needsGanttRefresh) {
-                    renderGantt();
-                    needsGanttRefresh = false;
-                } else {
-                    renderGantt();
-                }
+                renderGantt();
             } else if (viewName === 'user-control') {
                 renderUserControl();
             } else if (viewName === 'template-control') {
                 renderTemplateControl();
             } else if (viewName === 'dashboard') {
-                if (needsDashboardRefresh) {
-                    renderDashboard();
-                    needsDashboardRefresh = false;
-                } else {
-                    renderDashboard();
-                }
-            } else if (viewName === 'case') {
-                if (needsCaseTreeRefresh) {
-                    renderCaseTree();
-                    needsCaseTreeRefresh = false;
-                }
+                renderDashboard();
             }
         }
 
@@ -3396,17 +3207,21 @@
             // Optimistic update
             taskObj.is_completed = !taskObj.is_completed;
             
-            // Defer re-rendering to next animation frame so native checkbox toggle finishes instantly
-            requestAnimationFrame(() => {
-                renderActiveViewOnly();
-            });
+            // Re-render UI immediately
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+            renderDashboard();
 
             // Background API call (silent)
             const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST', true);
             if (!res) {
                 // Rollback if failed
                 taskObj.is_completed = !taskObj.is_completed;
-                renderActiveViewOnly();
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                renderDashboard();
                 alert("切換任務狀態失敗，已恢復原狀態。");
             }
         }
@@ -3889,11 +3704,11 @@
             }
         }
 
-        async function saveTaskDates(silent = false) {
+        async function saveTaskDates(silent = true) {
             const taskId = selectedTaskId;
             if (!taskId) return;
             if (taskId > 1000000000000) {
-                alert("該任務正在與雲端同步中，請稍候再進行操作。");
+                if (!silent) alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
             const startDate = document.getElementById('drawer-task-start-date').value || null;
@@ -3922,7 +3737,7 @@
                 taskObj.due_date = dueDate;
             }
 
-            showDrawerSyncStatus('syncing', "正在儲存日期時程...");
+            showDrawerSyncStatus('syncing');
             const res = await apiRequest('updateTask', { 
                 taskId: taskId, 
                 start_date: startDate, 
@@ -3932,10 +3747,11 @@
             if (res) {
                 showDrawerSyncStatus('success');
                 if (!silent) alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
-                renderActiveViewOnly();
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
             } else {
                 showDrawerSyncStatus('error', '同步失敗');
-                alert(lang === 'vi-VN' ? "Lưu thời gian thất bại!" : "儲存日期時程失敗，請再試一次。");
             }
         }
 
@@ -4483,11 +4299,6 @@
         }
 
         // --- Case Operations (Edit & Delete Case) ---
-        function toggleAllEditCaseUserCheckboxes(checked) {
-            const boxes = document.querySelectorAll('.edit-case-user-chk');
-            boxes.forEach(cb => cb.checked = checked);
-        }
-
         function openEditCaseModal(caseId) {
             const caseObj = allCases.find(c => c.id === caseId);
             if (!caseObj) return;
@@ -4499,36 +4310,48 @@
             document.getElementById('edit-case-ref-date').value = caseObj.reference_date || '';
             document.getElementById('edit-case-groups').value = caseObj.groups.map(g => g.name).join(', ');
 
-            // Collect existing visible user IDs across tasks of this case
-            const existingVisUserIds = new Set();
-            caseObj.groups.forEach(g => {
-                g.tasks.forEach(t => {
-                    if (Array.isArray(t.visible_user_ids)) {
-                        t.visible_user_ids.forEach(uId => existingVisUserIds.add(uId));
+            // Collect all user IDs that are currently visible in tasks of this case
+            const visibleInCase = new Set();
+            if (caseObj.groups) {
+                caseObj.groups.forEach(g => {
+                    if (g.tasks) {
+                        g.tasks.forEach(t => {
+                            if (t.visible_user_ids && Array.isArray(t.visible_user_ids)) {
+                                t.visible_user_ids.forEach(uid => visibleInCase.add(uid));
+                            }
+                        });
                     }
                 });
-            });
+            }
 
-            // Populate user checklist in Edit Case Modal
-            const userContainer = document.getElementById('edit-case-users-list');
-            if (userContainer) {
-                userContainer.innerHTML = '';
+            // Render member checklist
+            const usersListEl = document.getElementById('edit-case-users-list');
+            if (usersListEl) {
+                usersListEl.innerHTML = '';
                 allUsers.forEach(u => {
-                    const isChecked = existingVisUserIds.has(u.id);
-                    userContainer.innerHTML += `
-                        <label class="flex items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs cursor-pointer hover:bg-slate-800/80 transition-colors">
-                            <input type="checkbox" value="${u.id}" ${isChecked ? 'checked' : ''} class="edit-case-user-chk rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500">
-                            <span class="h-2 w-2 rounded-full shrink-0" style="background-color: ${u.avatar_color}"></span>
-                            <span class="truncate text-slate-200">${u.username} <span class="text-[10px] text-slate-500 font-normal">(${u.role_name})</span></span>
+                    // Check if this user is in the case's tasks, or if case has no tasks yet default all checked
+                    const isChecked = visibleInCase.size > 0 ? visibleInCase.has(u.id) : true;
+                    usersListEl.innerHTML += `
+                        <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs cursor-pointer hover:bg-slate-800 transition-colors">
+                            <input type="checkbox" value="${u.id}" ${isChecked ? 'checked' : ''} class="edit-case-user-chk rounded border-slate-700 bg-slate-900 text-brand-600 focus:ring-brand-500 w-3.5 h-3.5">
+                            <span class="h-2 w-2 rounded-full flex-shrink-0" style="background-color: ${u.avatar_color || '#4f46e5'}"></span>
+                            <span class="text-slate-200 font-medium truncate">${escapeHtml(u.username)}</span>
+                            <span class="text-[10px] text-slate-500 truncate">(${escapeHtml(u.role_name || '')})</span>
                         </label>
                     `;
                 });
             }
 
-            const defaultModeRadio = document.querySelector('input[name="edit-case-vis-mode"][value="add"]');
+            // Reset mode radio to append
+            const defaultModeRadio = document.querySelector('input[name="edit-case-vis-mode"][value="append"]');
             if (defaultModeRadio) defaultModeRadio.checked = true;
 
             document.getElementById('edit-case-modal').classList.remove('hidden');
+        }
+
+        function toggleAllEditCaseUsers(select) {
+            const chks = document.querySelectorAll('.edit-case-user-chk');
+            chks.forEach(c => c.checked = select);
         }
 
         function closeEditCaseModal() {
@@ -4556,11 +4379,11 @@
                 groups = ["一般待辦"];
             }
 
-            // Collect selected users & sync mode
+            // Get selected user IDs and sync mode
             const checkedBoxes = document.querySelectorAll('.edit-case-user-chk:checked');
-            const selectedUserIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
-            const visModeEl = document.querySelector('input[name="edit-case-vis-mode"]:checked');
-            const visMode = visModeEl ? visModeEl.value : 'add';
+            const selectedUserIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(n => !isNaN(n));
+            const modeRadio = document.querySelector('input[name="edit-case-vis-mode"]:checked');
+            const visMode = modeRadio ? modeRadio.value : 'append';
 
             let caseObj = allCases.find(c => c.id === caseId);
             if (caseObj) {
@@ -4579,26 +4402,32 @@
                     };
                 });
 
-                // Optimistically update tasks visibility if sync mode is not 'none'
-                if (visMode !== 'none') {
+                // Optimistically update tasks visibility in local memory for instant 0ms response
+                if (visMode !== 'none' && caseObj.groups) {
                     caseObj.groups.forEach(g => {
-                        g.tasks.forEach(t => {
-                            let currentVis = Array.isArray(t.visible_user_ids) ? [...t.visible_user_ids] : [];
-                            let newVis = [];
-                            if (visMode === 'add') {
-                                newVis = Array.from(new Set([...currentVis, ...selectedUserIds]));
-                            } else if (visMode === 'overwrite') {
-                                newVis = Array.from(new Set(selectedUserIds));
-                            }
-                            t.visible_user_ids = newVis;
-                            t.visible_users = newVis.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
-                        });
+                        if (g.tasks) {
+                            g.tasks.forEach(t => {
+                                let currentVis = t.visible_user_ids ? [...t.visible_user_ids] : [];
+                                if (visMode === 'overwrite') {
+                                    t.visible_user_ids = [...selectedUserIds];
+                                } else if (visMode === 'append') {
+                                    selectedUserIds.forEach(uid => {
+                                        if (!currentVis.includes(uid)) currentVis.push(uid);
+                                    });
+                                    t.visible_user_ids = currentVis;
+                                }
+                                t.visible_users = t.visible_user_ids.map(uId => allUsers.find(u => u.id === uId)).filter(u => u !== undefined);
+                            });
+                        }
                     });
                 }
             }
 
             closeEditCaseModal();
-            renderActiveViewOnly();
+            renderCalendar();
+            renderCaseTree();
+            renderGantt();
+            if (activeView === 'dashboard') renderDashboard();
 
             const payload = {
                 caseId: caseId,
@@ -4606,25 +4435,25 @@
                 description: descInput.value.trim(),
                 driveUrl: driveUrlInput.value.trim(),
                 reference_date: referenceDate,
-                groups: groups
+                groups: groups,
+                visible_user_ids: selectedUserIds,
+                visibility_mode: visMode
             };
 
             const res = await apiRequest('updateCase', payload, 'POST', true);
-            if (visMode !== 'none') {
-                await apiRequest('batchUpdateCaseTaskVisibility', {
-                    caseId: caseId,
-                    userIds: selectedUserIds,
-                    mode: visMode
-                }, 'POST', true);
-            }
-
             if (res) {
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
-                renderActiveViewOnly();
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                if (activeView === 'dashboard') renderDashboard();
             } else {
                 alert("更新案件失敗，已還原。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderActiveViewOnly();
+                renderCalendar();
+                renderCaseTree();
+                renderGantt();
+                if (activeView === 'dashboard') renderDashboard();
             }
         }
 

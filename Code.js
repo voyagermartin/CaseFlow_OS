@@ -221,7 +221,7 @@ function initDatabase() {
   // 2. Users Sheet
   const userHeaders = ["id", "username", "role_id", "avatar_color", "language", "google_email", "is_super_master"];
   const userSheet = setupSheet("Users", userHeaders);
-  userSheet.appendRow([1, "Martin", 1, "#4f46e5", "zh-TW", "voyager.martin@gmail.com", true]);
+  userSheet.appendRow([1, "Martin", 1, "#4f46e5", "zh-TW", "martin@example.com", true]);
   userSheet.appendRow([2, "OP_Ning", 2, "#0ea5e9", "zh-TW", "", false]);
   userSheet.appendRow([3, "Sales_Yang", 3, "#f59e0b", "zh-TW", "", false]);
   userSheet.appendRow([4, "Local_Nguyen", 4, "#10b981", "vi-VN", "", false]);
@@ -461,6 +461,9 @@ function handleRequest(action, params) {
     const ss = getSpreadsheet();
     const sheet = ss.getSheetByName("Tasks");
     return sheet ? sheet.getDataRange().getValues() : [];
+  } else if (action === "batchUpdateCaseTaskVisibility") {
+    let userIds = params.visible_user_ids || params.userIds || [];
+    return batchUpdateCaseTaskVisibility(getInt(params.caseId || params.case_id), userIds, params.mode || params.visibility_mode);
   } else if (action === "updateCase") {
     let groups = params.groups;
     if (typeof groups === "string") {
@@ -477,16 +480,12 @@ function handleRequest(action, params) {
       params.driveUrl,
       groups,
       params.reference_date,
-      params.is_archived
+      params.is_archived,
+      params.visible_user_ids,
+      params.visibility_mode
     );
   } else if (action === "deleteCase") {
     return deleteCase(getInt(params.caseId));
-  } else if (action === "batchUpdateCaseTaskVisibility") {
-    return batchUpdateCaseTaskVisibility(
-      getInt(params.caseId),
-      params.userIds,
-      params.mode
-    );
   } else if (action === "addComment") {
     return addComment(
       getInt(params.taskId),
@@ -620,11 +619,7 @@ function getUsers(ss) {
       canCreateCase = roleObj.can_create_case;
     }
 
-    let userEmail = values[i][5] ? String(values[i][5]).trim() : "";
-    if (isSuper && (!userEmail || userEmail === "martin@example.com")) {
-      userEmail = "voyager.martin@gmail.com";
-      sheet.getRange(i + 1, 6).setValue("voyager.martin@gmail.com");
-    }
+    const isSuper = (values[i][6] === true || values[i][6] === "TRUE" || uId === 1 || uName === "Martin");
 
     users.push({
       id: uId,
@@ -634,7 +629,7 @@ function getUsers(ss) {
       can_create_case: canCreateCase || isSuper,
       avatar_color: values[i][3],
       language: values[i][4],
-      google_email: userEmail,
+      google_email: values[i][5] || "",
       is_super_master: isSuper
     });
   }
@@ -1012,44 +1007,6 @@ function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
   throw new Error("Task with ID " + taskId + " not found");
 }
 
-function batchUpdateCaseTaskVisibility(caseId, userIds, mode) {
-  const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Tasks");
-  if (!sheet) throw new Error("Tasks sheet not initialized");
-
-  let targetIds = [];
-  if (Array.isArray(userIds)) {
-    targetIds = userIds.map(n => parseInt(n)).filter(n => !isNaN(n));
-  } else if (userIds) {
-    targetIds = parseUserIds(userIds).split(",").map(n => parseInt(n)).filter(n => !isNaN(n));
-  }
-
-  const values = sheet.getDataRange().getValues();
-  let updatedCount = 0;
-
-  for (let i = 1; i < values.length; i++) {
-    if (parseInt(values[i][1]) === parseInt(caseId)) { // Col 2 is case_id
-      let currentVisStr = values[i][8] ? String(values[i][8]) : "";
-      let currentVis = parseUserIds(currentVisStr).split(",").map(n => parseInt(n)).filter(n => !isNaN(n));
-      let newVis = [];
-
-      if (mode === "add") {
-        newVis = Array.from(new Set([...currentVis, ...targetIds]));
-      } else if (mode === "remove") {
-        newVis = currentVis.filter(id => !targetIds.includes(id));
-      } else if (mode === "set" || mode === "overwrite") {
-        newVis = Array.from(new Set(targetIds));
-      }
-
-      const newVisStr = newVis.join(",");
-      sheet.getRange(i + 1, 9).setValue(newVisStr);
-      updatedCount++;
-    }
-  }
-  SpreadsheetApp.flush();
-  return { status: "success", caseId: caseId, updatedCount: updatedCount };
-}
-
 function addComment(taskId, userId, content) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Comments");
@@ -1123,7 +1080,52 @@ function deleteTaskComments(taskId) {
   }
 }
 
-function updateCase(caseId, title, description, driveUrl, groups, referenceDate, isArchived) {
+function batchUpdateCaseTaskVisibility(caseId, userIds, mode) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Tasks");
+  if (!sheet) throw new Error("Tasks sheet not initialized");
+
+  const syncMode = mode || "append";
+  if (syncMode === "none") {
+    return { status: "success", caseId: caseId, updatedCount: 0 };
+  }
+
+  const targetUserIds = parseUserIds(userIds).split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+  const values = sheet.getDataRange().getValues();
+  let updatedCount = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    const tCaseId = parseInt(values[i][1]);
+    if (tCaseId === caseId) {
+      let currentVisIds = [];
+      const rawVis = values[i][8];
+      if (rawVis) {
+        currentVisIds = parseUserIds(rawVis).split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+      }
+
+      let newVisIds = [];
+      if (syncMode === "overwrite") {
+        newVisIds = [...targetUserIds];
+      } else if (syncMode === "append") {
+        newVisIds = [...currentVisIds];
+        targetUserIds.forEach(uId => {
+          if (!newVisIds.includes(uId)) {
+            newVisIds.push(uId);
+          }
+        });
+      }
+
+      const newVisStr = newVisIds.join(",");
+      sheet.getRange(i + 1, 9).setValue(newVisStr);
+      updatedCount++;
+    }
+  }
+
+  SpreadsheetApp.flush();
+  return { status: "success", caseId: caseId, updatedCount: updatedCount };
+}
+
+function updateCase(caseId, title, description, driveUrl, groups, referenceDate, isArchived, visibleUserIds, visibilityMode) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
@@ -1149,6 +1151,12 @@ function updateCase(caseId, title, description, driveUrl, groups, referenceDate,
         sheet.getRange(i + 1, 8).setValue(isArchived === true || isArchived === "true" || isArchived === "TRUE");
       }
       SpreadsheetApp.flush();
+
+      // If visibleUserIds and visibilityMode are provided, batch update all tasks in this case
+      if (visibilityMode && visibilityMode !== "none" && visibleUserIds !== undefined) {
+        batchUpdateCaseTaskVisibility(caseId, visibleUserIds, visibilityMode);
+      }
+
       return { status: "success", caseId: caseId };
     }
   }
@@ -1259,6 +1267,7 @@ function createUser(username, roleId, avatarColor, language, googleEmail) {
   if (!sheet) throw new Error("Users sheet not initialized");
   const nextId = getNextId(sheet);
   sheet.appendRow([nextId, username, roleId, avatarColor || "#4f46e5", language || "zh-TW", googleEmail || "", false]);
+  SpreadsheetApp.flush();
   return { status: "success", userId: nextId };
 }
 
@@ -1285,6 +1294,7 @@ function updateUser(userId, username, roleId, avatarColor, language, googleEmail
       if (language !== undefined) sheet.getRange(i + 1, 5).setValue(language);
       if (googleEmail !== undefined) sheet.getRange(i + 1, 6).setValue(googleEmail);
       
+      SpreadsheetApp.flush();
       return { status: "success", userId: userId };
     }
   }
