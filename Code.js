@@ -1086,20 +1086,27 @@ function batchUpdateCaseTaskVisibility(caseId, userIds, mode) {
   if (!sheet) throw new Error("Tasks sheet not initialized");
 
   const syncMode = mode || "append";
-  if (syncMode === "none") {
-    return { status: "success", caseId: caseId, updatedCount: 0 };
+  const targetCaseId = parseInt(caseId);
+  if (isNaN(targetCaseId) || syncMode === "none") {
+    return { status: "success", caseId: targetCaseId, updatedCount: 0 };
   }
 
   const targetUserIds = parseUserIds(userIds).split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-  const values = sheet.getDataRange().getValues();
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  if (values.length <= 1) {
+    return { status: "success", caseId: targetCaseId, updatedCount: 0 };
+  }
+
   let updatedCount = 0;
+  let hasChanges = false;
 
   for (let i = 1; i < values.length; i++) {
     const tCaseId = parseInt(values[i][1]);
-    if (tCaseId === caseId) {
+    if (tCaseId === targetCaseId) {
       let currentVisIds = [];
       const rawVis = values[i][8];
-      if (rawVis) {
+      if (rawVis !== undefined && rawVis !== null && rawVis !== "") {
         currentVisIds = parseUserIds(rawVis).split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
       }
 
@@ -1116,13 +1123,20 @@ function batchUpdateCaseTaskVisibility(caseId, userIds, mode) {
       }
 
       const newVisStr = newVisIds.join(",");
-      sheet.getRange(i + 1, 9).setValue(newVisStr);
+      if (String(values[i][8]) !== newVisStr) {
+        values[i][8] = newVisStr;
+        hasChanges = true;
+      }
       updatedCount++;
     }
   }
 
-  SpreadsheetApp.flush();
-  return { status: "success", caseId: caseId, updatedCount: updatedCount };
+  if (hasChanges) {
+    dataRange.setValues(values);
+    SpreadsheetApp.flush();
+  }
+
+  return { status: "success", caseId: targetCaseId, updatedCount: updatedCount };
 }
 
 function updateCase(caseId, title, description, driveUrl, groups, referenceDate, isArchived, visibleUserIds, visibilityMode) {
@@ -1130,37 +1144,43 @@ function updateCase(caseId, title, description, driveUrl, groups, referenceDate,
   const sheet = ss.getSheetByName("Cases");
   if (!sheet) throw new Error("Cases sheet not initialized");
   
-  const values = sheet.getDataRange().getValues();
+  const targetCaseId = parseInt(caseId);
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  let found = false;
+
   for (let i = 1; i < values.length; i++) {
-    if (parseInt(values[i][0]) === caseId) {
-      if (title !== undefined) sheet.getRange(i + 1, 2).setValue(title);
-      if (description !== undefined) sheet.getRange(i + 1, 3).setValue(description);
-      if (driveUrl !== undefined) sheet.getRange(i + 1, 5).setValue(driveUrl);
+    if (parseInt(values[i][0]) === targetCaseId) {
+      found = true;
+      if (title !== undefined) values[i][1] = title;
+      if (description !== undefined) values[i][2] = description;
+      if (driveUrl !== undefined) values[i][4] = driveUrl;
       if (groups !== undefined) {
         let finalGroups = parseGroupNames(groups);
-        if (finalGroups.length === 0) {
-          finalGroups = ["一般待辦"];
-        }
-        const groupsStr = finalGroups.join(", ");
-        sheet.getRange(i + 1, 6).setValue(groupsStr);
+        if (finalGroups.length === 0) finalGroups = ["一般待辦"];
+        values[i][5] = finalGroups.join(", ");
       }
-      if (referenceDate !== undefined) {
-        sheet.getRange(i + 1, 7).setValue(referenceDate);
-      }
+      if (referenceDate !== undefined) values[i][6] = referenceDate || "";
       if (isArchived !== undefined) {
-        sheet.getRange(i + 1, 8).setValue(isArchived === true || isArchived === "true" || isArchived === "TRUE");
+        values[i][7] = (isArchived === true || isArchived === "true" || isArchived === "TRUE");
       }
-      SpreadsheetApp.flush();
-
-      // If visibleUserIds and visibilityMode are provided, batch update all tasks in this case
-      if (visibilityMode && visibilityMode !== "none" && visibleUserIds !== undefined) {
-        batchUpdateCaseTaskVisibility(caseId, visibleUserIds, visibilityMode);
-      }
-
-      return { status: "success", caseId: caseId };
+      break;
     }
   }
-  throw new Error("Case with ID " + caseId + " not found");
+
+  if (!found) {
+    throw new Error("Case with ID " + caseId + " not found");
+  }
+
+  dataRange.setValues(values);
+  SpreadsheetApp.flush();
+
+  // If visibleUserIds and visibilityMode are provided, batch update all tasks in this case
+  if (visibilityMode && visibilityMode !== "none" && visibleUserIds !== undefined) {
+    batchUpdateCaseTaskVisibility(targetCaseId, visibleUserIds, visibilityMode);
+  }
+
+  return { status: "success", caseId: targetCaseId };
 }
 
 function deleteCase(caseId) {

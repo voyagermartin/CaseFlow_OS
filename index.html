@@ -2329,6 +2329,23 @@
             }
         }
 
+        // Render only the active view for instant 0ms latency and zero lag
+        function renderActiveViewOnly() {
+            if (activeView === 'case') {
+                renderCaseTree();
+            } else if (activeView === 'dashboard') {
+                renderDashboard();
+            } else if (activeView === 'calendar') {
+                renderCalendar();
+            } else if (activeView === 'gantt') {
+                renderGantt();
+            } else if (activeView === 'user-control') {
+                renderUserControl();
+            } else if (activeView === 'template-control') {
+                renderTemplateControl();
+            }
+        }
+
         // Tab views navigation
         function switchView(viewName) {
             activeView = viewName;
@@ -3789,9 +3806,7 @@
                 alert(tText.successSaveVis);
                 // Silent full reload in background because visibility changes what this user can see
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             } else {
                 showDrawerSyncStatus('error', '同步失敗');
             }
@@ -4424,10 +4439,7 @@
             }
 
             closeEditCaseModal();
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-            if (activeView === 'dashboard') renderDashboard();
+            renderActiveViewOnly();
 
             const payload = {
                 caseId: caseId,
@@ -4442,18 +4454,15 @@
 
             const res = await apiRequest('updateCase', payload, 'POST', true);
             if (res) {
-                allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true) || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                if (activeView === 'dashboard') renderDashboard();
+                const refreshedCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET', true);
+                if (refreshedCases && Array.isArray(refreshedCases)) {
+                    allCases = refreshedCases;
+                    renderActiveViewOnly();
+                }
             } else {
                 alert("更新案件失敗，已還原。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                if (activeView === 'dashboard') renderDashboard();
+                renderActiveViewOnly();
             }
         }
 
