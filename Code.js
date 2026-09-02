@@ -486,6 +486,8 @@ function handleRequest(action, params) {
     );
   } else if (action === "deleteCase") {
     return deleteCase(getInt(params.caseId));
+  } else if (action === "getTaskComments") {
+    return getTaskComments(getInt(params.taskId));
   } else if (action === "addComment") {
     return addComment(
       getInt(params.taskId),
@@ -1007,6 +1009,27 @@ function updateTask(taskId, notes, visibleUserIds, dueDate, startDate) {
   throw new Error("Task with ID " + taskId + " not found");
 }
 
+function getTaskComments(taskId) {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Comments");
+  if (!sheet) return [];
+  const values = sheet.getDataRange().getValues();
+  const comments = [];
+  const tId = parseInt(taskId);
+  for (let i = 1; i < values.length; i++) {
+    if (parseInt(values[i][1]) === tId) {
+      comments.push({
+        id: parseInt(values[i][0]),
+        task_id: tId,
+        user_id: parseInt(values[i][2]),
+        content: values[i][3],
+        created_at: formatDateString(values[i][4], true)
+      });
+    }
+  }
+  return comments;
+}
+
 function addComment(taskId, userId, content) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Comments");
@@ -1015,6 +1038,7 @@ function addComment(taskId, userId, content) {
   const nextId = getNextId(sheet);
   const nowStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd HH:mm:ss");
   sheet.appendRow([nextId, taskId, userId, content, nowStr]);
+  SpreadsheetApp.flush();
   return { status: "success", commentId: nextId };
 }
 

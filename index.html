@@ -577,7 +577,7 @@
                 
                 <!-- New Comment Form -->
                 <div class="flex gap-2">
-                    <input type="text" id="new-comment-input" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-brand-500" data-i18n="commentPlaceholder" placeholder="寫點留言...可使用 @小明 標註">
+                    <input type="text" id="new-comment-input" onkeydown="if(event.key === 'Enter') { event.preventDefault(); submitComment(); }" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-brand-500" data-i18n="commentPlaceholder" placeholder="寫點留言...可使用 @小明 標註">
                     <button onclick="submitComment()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors" data-i18n="submitCommentBtn">
                         送出
                     </button>
@@ -1860,17 +1860,34 @@
                             } else {
                                 resolve({ status: 'error', message: 'Task not found' });
                             }
+                        } else if (action === 'getTaskComments') {
+                            const tId = parseInt(payload.taskId);
+                            const list = mockComments.filter(x => parseInt(x.task_id) === tId);
+                            resolve(list);
                         } else if (action === 'addComment') {
                             const nextId = mockComments.length > 0 ? Math.max(...mockComments.map(x => x.id)) + 1 : 1;
                             const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
                             mockComments.push({
                                 id: nextId,
-                                task_id: payload.taskId,
-                                user_id: payload.user_id,
+                                task_id: parseInt(payload.taskId),
+                                user_id: parseInt(payload.user_id),
                                 content: payload.content,
                                 created_at: nowStr
                             });
                             resolve({ status: 'success', commentId: nextId });
+                        } else if (action === 'updateComment') {
+                            const cId = parseInt(payload.commentId);
+                            const cm = mockComments.find(x => parseInt(x.id) === cId);
+                            if (cm) {
+                                cm.content = payload.content;
+                                resolve({ status: 'success', commentId: cId });
+                            } else {
+                                resolve({ status: 'error', message: 'Comment not found' });
+                            }
+                        } else if (action === 'deleteComment') {
+                            const cId = parseInt(payload.commentId);
+                            mockComments = mockComments.filter(x => parseInt(x.id) !== cId);
+                            resolve({ status: 'success', commentId: cId });
                         } else if (action === 'createRole') {
                             const nextId = mockRoles.length > 0 ? Math.max(...mockRoles.map(x => x.id)) + 1 : 1;
                             mockRoles.push({
@@ -3396,12 +3413,13 @@
 
         // --- Task Drawer Handling ---
         async function openTaskDrawer(taskId) {
-            selectedTaskId = taskId;
+            const numTaskId = parseInt(taskId);
+            selectedTaskId = numTaskId;
             
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === taskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === numTaskId);
                     if (found) taskObj = found;
                 });
             });
@@ -3420,7 +3438,7 @@
             // Handle UI elements when task is still syncing with cloud
             const commentInput = document.getElementById('new-comment-input');
             const commentBtn = document.getElementById('new-comment-input')?.nextElementSibling;
-            if (taskId > 1000000000000) {
+            if (numTaskId > 1000000000000) {
                 showDrawerSyncStatus('syncing', "任務正在雲端創建中...");
                 if (commentInput) commentInput.disabled = true;
                 if (commentBtn) commentBtn.disabled = true;
@@ -3459,17 +3477,32 @@
             if (saveVisBtn) {
                 if (hasPerm) {
                     saveVisBtn.classList.remove('hidden');
-                    saveVisBtn.disabled = (taskId > 1000000000000);
+                    saveVisBtn.disabled = (numTaskId > 1000000000000);
                 } else {
                     saveVisBtn.classList.add('hidden');
                 }
             }
 
+            // 1. Immediately render local comments (0ms instantaneous)
             renderDrawerComments(taskObj.comments || []);
 
             // animation open
             document.getElementById('task-drawer').classList.remove('translate-x-full');
             document.getElementById('drawer-backdrop').classList.remove('hidden');
+
+            // 2. Fetch fresh comments asynchronously from cloud in background to guarantee real-time sync without F5
+            if (numTaskId <= 1000000000000) {
+                try {
+                    const freshComments = await apiRequest('getTaskComments', { taskId: numTaskId }, 'GET', true);
+                    if (Array.isArray(freshComments) && selectedTaskId === numTaskId && taskObj) {
+                        taskObj.comments = freshComments;
+                        renderDrawerComments(taskObj.comments);
+                        renderActiveViewOnly();
+                    }
+                } catch (e) {
+                    console.warn("Could not fetch latest task comments in background:", e);
+                }
+            }
         }
 
         function closeTaskDrawer() {
@@ -3497,13 +3530,12 @@
             
             if (status === 'syncing') {
                 dot.className = "h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse";
-                text.textContent = "同步中...";
+                text.textContent = message || "同步中...";
             } else if (status === 'success') {
                 dot.className = "h-1.5 w-1.5 rounded-full bg-emerald-500";
-                text.textContent = "已儲存";
+                text.textContent = message || "已儲存";
                 setTimeout(() => {
-                    // Check if drawer is still open and status hasn't changed to syncing again
-                    if (text.textContent === "已儲存") {
+                    if (text.textContent === (message || "已儲存")) {
                         el.style.transition = 'opacity 0.5s ease';
                         el.style.opacity = '0';
                         setTimeout(() => {
@@ -3528,7 +3560,7 @@
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
             const tText = i18n[lang];
 
-            if (comments.length === 0) {
+            if (!comments || comments.length === 0) {
                 list.innerHTML = `<p class="text-xs text-slate-655 italic">${tText.noComments}</p>`;
                 return;
             }
@@ -3573,13 +3605,14 @@
         async function deleteCommentAction(commentId) {
             if (!confirm("確定要刪除這條討論留言嗎？")) return;
             
+            const numCommentId = parseInt(commentId);
             // Local update
             let foundTask = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
                     g.tasks.forEach(t => {
                         if (t.comments) {
-                            const index = t.comments.findIndex(cm => cm.id === commentId);
+                            const index = t.comments.findIndex(cm => parseInt(cm.id) === numCommentId);
                             if (index !== -1) {
                                 t.comments.splice(index, 1);
                                 foundTask = t;
@@ -3591,13 +3624,11 @@
 
             if (foundTask) {
                 renderDrawerComments(foundTask.comments);
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             }
 
             showDrawerSyncStatus('syncing', "正在刪除留言...");
-            const res = await apiRequest('deleteComment', { commentId: commentId }, 'POST', true);
+            const res = await apiRequest('deleteComment', { commentId: numCommentId }, 'POST', true);
             if (res && res.status === 'success') {
                 showDrawerSyncStatus('success');
             } else {
@@ -3607,7 +3638,8 @@
         }
 
         function startEditComment(commentId, btn) {
-            const textEl = document.getElementById(`comment-text-${commentId}`);
+            const numCommentId = parseInt(commentId);
+            const textEl = document.getElementById(`comment-text-${numCommentId}`);
             if (!textEl) return;
             
             // If already editing, ignore
@@ -3617,11 +3649,11 @@
             
             textEl.innerHTML = `
                 <div class="flex gap-2 mt-1 w-full">
-                    <input type="text" id="comment-edit-input-${commentId}" value="${escapeHtml(originalContent)}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
-                    <button onclick="saveCommentEdit(${commentId})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
+                    <input type="text" id="comment-edit-input-${numCommentId}" value="${escapeHtml(originalContent)}" onkeydown="if(event.key === 'Enter') saveCommentEdit(${numCommentId})" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+                    <button onclick="saveCommentEdit(${numCommentId})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
                         儲存
                     </button>
-                    <button onclick="cancelCommentEdit(${commentId}, \`${escapeHtml(originalContent).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="bg-slate-800 hover:bg-slate-750 text-slate-350 text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
+                    <button onclick="cancelCommentEdit(${numCommentId}, \`${escapeHtml(originalContent).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="bg-slate-800 hover:bg-slate-750 text-slate-350 text-[10px] font-semibold px-2 py-1 rounded transition-colors shrink-0">
                         取消
                     </button>
                 </div>
@@ -3629,20 +3661,22 @@
             
             // Auto focus
             setTimeout(() => {
-                const input = document.getElementById(`comment-edit-input-${commentId}`);
+                const input = document.getElementById(`comment-edit-input-${numCommentId}`);
                 if (input) input.focus();
             }, 50);
         }
 
         function cancelCommentEdit(commentId, originalContent) {
-            const textEl = document.getElementById(`comment-text-${commentId}`);
+            const numCommentId = parseInt(commentId);
+            const textEl = document.getElementById(`comment-text-${numCommentId}`);
             if (textEl) {
                 textEl.innerHTML = escapeHtml(originalContent);
             }
         }
 
         async function saveCommentEdit(commentId) {
-            const input = document.getElementById(`comment-edit-input-${commentId}`);
+            const numCommentId = parseInt(commentId);
+            const input = document.getElementById(`comment-edit-input-${numCommentId}`);
             if (!input) return;
             const newContent = input.value.trim();
             if (!newContent) return;
@@ -3653,7 +3687,7 @@
                 c.groups.forEach(g => {
                     g.tasks.forEach(t => {
                         if (t.comments) {
-                            const found = t.comments.find(cm => cm.id === commentId);
+                            const found = t.comments.find(cm => parseInt(cm.id) === numCommentId);
                             if (found) {
                                 found.content = newContent;
                                 foundTask = t;
@@ -3665,13 +3699,11 @@
 
             if (foundTask) {
                 renderDrawerComments(foundTask.comments);
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             }
 
             showDrawerSyncStatus('syncing', "正在儲存留言...");
-            const res = await apiRequest('updateComment', { commentId: commentId, content: newContent }, 'POST', true);
+            const res = await apiRequest('updateComment', { commentId: numCommentId, content: newContent }, 'POST', true);
             if (res && res.status === 'success') {
                 showDrawerSyncStatus('success');
             } else {
@@ -3702,7 +3734,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === taskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === parseInt(taskId));
                     if (found) taskObj = found;
                 });
             });
@@ -3713,9 +3745,7 @@
             if (res) {
                 showDrawerSyncStatus('success');
                 if (!silent) alert(tText.successSaveNotes);
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             } else {
                 showDrawerSyncStatus('error', '同步失敗');
             }
@@ -3745,7 +3775,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === taskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === parseInt(taskId));
                     if (found) taskObj = found;
                 });
             });
@@ -3764,9 +3794,7 @@
             if (res) {
                 showDrawerSyncStatus('success');
                 if (!silent) alert(lang === 'vi-VN' ? "Lưu thời gian thành công!" : "時程與日期儲存成功！");
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                renderActiveViewOnly();
             } else {
                 showDrawerSyncStatus('error', '同步失敗');
             }
@@ -3790,7 +3818,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === taskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === parseInt(taskId));
                     if (found) taskObj = found;
                 });
             });
@@ -3814,7 +3842,8 @@
 
         async function submitComment() {
             if (!selectedTaskId) return;
-            if (selectedTaskId > 1000000000000) {
+            const numTaskId = parseInt(selectedTaskId);
+            if (numTaskId > 1000000000000) {
                 alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
@@ -3834,7 +3863,7 @@
             
             const newComment = {
                 id: tempCommentId,
-                task_id: selectedTaskId,
+                task_id: numTaskId,
                 user_id: currentUserId,
                 content: content,
                 created_at: nowStr
@@ -3844,7 +3873,7 @@
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === selectedTaskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === numTaskId);
                     if (found) taskObj = found;
                 });
             });
@@ -3853,12 +3882,14 @@
                 if (!taskObj.comments) taskObj.comments = [];
                 taskObj.comments.push(newComment);
                 renderDrawerComments(taskObj.comments);
+                renderActiveViewOnly();
             }
 
             input.value = '';
+            showDrawerSyncStatus('syncing', "正在送出留言...");
 
             const payload = {
-                taskId: selectedTaskId,
+                taskId: numTaskId,
                 user_id: currentUserId,
                 content: content
             };
@@ -3866,11 +3897,14 @@
             const res = await apiRequest('addComment', payload, 'POST', true);
             if (res && res.status === 'success') {
                 newComment.id = res.commentId;
+                showDrawerSyncStatus('success', "留言已送出");
             } else {
                 if (taskObj && taskObj.comments) {
                     taskObj.comments = taskObj.comments.filter(c => c.id !== tempCommentId);
                     renderDrawerComments(taskObj.comments);
+                    renderActiveViewOnly();
                 }
+                showDrawerSyncStatus('error', '送出失敗');
                 alert("新增留言失敗。");
             }
         }

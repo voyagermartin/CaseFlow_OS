@@ -138,4 +138,9 @@
   - **前端 0ms 流暢渲染 (`renderActiveViewOnly`)**：在案件編輯儲存與權限更新時，全面改採 `renderActiveViewOnly()` 視圖懶加載，僅即時渲染當前使用者所在的檢視畫面，杜絕 FullCalendar、Frappe Gantt 與 DOM 多重同步銷毀重繪造成的瀏覽器凍結卡頓。
   - **固定 Web App 部署 ID 版本綁定 (`clasp deploy -i ...` @46)**：排查出前端 `GAS_API_URL` 鎖定在多天前舊版 `@39` 導致新功能被舊後端忽略的根本原因；確立覆蓋更新既有主部署 ID 之發布協議（`clasp deploy -i AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`），成功將主要 Web App 網址全自動更新至包含最新功能的版本 **`@46`**。
   - **實體雲端 API 整合測試驗證通過**：透過自動化測試腳本直接向線上 Web App 發送 `updateCase` 請求並即時回查 `getInitialData`，100% 驗證任務可見成員成功持久化寫入 Google Sheets 雲端試算表。
+- **📅 2026-09-02 (Phase 8: 討論留言即時響應修復、開抽屜背景自動拉取最新留言與 Enter 快捷送出)**：
+  - **留言 0ms 樂觀更新與背景視圖即時連動**：修復新增留言、編輯留言與刪除留言時僅更新抽屜 DOM 的問題；全面串接 `renderActiveViewOnly()`，讓主畫面的樹狀圖留言氣泡預覽 (`preview bubble`) 與 `+X 則討論` 徽章在點擊送出的瞬間 0ms 同步更新，無須手動 F5 重新整理頁面。
+  - **開抽屜背景動態拉取最新討論 (`getTaskComments`)**：後端新增 `getTaskComments` 專屬端點與 `SpreadsheetApp.flush()` 強制落盤；前端在點擊任何待辦事項打開抽屜時，先以記憶體快取秒顯，並在背景自動向雲端拉取該待辦之最新留言串（雙重保證他人留言或異步更新即時顯現）。
+  - **鍵盤 Enter 快捷發送支援**：留言輸入框與編輯框全面支援 `Enter` 鍵直接送出留言 / 儲存編輯，大幅提升操作流暢度。
+  - **型別安全轉換防護 (`parseInt`)**：修復 `selectedTaskId` 與 `commentId` 在局部更新比對時因字串與數字型別不一致導致的查詢失敗。
 
