@@ -8,13 +8,13 @@
 
 **CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為底層資料庫、由 **Google Apps Script (GAS)** 直接託管與 **GitHub Pages** 雙軌部署的事件驅動專案 OS (Event-Driven OS)。
 
-> 🛠️ **技術與架構規格 (Phase 7 Milestone Checkpoint)**
+> 🛠️ **技術與架構規格 (Phase 8 Milestone Checkpoint)**
 > - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表 (7 大核心工作表)。
 > - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
-> - **效能與極速載入**：後端全面升級為 **單一記憶體 2D 陣列批次寫入 (`setValues`)**，取代逐行 RPC `setValue`，API 寫入耗時從 10 秒降至 <0.05 秒 (提升 200 倍)；前端首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援 (<0.3 秒載入)；待辦勾選與案件修改導入 `renderActiveViewOnly` 視圖懶加載與 `requestAnimationFrame` 0ms 影格響應，消除全站 DOM 銷毀重繪之卡頓。
-> - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；`createUser` 與 `updateUser` 補齊實體落盤；專案 ID 全面導入 `parseInt` 型別安全轉換，杜絕字串比對失敗；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)；`initApp` 支援 `document.readyState` 雙重保險強健啟動。
+> - **效能與極速載入**：後端全面升級為 **單一記憶體 2D 陣列批次寫入 (`setValues`)**，取代逐行 RPC `setValue`，API 寫入耗時從 10 秒降至 <0.05 秒 (提升 200 倍)；前端首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援 (<0.3 秒載入)；待辦勾選、案件修改與討論留言導入 `renderActiveViewOnly` 視圖懶加載與 `requestAnimationFrame` 0ms 影格響應，消除全站 DOM 銷毀重繪之卡頓。
+> - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；`createUser`、`updateUser` 與 `addComment` 補齊實體落盤；專案 ID 與任務/留言 ID 全面導入 `parseInt` 型別安全轉換，杜絕字串比對失敗；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)；`initApp` 支援 `document.readyState` 雙重保險強健啟動。
 > - **門禁與權限控管**：`google_email` 全站白名單門禁驗證 Modal (`#login-modal`)、管理員單向密碼鎖 (`ADMIN_PASSCODE` + `sessionStorage`)、頂端安全身分指示器與登出機制。
-> - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、案件封存/解封、編輯案件內建批量人員權限設定 (`batchUpdateCaseTaskVisibility`，支援「批量加入」、「覆蓋重設」、「不變更」3 種模式)、抽屜日期批次儲存按鈕、語系字典 (zh-TW / vi-VN)。
+> - **高階功能**：臺灣節假日/補班工作天計算引擎、案件範本 CRUD、個人待辦儀表板、案件封存/解封、編輯案件內建批量人員權限設定 (`batchUpdateCaseTaskVisibility`，支援「批量加入」、「覆蓋重設」、「不變更」3 種模式)、抽屜日期批次儲存按鈕、討論留言即時響應與開抽屜背景動態拉取 (`getTaskComments`)、鍵盤 Enter 快捷送出、語系字典 (zh-TW / vi-VN)。
 
 ---
 
@@ -48,6 +48,7 @@
 ### 📋 C. 案件模式 (Case Tree View)
 - **卡片層級與預設收合**：案件標題採用升級版 `text-xl font-bold` (20px) 醒目字型，預設收合帶有 `openCaseIds` 展開記憶。
 - **靜音快速新增待辦**：支援組名安全脫逸 (`getSanitizedKey`) 與動態組別自動創建；純樂觀 UI 0ms 秒發秒顯，背景靜默配發 ID。
+- **即時討論留言與氣泡預覽連動**：在案件樹狀中直接渲染任務備註與「最新留言氣泡預覽 (Recent Comment Balloon Preview)」，展示最新討論作者頭像與字數防護，以靛藍色調與靜態備註做視覺區隔，提供 +X 則歷史討論徽章；支援留言 0ms 樂觀更新與背景視圖即時連動，打開抽屜時自動在背景拉取雲端最新留言串 (`getTaskComments`)，且支援 `Enter` 鍵快捷送出/編輯，無須手動 F5 重新整理。
 - **抽屜日期批次儲存與工作天提示**：抽屜備註支援失去焦點自動儲存 (`onblur`)，時程日期改為專屬「📅 儲存日期時程」按鈕批量同步；標題自動顯示排除週末與國定假日的剩餘工作天數提示（如 `(剩 3 工作天)`）。
 - **編輯案件內建批量人員權限設定**：點擊「✏️ 編輯」案件即可直接勾選/取消人員權限（支援全選與取消全選），並可選擇「➕ 批量加入 (預設)」、「🔄 覆蓋重設」或「⏸️ 不變更現有待辦」同步模式，儲存時一鍵將權限變更套用到該案件下的所有待辦事項。
 - **案件封存與解除封存**：案件卡片管理按鈕增設「📦 封存」與「🔓 解封」操作。封存之案件預設由儀表板、日曆、甘特圖中過濾隱藏，並可在樹狀頂端勾選「顯示已封存案件」進行檢視，已封存案件呈半透明顯示且帶有 `📦 已封存` 徽章。
@@ -143,4 +144,6 @@
   - **開抽屜背景動態拉取最新討論 (`getTaskComments`)**：後端新增 `getTaskComments` 專屬端點與 `SpreadsheetApp.flush()` 強制落盤；前端在點擊任何待辦事項打開抽屜時，先以記憶體快取秒顯，並在背景自動向雲端拉取該待辦之最新留言串（雙重保證他人留言或異步更新即時顯現）。
   - **鍵盤 Enter 快捷發送支援**：留言輸入框與編輯框全面支援 `Enter` 鍵直接送出留言 / 儲存編輯，大幅提升操作流暢度。
   - **型別安全轉換防護 (`parseInt`)**：修復 `selectedTaskId` 與 `commentId` 在局部更新比對時因字串與數字型別不一致導致的查詢失敗。
+  - **Mock API 測試引擎同步補齊**：於 `runMockApi` 補齊 `getTaskComments`、`updateComment` 與 `deleteComment` 模擬邏輯，確保本機與 GitHub Pages 獨立測試環境功能 100% 正常。
+  - **全自動代部署更新至 `@47`**：完成程式碼修復與驗證後，全自動執行 `clasp push`、`clasp deploy -i ...`（版本 `@47`）、`git commit` 與 `git push`，完成 Phase 8 開發閉環並作為下階段起點記錄。
 
