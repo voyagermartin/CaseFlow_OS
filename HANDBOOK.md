@@ -11,9 +11,9 @@
 > 🛠️ **技術與架構規格 (Phase 9 Milestone Checkpoint)**
 > - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表 (7 大核心工作表)。
 > - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6 (日曆) 與 Frappe Gantt (甘特圖)。
-> - **效能與極速載入**：後端全面升級為 **單一記憶體 2D 陣列批次寫入 (`setValues`)**，取代逐行 RPC `setValue`，API 寫入耗時從 10 秒降至 <0.05 秒 (提升 200 倍)；前端首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援 (<0.3 秒載入)；待辦勾選、案件修改與討論留言導入 `renderActiveViewOnly` 視圖懶加載與 `requestAnimationFrame` 0ms 影格響應，消除全站 DOM 銷毀重繪之卡頓。
+> - **效能與極速載入**：後端全面升級為 **單一記憶體 2D 陣列批次寫入 (`setValues`)**，取代逐行 RPC `setValue`，API 寫入耗時從 10 秒降至 <0.05 秒 (提升 200 倍)；前端首頁載入引擎 (`getInitialData`) + `Promise.all` 併行備援 (<0.3 秒載入)；讀取端點徹底移除 GET 迴圈中之寫入操作；待辦勾選、案件修改與討論留言導入 `renderActiveViewOnly` 視圖懶加載與 `requestAnimationFrame` 0ms 影格響應，消除全站 DOM 銷毀重繪之卡頓。
 > - **資料防護與落盤**：後端全面 `SpreadsheetApp.flush()` 強制落盤防護；`createUser`、`updateUser` 與 `addComment` 補齊實體落盤；專案 ID 與任務/留言 ID 全面導入 `parseInt` 型別安全轉換，杜絕字串比對失敗；純樂觀更新 (0ms 響應) + 靜音背景同步 (`silent = true`)；`initApp` 支援 `document.readyState` 雙重保險強健啟動。
-> - **門禁與權限控管**：`google_email` 全站白名單門禁驗證 Modal (`#login-modal`)、管理員單向密碼鎖 (`ADMIN_PASSCODE` + `sessionStorage`)、頂端安全身分指示器與登出機制。
+> - **門禁與權限控管**：`google_email` 全站白名單門禁驗證 Modal (`#login-modal`)、管理員單向密碼鎖 (`ADMIN_PASSCODE` + `sessionStorage`)、**Super Master (`Martin` / ID 1) 全域案件與任務穿透檢視權限**、頂端安全身分指示器、登出機制與動態更新之開發者除錯面板 (`updateDebugPanel`)。
 > - **高階功能**：雙向時程偏移計算機（行前倒算/團後順推 + 臺灣節假日/補班工作天計算引擎）、案件範本 CRUD、個人待辦儀表板、案件封存/解封、編輯案件內建批量人員權限設定 (`batchUpdateCaseTaskVisibility`，支援「批量加入」、「覆蓋重設」、「不變更」3 種模式)、抽屜日期批次儲存按鈕、討論留言即時響應與開抽屜背景動態拉取 (`getTaskComments`)、鍵盤 Enter 快捷送出、語系字典 (zh-TW / vi-VN)。
 
 ---
@@ -65,11 +65,13 @@
 
 ---
 
-## 🎨 4. 任務組配色、語系 (i18n) 與 Email 門禁登入 / 身分防護
+## 🎨 4. 任務組配色、語系 (i18n)、身分防護與開發者除錯
 
+- **👑 Super Master 全域穿透權限**：系統核心針對超級管理員（`Martin` / `id: 1` / `is_super_master: true`）提供全域案件與任務穿透檢視權限。無論案件由哪位成員發起、任務指派給誰，Super Master 皆能完整檢視與管理所有專案，杜絕跨部門指派時案件被意外隱藏。
 - **🔑 人員控管 Email 白名單門禁 (`#login-modal`)**：系統以「Users」工作表中的 `google_email` 為唯一進站門禁白名單。初次訪問全螢幕彈出驗證 Modal（`handleEmailLogin`），未在名單內之信箱無法查看背景任何系統內容。
 - **🔒 管理員單向密碼鎖 (`ADMIN_PASSCODE`)**：比對為 Super Master (`Martin`) 信箱時，必須額外輸入解鎖密碼（預設 PIN: `8888`，登錄標記紀錄於 `sessionStorage`），密碼正確方可開啟權限控管與範本管理頁籤。
 - **🚪 頂端身分指示器與登出按鈕**：移除舊有可隨意切換身分之下拉選單，改為渲染「`👤 當前登入：[username] ([role_name]) ｜ 🚪 登出/切換帳號`」。點擊登出會安全清除 `localStorage` 並自動跳出登入門禁彈窗。
+- **🛠️ 開發者除錯面板 (`Developer Debugger`)**：右下角提供浮動除錯面板，並由 `updateDebugPanel()` 在初始化及所有視圖切換 (`reloadAllViews`) 時動態即時同步呈現 Hostname、Is GAS Container、loggedInUserEmail、allUsers.length、currentUserId、loginUser、allCases.length 與 Status。
 - **自訂任務組配色**：點擊「🎨 任務組配色設定」可新增、編輯或刪除組別代表色，自動記憶於 `localStorage`。
 - **多國語言 (i18n) 雙向切換**：登入時系統會根據該使用者偏好語系（如繁中 `zh-TW` 或越南文 `vi-VN`）自動進行全站介面翻譯。
 
@@ -157,5 +159,5 @@
   - **即時預覽與一鍵套用**：面板即時運算推算目標日期（附帶星期與推算摘要），並提供「⬅️ 套用為開始日」與「➡️ 套用為截止日」操作，填入後自動觸發 `saveTaskDates(true)` 批量同步，實現無縫操作體驗。
   - **多語系 (i18n) 完整字典擴充**：於繁體中文與越南文字典中補齊推算小工具之完整標籤翻譯。
   - **Super Master 全域權限與跨網域檢視優化**：修復 `getCasesForUser` 對 Super Master (Martin / ID 1) 的全權穿透檢視權限，避免其他成員建立的案件因可見權限過濾而在 Super Master 檢視時被隱藏；並移除 GET 讀取迴圈中不必要的寫入操作，大幅降低 API 延遲。
-  - **全自動代部署更新至 `@49`**：完成代碼編寫與測試後，自動執行 `clasp push`、`clasp deploy -i ...`（版本 `@49`）、`git commit` 與 `git push`，確保雲端 Web App 與本機儲存庫同步至最新版本。
+  - **全自動代部署更新至 `@50`**：完成代碼編寫與測試後，自動執行 `clasp push`、`clasp deploy -i ...`（版本 `@50`）、`git commit` 與 `git push`，確保雲端 Web App 與本機儲存庫同步至最新版本。
 
