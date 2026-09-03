@@ -10,10 +10,10 @@
 
 ### 🛠️ 技術規格
 - **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表（7 大核心工作表）。
-- **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6（日曆）與 Frappe Gantt（甘特圖）。
+- **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6（日曆）。
 - **極速效能架構**：
   - **後端**：全面改採**單一記憶體 2D 陣列批次寫入 (`setValues`)** 與 `SpreadsheetApp.flush()` 強制落盤防護，寫入耗時降至 `<0.05s`。
-  - **前端**：單通道載入 (`getInitialData`) + `Promise.all` 降級備援（首頁載入 `<0.3s`）；`renderActiveViewOnly` 視圖懶加載與 `requestAnimationFrame` 0ms 影格響應，消除全站 DOM 銷毀重繪卡頓。
+  - **前端**：單通道載入 (`getInitialData`) + `Promise.all` 降級備援（首頁載入 `<0.3s`）；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，消除全站 DOM 銷毀重繪卡頓。
 - **門禁與權限控管**：
   - **Email 白名單門禁**：以 `Users.google_email` 為進站名單（`#login-modal`）。
   - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域專案與任務檢視穿透權限，外加單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
@@ -36,11 +36,11 @@
 
 ---
 
-## 🖥️ 3. 核心功能與 4 大檢視模式
+## 🖥️ 3. 核心功能與 3 大檢視模式
 
 ### 📊 A. 個人待辦儀表板 (Personal Dashboard - 預設首頁)
 - **智慧排序與狀態燈號**：自動依 🔴 過期 ➡️ 🟡 48H內急件 ➡️ 🔵 進行中 排序；當日截止日精確解析至 23:59:59 消除過期誤判。
-- **互動操作**：列表中 0ms 勾選完成、點擊案件名稱跳轉案件樹狀圖（帶閃爍高亮定位）、一鍵開啟討論抽屜。
+- **互動操作**：列表中 0ms 原地動畫勾選完成、點擊案件名稱跳轉案件樹狀圖（帶閃爍高亮定位）、一鍵開啟討論抽屜。
 
 ### 📅 B. 日曆模式 (Calendar View)
 - 支援死線狀態燈號（紅/黃/綠/藍）與「組別色彩優先 / 雙色混合 / 死線優先」3 種配色切換。
@@ -54,9 +54,6 @@
   - 任務抽屜內建折疊式時程推算工具，支援專案出發日（`reference_date`）或指定基準日。
   - 支援「◀ 往前 (行前倒算)」與「▶ 往後 (團後順推)」，可勾選「`[v] 僅計臺灣工作天`」自動避開週末與國定假日（支援補班日計算）。
   - 提供即時推算預覽與「⬅️ 套用為開始日」/「➡️ 套用為截止日」一鍵填入並自動批量儲存。
-
-### 📊 D. 甘特圖模式 (Gantt View)
-- 全景時程地圖，支援日/週/月切換與進度百分比 (%) 呈現。
 
 ---
 
@@ -80,7 +77,7 @@
 
 | 階段與日期 | 里程碑核心成果 | 版本 |
 | :--- | :--- | :--- |
-| **Phase 1** (2026-08-17) | 建立專案基礎設施、ORM 模型、權限過濾、FullCalendar & Frappe Gantt 基礎整合。 | MVP |
+| **Phase 1** (2026-08-17) | 建立專案基礎設施、ORM 模型、權限過濾、FullCalendar 基礎整合。 | MVP |
 | **Phase 2** (2026-08-18) | GAS 無伺服器移轉、Google Sheets 資料庫落地、多語系 (zh-TW / vi-VN) 字典。 | v0.2 |
 | **Phase 3** (2026-08-19) | 全站樂觀更新 (0ms 響應)、Task/Case CRUD 與聯動刪除、任務組 10 色彩盤管理。 | v0.3 |
 | **Phase 4** (2026-08-20) | 臺灣工作天計算引擎（國定假日與補班日判定）、Roles 防禦性初始化與權限重構。 | v0.4 |
@@ -89,7 +86,8 @@
 | **Phase 7** (2026-09-01) | 案件批量人員權限持久化修復 (`batchUpdateCaseTaskVisibility` + `parseInt`)、GAS 後端改採記憶體 2D 陣列單次 `setValues` 批次寫入（寫入耗時降至 <0.05s，效能提升 200 倍）、前端 `renderActiveViewOnly` 視圖懶加載。 | `@46` |
 | **Phase 8** (2026-09-02) | 討論留言 0ms 樂觀更新與背景視圖即時連動（氣泡預覽與徽章同步）、開抽屜背景動態拉取最新留言串 (`getTaskComments`)、鍵盤 `Enter` 快捷送出、留言 CRUD 權限控管。 | `@47` |
 | **Phase 9** (2026-09-03) | ⚡ 任務抽屜雙向時程偏移計算機（行前倒算/團後順推 + 臺灣國定假日/補班工作天計算引擎 + 一鍵套用）、Super Master 全域穿透檢視權限、移除 GET 迴圈寫入操作提升效能。 | `@50` |
-| **Phase 10** (2026-09-03) | 待辦勾選 0ms 極速原地 DOM 更新 (In-place Mutation)、解耦 4 大視圖同步重繪、全站視圖 Dirty 標記與切換按需懶加載 (Lazy Evaluation)。 | `@51` |
+| **Phase 10** (2026-09-03) | 待辦勾選 0ms 極速原地 DOM 更新 (In-place Mutation)、解耦視圖同步重繪、全站視圖 Dirty 標記與切換按需懶加載 (Lazy Evaluation)。 | `@51` |
+| **Phase 11** (2026-09-03) | 移除甘特圖模式（減重前端架構與消除依賴庫負載）、儀表板 0ms 原地動畫回饋 (`dashboard-task-row` in-place mutation) 與平滑重繪。 | `@52` |
 
 ---
 
@@ -99,4 +97,4 @@
 2. **📁 雲端硬碟檔案直接上傳**：於抽屜組件中支援直接上傳圖片/PDF 至該 Case 的 `drive_url` 資料夾。
 3. **📊 高級統計與專案報告匯出**：一鍵匯出專案進度報告（PDF/Excel）與過期任務統計。
 4. **📶 離線快取與 PWA 支援**：導入 Service Worker 與 LocalStorage 快取，支援離線唯讀查詢。
-5. **🔗 任務相依性關聯 (Task Dependencies)**：甘特圖支援前置任務連線與延期連鎖警告。
+5. **🔗 任務相依性關聯 (Task Dependencies)**：支援前置任務連鎖關聯與延期警告提示。

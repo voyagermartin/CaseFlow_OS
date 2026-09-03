@@ -35,9 +35,6 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     <!-- FullCalendar Locales -->
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales-all.global.min.js"></script>
-    <!-- Frappe Gantt CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
-    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -98,53 +95,6 @@
         .fc .fc-button-primary:disabled {
             background-color: #1e1b4b;
             border-color: #1e1b4b;
-        }
-        /* Frappe Gantt Custom dark tweaks & High Contrast Text */
-        .gantt .grid-header {
-            fill: #0f172a;
-            stroke: #334155;
-        }
-        .gantt text {
-            fill: #f8fafc !important;
-        }
-        .gantt .lower-text {
-            fill: #e2e8f0 !important; /* High contrast date text */
-            font-weight: 600 !important;
-            font-size: 12px !important;
-        }
-        .gantt .upper-text {
-            fill: #818cf8 !important; /* Indigo accent for Month Header */
-            font-weight: 700 !important;
-            font-size: 13px !important;
-        }
-        .gantt .grid-row {
-            fill: #020617;
-        }
-        .gantt .grid-row:nth-child(even) {
-            fill: #0f172a;
-        }
-        .gantt .row-line {
-            stroke: #1e293b;
-        }
-        .gantt .tick {
-            stroke: #334155;
-        }
-        .gantt .bar {
-            fill: #818cf8;
-        }
-        .gantt .bar-progress {
-            fill: #4f46e5;
-        }
-        .gantt .bar-label {
-            fill: #ffffff !important;
-            font-weight: 600;
-            font-size: 11px;
-        }
-        .gantt-container {
-            background-color: #020617;
-            border: 1px solid #1e293b;
-            border-radius: 1rem;
-            overflow: auto;
         }
     </style>
 </head>
@@ -208,9 +158,6 @@
                 </button>
                 <button onclick="switchView('case')" id="tab-case" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="caseTreeTab">📋 案件樹狀</span>
-                </button>
-                <button onclick="switchView('gantt')" id="tab-gantt" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-                    <span data-i18n="ganttTab">📊 甘特圖模式</span>
                 </button>
                 <button onclick="switchView('user-control')" id="tab-user-control" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="userControlTab">👥 人員控管</span>
@@ -346,21 +293,6 @@
                 </div>
                 <div id="cases-tree-container" class="space-y-6">
                     <!-- Dynamic case cards go here -->
-                </div>
-            </div>
-
-            <!-- Gantt View Container -->
-            <div id="view-gantt" class="w-full hidden">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-slate-100" data-i18n="ganttTitle">甘特圖時程全局圖</h3>
-                    <div class="flex gap-2">
-                        <button onclick="changeGanttMode('Day')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="dayView">日</button>
-                        <button onclick="changeGanttMode('Week')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="weekView">週</button>
-                        <button onclick="changeGanttMode('Month')" class="px-3 py-1 bg-slate-850 border border-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-700" data-i18n="monthView">月</button>
-                    </div>
-                </div>
-                <div class="gantt-target overflow-x-auto">
-                    <svg id="gantt-svg"></svg>
                 </div>
             </div>
 
@@ -1371,8 +1303,6 @@
         let showArchivedCases = false;
         let activeView = 'dashboard';
         let calendar = null;
-        let gantt = null;
-        let ganttViewMode = 'Day';
         let selectedTaskId = null;
         let originalNotes = '';
         let originalStartDate = '';
@@ -1383,7 +1313,6 @@
 
         // Lazy rendering dirty flags
         let isCalendarDirty = true;
-        let isGanttDirty = true;
         let isDashboardDirty = true;
         let isCaseTreeDirty = true;
 
@@ -1391,7 +1320,6 @@
             if (activeView !== 'case') isCaseTreeDirty = true;
             if (activeView !== 'dashboard') isDashboardDirty = true;
             if (activeView !== 'calendar') isCalendarDirty = true;
-            if (activeView !== 'gantt') isGanttDirty = true;
         }
 
         // On Document Ready - Optimized parallel batch initial load
@@ -2608,9 +2536,6 @@
             } else if (activeView === 'calendar') {
                 renderCalendar();
                 isCalendarDirty = false;
-            } else if (activeView === 'gantt') {
-                renderGantt();
-                isGanttDirty = false;
             } else if (activeView === 'user-control') {
                 renderUserControl();
             } else if (activeView === 'template-control') {
@@ -2625,11 +2550,10 @@
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-calendar').classList.add('hidden');
             document.getElementById('view-case').classList.add('hidden');
-            document.getElementById('view-gantt').classList.add('hidden');
             document.getElementById('view-user-control').classList.add('hidden');
             document.getElementById('view-template-control').classList.add('hidden');
             
-            const tabs = ['dashboard', 'calendar', 'case', 'gantt', 'user-control', 'template-control'];
+            const tabs = ['dashboard', 'calendar', 'case', 'user-control', 'template-control'];
             tabs.forEach(t => {
                 const tabEl = document.getElementById(`tab-${t}`);
                 if (tabEl) {
@@ -2650,11 +2574,6 @@
                     isCalendarDirty = false;
                 } else {
                     calendar.updateSize();
-                }
-            } else if (viewName === 'gantt') {
-                if (isGanttDirty) {
-                    renderGantt();
-                    isGanttDirty = false;
                 }
             } else if (viewName === 'case') {
                 if (isCaseTreeDirty) {
@@ -3224,88 +3143,6 @@
             }
         }
 
-        // --- Gantt Chart View Rendering ---
-        function renderGantt() {
-            const svg = document.getElementById('gantt-svg');
-            if (!svg) return;
-
-            const tasks = [];
-            allCases.forEach(c => {
-                if (c.is_archived) return;
-                // Find start & end date bounds
-                let minDate = null;
-                let maxDate = null;
-                
-                c.groups.forEach(g => {
-                    g.tasks.forEach(t => {
-                        if (t.start_date || t.due_date) {
-                            const start = new Date(t.start_date || t.due_date);
-                            const end = new Date(t.due_date || t.start_date);
-                            if (!minDate || start < minDate) minDate = start;
-                            if (!maxDate || end > maxDate) maxDate = end;
-                        }
-                    });
-                });
-
-                if (!minDate) minDate = new Date();
-                if (!maxDate) maxDate = new Date(Date.now() + 86400000 * 7);
-
-                const formatDateStr = (d) => d.toISOString().split('T')[0];
-
-                // Parent summary bar
-                tasks.push({
-                    id: `case-${c.id}`,
-                    name: `📁 ${c.title.substring(0, 15)}...`,
-                    start: formatDateStr(minDate),
-                    end: formatDateStr(maxDate),
-                    progress: 50,
-                    dependencies: ''
-                });
-
-                c.groups.forEach(g => {
-                    g.tasks.forEach(t => {
-                        tasks.push({
-                            id: `task-${t.id}`,
-                            name: `├─ ${t.title}`,
-                            start: t.start_date || formatDateStr(minDate),
-                            end: t.due_date || formatDateStr(maxDate),
-                            progress: t.is_completed ? 100 : 0,
-                            dependencies: '',
-                            custom_class: t.is_completed ? 'gantt-completed' : ''
-                        });
-                    });
-                });
-            });
-
-            if (tasks.length === 0) {
-                svg.innerHTML = '';
-                return;
-            }
-
-            try {
-                const user = allUsers.find(u => u.id === currentUserId);
-                const ganttLang = (user && user.language === 'vi-VN') ? 'en' : 'zh';
-
-                gantt = new Gantt("#gantt-svg", tasks, {
-                    view_mode: ganttViewMode,
-                    language: ganttLang,
-                    on_click: function (task) {
-                        if (task.id.startsWith('task-')) {
-                            const taskId = parseInt(task.id.replace('task-', ''));
-                            openTaskDrawer(taskId);
-                        }
-                    }
-                });
-            } catch (err) {
-                console.error("甘特圖渲染錯誤:", err);
-            }
-        }
-
-        function changeGanttMode(mode) {
-            ganttViewMode = mode;
-            renderGantt();
-        }
-
         // ==========================================
         // --- Personal Dashboard Rendering Logic ---
         // ==========================================
@@ -3412,6 +3249,7 @@
             myTasks.forEach(item => {
                 const t = item.task;
                 const tr = document.createElement('tr');
+                tr.id = `dashboard-task-row-${t.id}`;
                 tr.className = "border-b border-slate-850 hover:bg-slate-900/40 transition-colors text-xs text-slate-300";
 
                 let statusBadge = '';
@@ -3436,7 +3274,7 @@
                         : `<span class="text-slate-400">還剩 ${days} 天</span>`;
                 }
 
-                const checkbox = `<input type="checkbox" onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">`;
+                const checkbox = `<input type="checkbox" id="dashboard-task-chk-${t.id}" onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">`;
                 const caseLink = `<button onclick="jumpToCase(${item.caseId})" class="text-sm font-bold text-indigo-400 hover:text-indigo-300 text-left hover:underline truncate max-w-[200px] block">${item.caseName}</button>`;
                 
                 const groupColor = getGroupColor(item.groupName);
@@ -3496,8 +3334,6 @@
 
         // --- Actions Processing API Wrapper ---
 
-        // --- Actions Processing API Wrapper ---
-
         async function toggleTask(taskId) {
             const numTaskId = parseInt(taskId);
 
@@ -3519,7 +3355,7 @@
             // 3. Mark background views as dirty so they refresh on tab switch
             markOtherViewsDirty();
 
-            // 4. In-place DOM update for 0ms visual feedback
+            // 4. In-place DOM update for 0ms instantaneous visual feedback
             // (a) Update Case Tree DOM if present
             const caseChk = document.getElementById(`case-task-chk-${numTaskId}`);
             if (caseChk) {
@@ -3538,8 +3374,21 @@
 
             // (b) Active View handling
             if (activeView === 'dashboard') {
-                // Re-render dashboard to immediately update overdue/near/progress/completed counters & list
-                renderDashboard();
+                // Immediate in-place animation on dashboard row to prevent UI freeze
+                const dashRow = document.getElementById(`dashboard-task-row-${numTaskId}`);
+                const dashChk = document.getElementById(`dashboard-task-chk-${numTaskId}`);
+                if (dashChk) dashChk.checked = isCompleted;
+                if (dashRow) {
+                    if (isCompleted) {
+                        dashRow.classList.add('opacity-40', 'line-through');
+                    } else {
+                        dashRow.classList.remove('opacity-40', 'line-through');
+                    }
+                }
+                // Delay table re-render slightly so user enjoys the 0ms click animation
+                setTimeout(() => {
+                    if (activeView === 'dashboard') renderDashboard();
+                }, 180);
                 isDashboardDirty = false;
             } else if (activeView === 'case') {
                 // Case tree already in-place updated above in 0ms!
@@ -3547,9 +3396,6 @@
             } else if (activeView === 'calendar') {
                 renderCalendar();
                 isCalendarDirty = false;
-            } else if (activeView === 'gantt') {
-                renderGantt();
-                isGanttDirty = false;
             }
 
             // 5. Background API call (silent = true)
