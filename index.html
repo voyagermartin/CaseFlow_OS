@@ -96,6 +96,16 @@
             background-color: #1e1b4b;
             border-color: #1e1b4b;
         }
+        /* Dynamic Root Font Scaling */
+        html.font-scale-normal {
+            font-size: 16px;
+        }
+        html.font-scale-comfort {
+            font-size: 18px;
+        }
+        html.font-scale-large {
+            font-size: 20px;
+        }
     </style>
 </head>
 <body class="h-full flex flex-col overflow-hidden bg-slate-950">
@@ -192,6 +202,24 @@
                     <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
                 </button>
             </nav>
+            <!-- Font Size Scaling Switcher -->
+            <div class="bg-slate-800/40 border border-slate-800 p-3 rounded-xl space-y-1.5 mt-3">
+                <div class="flex items-center justify-between text-xs text-slate-300 font-bold">
+                    <span data-i18n="fontSizeLabel">🔠 字體大小</span>
+                    <span class="text-[10px] text-slate-500 font-normal">Font Size</span>
+                </div>
+                <div class="flex items-center gap-1.5 pt-0.5">
+                    <button id="btn-font-normal" onclick="setFontScale('normal')" class="flex-1 py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm border border-indigo-500 text-center transition-colors" data-i18n="fontNormal">
+                        標準
+                    </button>
+                    <button id="btn-font-comfort" onclick="setFontScale('comfort')" class="flex-1 py-1 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 text-center transition-colors" data-i18n="fontComfort">
+                        舒適
+                    </button>
+                    <button id="btn-font-large" onclick="setFontScale('large')" class="flex-1 py-1 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 text-center transition-colors" data-i18n="fontLarge">
+                        大字
+                    </button>
+                </div>
+            </div>
             <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5 mt-3">
                 <div class="font-bold text-slate-300" data-i18n="guideTitle">💡 每日檢視指引</div>
                 <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-red-500"></span><span data-i18n="redLight">🔴 已過期未完成</span></div>
@@ -580,26 +608,26 @@
 
             <!-- Visibility / Assignee Config -->
             <div class="space-y-3">
-                <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="visibilityLabel">可見人員設定 (誰能看見此任務與留言)</label>
+                <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="visibilityLabel">可見人員設定 (誰能看見此任務與留言)</label>
                 <div id="drawer-task-visibility" class="grid grid-cols-2 gap-2">
                     <!-- Checkboxes of users -->
                 </div>
-                <button id="drawer-save-vis-btn" onclick="saveTaskVisibility()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors" data-i18n="updateVisBtn">
+                <button id="drawer-save-vis-btn" onclick="saveTaskVisibility()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl transition-colors" data-i18n="updateVisBtn">
                     更新可見權限
                 </button>
             </div>
 
             <!-- Comments Thread -->
             <div class="space-y-4 pt-4 border-t border-slate-800">
-                <label class="text-xs text-slate-500 font-semibold uppercase block" data-i18n="commentLabel">項目級討論留言 (@精準對象)</label>
+                <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase block" data-i18n="commentLabel">項目級討論留言 (@精準對象)</label>
                 <div id="drawer-comments-list" class="space-y-3">
                     <!-- Dynamically rendered comments -->
                 </div>
                 
                 <!-- New Comment Form -->
                 <div class="flex gap-2">
-                    <input type="text" id="new-comment-input" onkeydown="if(event.key === 'Enter') { event.preventDefault(); submitComment(); }" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-brand-500" data-i18n="commentPlaceholder" placeholder="寫點留言...可使用 @小明 標註">
-                    <button onclick="submitComment()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors" data-i18n="submitCommentBtn">
+                    <input type="text" id="new-comment-input" onkeydown="if(event.key === 'Enter') { event.preventDefault(); submitComment(); }" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-brand-500 placeholder:text-slate-500" data-i18n="commentPlaceholder" placeholder="寫點留言...可使用 @小明 標註">
+                    <button onclick="submitComment()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shrink-0" data-i18n="submitCommentBtn">
                         送出
                     </button>
                 </div>
@@ -611,11 +639,11 @@
     <div id="drawer-backdrop" onclick="closeTaskDrawer()" class="fixed inset-0 bg-slate-950/60 z-30 hidden backdrop-blur-sm"></div>
 
     <!-- New Case Modal -->
-    <div id="new-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="new-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeNewCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-xl font-bold text-slate-100" data-i18n="newCaseModalTitle">🚀 發起新案件 (New Case)</h3>
+                <h3 class="text-lg sm:text-xl font-bold text-slate-100" data-i18n="newCaseModalTitle">🚀 發起新案件 (New Case)</h3>
                 <button onclick="closeNewCaseModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -625,31 +653,31 @@
             
             <div class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-sm text-slate-300 font-bold uppercase" data-i18n="caseNameLabel">案件名稱 / 團號</label>
-                    <input type="text" id="new-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseNamePlaceholder" placeholder="例如：2026/09/15 馬航怡保專案">
+                    <label class="text-xs sm:text-sm text-slate-300 font-bold uppercase" data-i18n="caseNameLabel">案件名稱 / 團號</label>
+                    <input type="text" id="new-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm sm:text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseNamePlaceholder" placeholder="例如：2026/09/15 馬航怡保專案">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseDescLabel">案件描述</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="caseDescLabel">案件描述</label>
                     <textarea id="new-case-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" data-i18n="caseDescPlaceholder" placeholder="請填寫專案背景簡介..."></textarea>
                 </div>
                 
                 <!-- Template Selection -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="applyTemplate">套用案件範本</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="applyTemplate">套用案件範本</label>
                         <select id="new-case-template" onchange="handleNewCaseTemplateChange(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                             <!-- Option value="" is handled dynamically or loaded in javascript -->
                         </select>
                     </div>
                     <div id="new-case-ref-date-container" class="space-y-1.5 hidden">
-                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="referenceDate">出發日期 (基準日)</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="referenceDate">出發日期 (基準日)</label>
                         <input type="date" id="new-case-ref-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                     </div>
                 </div>
 
                 <!-- Briefing Option Checkboxes Container -->
                 <div id="new-case-briefing-container" class="space-y-2 hidden bg-slate-950/40 border border-slate-850 p-4 rounded-xl">
-                    <label class="text-xs text-indigo-400 font-semibold uppercase flex items-center gap-1">
+                    <label class="text-xs sm:text-sm text-indigo-400 font-semibold uppercase flex items-center gap-1">
                         <span>📢 選擇要加入 Briefing 的注意事項：</span>
                     </label>
                     <div id="new-case-briefing-options" class="grid grid-cols-1 gap-2.5 max-h-[160px] overflow-y-auto pr-1">
@@ -658,7 +686,7 @@
                 </div>
 
                 <div id="new-case-groups-container" class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="caseGroupsLabel">預設任務群組 (以逗號分隔)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="caseGroupsLabel">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="new-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" value="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
             </div>
@@ -671,12 +699,12 @@
     </div>
 
     <!-- Group Color Settings Modal -->
-    <div id="group-color-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="group-color-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeGroupColorModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[540px] max-h-[85vh] flex flex-col relative z-10 shadow-2xl overflow-hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col relative z-10 shadow-2xl overflow-hidden">
             <!-- Modal Header -->
-            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2" data-i18n="groupColorModalTitle">
+            <div class="p-4 sm:p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <h3 class="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2" data-i18n="groupColorModalTitle">
                     🎨 任務組顏色與顯示設定
                 </h3>
                 <button onclick="closeGroupColorModal()" class="text-slate-400 hover:text-slate-200">
@@ -687,42 +715,42 @@
             </div>
             
             <!-- Modal Body (Scrollable) -->
-            <div class="p-6 space-y-6 overflow-y-auto">
+            <div class="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto">
                 <!-- Mode Selection -->
                 <div class="space-y-3">
-                    <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="colorModeLabel">日曆色彩顯示模式</label>
-                    <div class="grid grid-cols-1 gap-2 text-xs">
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="colorModeLabel">日曆色彩顯示模式</label>
+                    <div class="grid grid-cols-1 gap-2 text-xs sm:text-sm">
                         <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
                             <input type="radio" name="color-mode-choice" value="group" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
                             <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeGroupFirst">組別色彩優先</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeGroupFirstDesc">日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。</span>
+                                <span class="font-bold text-slate-200 block text-xs sm:text-sm" data-i18n="modeGroupFirst">組別色彩優先</span>
+                                <span class="text-slate-400 text-xs" data-i18n="modeGroupFirstDesc">日曆事件背景為任務組專屬顏色，標題帶有 🔴/🟡/🟢 死線狀態燈號。</span>
                             </div>
                         </label>
                         <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
                             <input type="radio" name="color-mode-choice" value="hybrid" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
                             <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeHybrid">雙色混合模式</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeHybridDesc">日曆事件背景為任務組專屬顏色，左側邊框呈現死線狀態警告色（紅/黃/綠/藍）。</span>
+                                <span class="font-bold text-slate-200 block text-xs sm:text-sm" data-i18n="modeHybrid">雙色混合模式</span>
+                                <span class="text-slate-400 text-xs" data-i18n="modeHybridDesc">日曆事件背景為任務組專屬顏色，左側邊框呈現死線狀態警告色（紅/黃/綠/藍）。</span>
                             </div>
                         </label>
                         <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-colors">
                             <input type="radio" name="color-mode-choice" value="status" class="mt-0.5 text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700">
                             <div>
-                                <span class="font-bold text-slate-200 block" data-i18n="modeStatusFirst">死線狀態優先</span>
-                                <span class="text-slate-400 text-[11px]" data-i18n="modeStatusFirstDesc">維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。</span>
+                                <span class="font-bold text-slate-200 block text-xs sm:text-sm" data-i18n="modeStatusFirst">死線狀態優先</span>
+                                <span class="text-slate-400 text-xs" data-i18n="modeStatusFirstDesc">維持傳統模式（已過期紅、即將到期黃、進行中藍、完成綠），標題保留組別名稱。</span>
                             </div>
                         </label>
                     </div>
                 </div>
 
                 <!-- Add New Group Form -->
-                <div class="space-y-2 p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
-                    <label class="text-xs text-slate-300 font-semibold block" data-i18n="addNewGroupTitle">➕ 新增自訂任務組</label>
+                <div class="space-y-2 p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl">
+                    <label class="text-xs sm:text-sm text-slate-300 font-semibold block" data-i18n="addNewGroupTitle">➕ 新增自訂任務組</label>
                     <div class="flex items-center gap-2">
-                        <input type="text" id="new-group-name-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500" data-i18n="newGroupPlaceholder" placeholder="輸入任務組名稱 (如: 簽證, 財務)..." onkeydown="if(event.key==='Enter') handleAddNewGroup()">
-                        <input type="color" id="new-group-color-picker" value="#3b82f6" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded overflow-hidden shrink-0">
-                        <button onclick="handleAddNewGroup()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0" data-i18n="addGroupBtn">
+                        <input type="text" id="new-group-name-input" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-brand-500" data-i18n="newGroupPlaceholder" placeholder="輸入任務組名稱 (如: 簽證, 財務)..." onkeydown="if(event.key==='Enter') handleAddNewGroup()">
+                        <input type="color" id="new-group-color-picker" value="#3b82f6" class="w-8 h-8 bg-transparent border-0 cursor-pointer rounded overflow-hidden shrink-0">
+                        <button onclick="handleAddNewGroup()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg transition-colors shrink-0" data-i18n="addGroupBtn">
                             新增
                         </button>
                     </div>
@@ -731,8 +759,8 @@
                 <!-- Group Color List -->
                 <div class="space-y-3 pt-4 border-t border-slate-800">
                     <div class="flex justify-between items-center">
-                        <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="groupColorListTitle">各任務組指定顏色</label>
-                        <button onclick="clearAllGroupColors()" class="text-[11px] text-red-400 hover:text-red-300 underline transition-colors" data-i18n="clearAllGroupsBtn">🗑️ 清空所有任務組</button>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase tracking-wider block" data-i18n="groupColorListTitle">各任務組指定顏色</label>
+                        <button onclick="clearAllGroupColors()" class="text-xs text-red-400 hover:text-red-300 underline transition-colors" data-i18n="clearAllGroupsBtn">🗑️ 清空所有任務組</button>
                     </div>
                     <div id="group-colors-editor-list" class="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
                         <!-- Dynamically generated list of task groups and color pickers -->
@@ -750,11 +778,11 @@
     </div>
 
     <!-- Template Create/Edit Modal -->
-    <div id="template-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="template-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeTemplateModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 id="template-modal-title" class="text-lg font-bold text-slate-100">🚀 新增範本</h3>
+                <h3 id="template-modal-title" class="text-lg sm:text-xl font-bold text-slate-100">🚀 新增範本</h3>
                 <button onclick="closeTemplateModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -765,23 +793,23 @@
             <div class="space-y-4">
                 <input type="hidden" id="template-modal-id">
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateNameLabel">範本名稱</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="templateNameLabel">範本名稱</label>
                     <input type="text" id="template-modal-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：馬航怡保5天標準團範本">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateDescLabel">範本描述</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="templateDescLabel">範本描述</label>
                     <textarea id="template-modal-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本適用場景或簡要說明..."></textarea>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">預置案件描述 (套用範本時自動代入)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">預置案件描述 (套用範本時自動代入)</label>
                     <textarea id="template-modal-default-desc" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="填寫此範本套用後，新案件預設的描述、待辦歷程或重要預置事項..."></textarea>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">備選注意事項清單 (供建立案件時勾選)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">備選注意事項清單 (供建立案件時勾選)</label>
                     <textarea id="template-modal-briefing-options" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="每行填寫一筆，格式為：主題 | 詳細注意事項內容&#10;例如：&#10;機票注意 | 航司使用 JX，票期 14 天&#10;保險注意 | 確實投保海外醫療險"></textarea>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="templateGroupsLabel">預設任務群組 (以逗號分隔)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="templateGroupsLabel">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="template-modal-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" value="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
             </div>
@@ -794,11 +822,11 @@
     </div>
 
     <!-- Template Task Create/Edit Modal -->
-    <div id="template-task-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="template-task-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeTemplateTaskModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 id="template-task-modal-title" class="text-lg font-bold text-slate-100">🚀 新增預設任務</h3>
+                <h3 id="template-task-modal-title" class="text-lg sm:text-xl font-bold text-slate-100">🚀 新增預設任務</h3>
                 <button onclick="closeTemplateTaskModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -809,29 +837,29 @@
             <div class="space-y-4">
                 <input type="hidden" id="template-task-modal-id">
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">任務群組</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">任務群組</label>
                     <select id="template-task-modal-group" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                         <!-- Options loaded dynamically -->
                     </select>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">任務名稱</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">任務名稱</label>
                     <input type="text" id="template-task-modal-title-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：確認遊覽車車號">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="startOffsetLabel">開始偏移天數</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="startOffsetLabel">開始偏移天數</label>
                         <input type="number" id="template-task-modal-start-offset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" value="0">
-                        <span class="text-[10px] text-slate-500 block" data-i18n="startOffsetDesc">例：-30 代表出發前 30 天</span>
+                        <span class="text-xs text-slate-500 block" data-i18n="startOffsetDesc">例：-30 代表出發前 30 天</span>
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase" data-i18n="dueOffsetLabel">截止偏移天數</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase" data-i18n="dueOffsetLabel">截止偏移天數</label>
                         <input type="number" id="template-task-modal-due-offset" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" value="0">
-                        <span class="text-[10px] text-slate-500 block" data-i18n="dueOffsetDesc">例：-15 代表出發前 15 天</span>
+                        <span class="text-xs text-slate-500 block" data-i18n="dueOffsetDesc">例：-15 代表出發前 15 天</span>
                     </div>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">任務備註 / SOP</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">任務備註 / SOP</label>
                     <textarea id="template-task-modal-notes" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="輸入此項目之 SOP、聯絡對象或應注意事項..."></textarea>
                 </div>
             </div>
@@ -844,11 +872,11 @@
     </div>
 
     <!-- Edit Case Modal -->
-    <div id="edit-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="edit-case-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeEditCaseModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[500px] p-6 relative z-10 shadow-2xl space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-xl font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
+                <h3 class="text-lg sm:text-xl font-bold text-slate-100">✏️ 編輯案件 (Edit Case)</h3>
                 <button onclick="closeEditCaseModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -860,34 +888,34 @@
             
             <div class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-sm text-slate-300 font-bold uppercase">案件名稱 / 團號</label>
-                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
+                    <label class="text-xs sm:text-sm text-slate-300 font-bold uppercase">案件名稱 / 團號</label>
+                    <input type="text" id="edit-case-title" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm sm:text-base font-semibold text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：2026/09/15 馬航怡保專案">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">案件描述</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">案件描述</label>
                     <textarea id="edit-case-desc" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="請填寫專案背景簡介..."></textarea>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">雲端硬碟連結 (Drive URL)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">雲端硬碟連結 (Drive URL)</label>
                     <input type="text" id="edit-case-drive-url" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="https://drive.google.com/drive/folders/...">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">出發日期 / 基準日 (Reference Date)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">出發日期 / 基準日 (Reference Date)</label>
                     <input type="date" id="edit-case-ref-date" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">預設任務群組 (以逗號分隔)</label>
                     <input type="text" id="edit-case-groups" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-brand-500" placeholder="票務與交通, LOCAL 與 住宿, 名單與證件">
                 </div>
 
                 <!-- Member Visibility & Permission Settings -->
                 <div class="space-y-2 pt-3 border-t border-slate-800/80">
                     <div class="flex justify-between items-center">
-                        <label class="text-xs text-slate-300 font-bold uppercase flex items-center gap-1.5">
+                        <label class="text-xs sm:text-sm text-slate-300 font-bold uppercase flex items-center gap-1.5">
                             <span>🔒 案件可見成員設定</span>
-                            <span class="text-[10px] text-slate-500 font-normal">(誰能看見此專案與任務)</span>
+                            <span class="text-xs text-slate-500 font-normal">(誰能看見此專案與任務)</span>
                         </label>
-                        <div class="flex gap-2 text-[11px]">
+                        <div class="flex gap-2 text-xs">
                             <button type="button" onclick="toggleAllEditCaseUsers(true)" class="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">全選</button>
                             <span class="text-slate-600">|</span>
                             <button type="button" onclick="toggleAllEditCaseUsers(false)" class="text-slate-400 hover:text-slate-300 transition-colors font-medium">取消全選</button>
@@ -899,8 +927,8 @@
                     </div>
 
                     <!-- Sync Mode Selector -->
-                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
-                        <span class="text-slate-400 font-semibold block">同步套用模式：</span>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-2 text-xs sm:text-sm">
+                        <span class="text-slate-300 font-semibold block">同步套用模式：</span>
                         <div class="space-y-1.5">
                             <label class="flex items-center gap-2 cursor-pointer hover:text-slate-200 text-slate-300">
                                 <input type="radio" name="edit-case-vis-mode" value="append" checked class="text-brand-600 bg-slate-900 border-slate-700 focus:ring-brand-500">
@@ -927,11 +955,11 @@
     </div>
 
     <!-- User Create/Edit Modal -->
-    <div id="user-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div id="user-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
         <div onclick="closeUserModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-[480px] p-6 relative z-10 shadow-2xl space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 id="user-modal-title" class="text-lg font-bold text-slate-100">👤 新增成員 (New User)</h3>
+                <h3 id="user-modal-title" class="text-lg sm:text-xl font-bold text-slate-100">👤 新增成員 (New User)</h3>
                 <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-200">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -942,29 +970,29 @@
             <input type="hidden" id="edit-user-id">
             <div class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">成員姓名 / 代號</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">成員姓名 / 代號</label>
                     <input type="text" id="user-username-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：OP_Ning">
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">指派職位 (Role)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">指派職位 (Role)</label>
                     <select id="user-role-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                         <!-- Loaded dynamically -->
                     </select>
                 </div>
                 <div class="space-y-1.5">
-                    <label class="text-xs text-slate-400 font-semibold uppercase">Google 電子信箱 (未來帳號綁定)</label>
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">Google 電子信箱 (未來帳號綁定)</label>
                     <input type="email" id="user-email-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：ning@gmail.com (選填)">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase">頭像顏色</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">頭像顏色</label>
                         <div class="flex items-center gap-2">
                             <input type="color" id="user-color-input" value="#4f46e5" class="w-10 h-10 bg-transparent border-0 cursor-pointer rounded overflow-hidden">
-                            <span class="text-xs text-slate-500">點擊挑選顏色</span>
+                            <span class="text-xs text-slate-400">點擊挑選顏色</span>
                         </div>
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-400 font-semibold uppercase">偏好語系</label>
+                        <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">偏好語系</label>
                         <select id="user-lang-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500">
                             <option value="zh-TW">繁體中文 (zh-TW)</option>
                             <option value="vi-VN">越南文 (vi-VN)</option>
@@ -981,8 +1009,8 @@
     </div>
 
     <!-- Unauthorized User Blocking Overlay -->
-    <div id="unauthorized-overlay" class="fixed inset-0 flex items-center justify-center z-[200] bg-slate-950/90 backdrop-blur-md hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-8 text-center shadow-2xl space-y-6 relative overflow-hidden">
+    <div id="unauthorized-overlay" class="fixed inset-0 flex items-center justify-center z-[200] bg-slate-950/90 backdrop-blur-md hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl space-y-6 relative overflow-hidden">
             <div class="absolute -top-10 -left-10 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl"></div>
             <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl"></div>
             
@@ -991,18 +1019,64 @@
             </div>
             
             <div class="space-y-2 relative z-10">
-                <h3 class="text-xl font-bold text-slate-100">存取受限：未授權的帳戶</h3>
+                <h3 class="text-lg sm:text-xl font-bold text-slate-100">存取受限：未授權的帳戶</h3>
                 <p class="text-xs text-slate-400">Access Restricted: Unauthorized Account</p>
             </div>
             
             <div class="bg-slate-950/60 border border-slate-850 p-4 rounded-xl text-left space-y-3 relative z-10">
-                <div class="text-xs text-slate-400 leading-relaxed">
+                <div class="text-xs sm:text-sm text-slate-400 leading-relaxed">
                     您的 Google 帳號 Email 為：
                     <div id="unauthorized-email-display" class="font-mono text-indigo-300 font-semibold bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg mt-1 break-all select-all">
                         unknown@gmail.com
                     </div>
                 </div>
-                <div class="text-xs text-slate-400 leading-relaxed">
+                <div class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    本系統 (CaseFlow OS) 目前僅開放給受邀的團隊成員進站。請聯繫您的系統管理員 **Martin** 將此 Email 開通綁定至您的成員帳號中。
+                </div>
+            </div>
+            
+            <div class="pt-2 relative z-10">
+                <a href="https://mail.google.com" target="_blank" class="w-full block bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200">
+                    前往 Gmail 收信 / 切換帳戶
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Create/Edit Modal -->
+    <div id="role-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden p-3">
+        <div onclick="closeRoleModal()" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 relative z-10 shadow-2xl space-y-5 sm:space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="role-modal-title" class="text-lg sm:text-xl font-bold text-slate-100">🛡️ 職位設定</h3>
+                <button onclick="closeRoleModal()" class="text-slate-400 hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="edit-role-id">
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs sm:text-sm text-slate-400 font-semibold uppercase">職位名稱</label>
+                    <input type="text" id="role-name-input" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-brand-500" placeholder="例如：實習生">
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/50 cursor-pointer">
+                    <input type="checkbox" id="role-can-create-case-chk" class="text-indigo-600 focus:ring-brand-500 bg-slate-900 border-slate-700 rounded w-4 h-4">
+                    <div>
+                        <span class="font-bold text-slate-200 text-xs sm:text-sm block">可新增案件與指派成員</span>
+                        <span class="text-slate-400 text-xs">打勾代表此職位成員可新增專案案件，並可自由設定任務的可見成員。</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeRoleModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-sm font-semibold transition-colors">取消</button>
+                <button onclick="submitRoleForm()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-semibold transition-colors">儲存</button>
+            </div>
+        </div>
+    </div><div class="text-xs text-slate-400 leading-relaxed">
                     本系統 (CaseFlow OS) 目前僅開放給受邀的團隊成員進站。請聯繫您的系統管理員 **Martin** 將此 Email 開通綁定至您的成員帳號中。
                 </div>
             </div>
@@ -1161,6 +1235,10 @@
                 calcWorkdaysOnly: "僅計臺灣工作天",
                 calcApplyStart: "⬅️ 套用為開始日",
                 calcApplyDue: "➡️ 套用為截止日",
+                fontSizeLabel: "🔠 字體大小",
+                fontNormal: "標準",
+                fontComfort: "舒適",
+                fontLarge: "大字",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -1253,6 +1331,10 @@
                 calcWorkdaysOnly: "Chỉ tính ngày làm việc (Đài Loan)",
                 calcApplyStart: "⬅️ Áp dụng làm ngày bắt đầu",
                 calcApplyDue: "➡️ Áp dụng làm hạn chót",
+                fontSizeLabel: "🔠 Cỡ chữ",
+                fontNormal: "Chuẩn",
+                fontComfort: "Vừa",
+                fontLarge: "Lớn",
             }
         };
 
@@ -1337,6 +1419,11 @@
 
         // On Document Ready - Optimized parallel batch initial load
         document.addEventListener('DOMContentLoaded', async () => {
+            // Apply saved font size scale
+            const currentFontScale = getFontScale();
+            applyFontScale(currentFontScale);
+            updateFontScaleButtons(currentFontScale);
+
             showLoading(true);
 
             // Update debug hostname and container flag
@@ -2351,16 +2438,16 @@
             if (days === null) return "";
             
             if (days > 0) {
-                const colorClass = (days <= 5) ? "text-amber-500 font-semibold" : "text-slate-400 font-medium";
-                return `<span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-950/80 border border-slate-800 ${colorClass} flex items-center gap-1 shrink-0">
+                const colorClass = (days <= 5) ? "text-amber-400 font-bold" : "text-slate-300 font-semibold";
+                return `<span class="text-xs px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-800 ${colorClass} flex items-center gap-1.5 shrink-0">
                     ⏱️ 剩 ${days} 工作天出發
                 </span>`;
             } else if (days === 0) {
-                return `<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-950/80 border border-emerald-900/60 text-emerald-400 flex items-center gap-1 shrink-0 animate-pulse">
+                return `<span class="text-xs px-2.5 py-1 rounded-md font-bold bg-emerald-950/80 border border-emerald-900/60 text-emerald-400 flex items-center gap-1.5 shrink-0 animate-pulse">
                     🚀 今日出發！
                 </span>`;
             } else {
-                return `<span class="text-[10px] px-2 py-0.5 rounded-md font-normal bg-slate-950/40 border border-slate-900 text-slate-500 flex items-center gap-1 shrink-0">
+                return `<span class="text-xs px-2.5 py-1 rounded-md font-medium bg-slate-950/40 border border-slate-900 text-slate-400 flex items-center gap-1.5 shrink-0">
                     已出發 ${Math.abs(days)} 工作天
                 </span>`;
             }
@@ -2551,6 +2638,38 @@
                 renderUserControl();
             } else if (activeView === 'template-control') {
                 renderTemplateControl();
+            }
+        }
+
+        // --- Font Scale Management ---
+        function getFontScale() {
+            return localStorage.getItem('caseflow_font_scale') || 'normal';
+        }
+
+        function setFontScale(scale) {
+            localStorage.setItem('caseflow_font_scale', scale);
+            applyFontScale(scale);
+            updateFontScaleButtons(scale);
+        }
+
+        function applyFontScale(scale) {
+            document.documentElement.classList.remove('font-scale-normal', 'font-scale-comfort', 'font-scale-large');
+            document.documentElement.classList.add(`font-scale-${scale}`);
+        }
+
+        function updateFontScaleButtons(scale) {
+            const btnNormal = document.getElementById('btn-font-normal');
+            const btnComfort = document.getElementById('btn-font-comfort');
+            const btnLarge = document.getElementById('btn-font-large');
+            if (!btnNormal || !btnComfort || !btnLarge) return;
+            
+            [btnNormal, btnComfort, btnLarge].forEach(b => {
+                b.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 text-center transition-colors";
+            });
+            
+            const activeBtn = document.getElementById(`btn-font-${scale}`);
+            if (activeBtn) {
+                activeBtn.className = "flex-1 py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-sm border border-indigo-500 text-center transition-colors";
             }
         }
 
@@ -2978,43 +3097,43 @@
 
                 // Card title & info
                 caseCard.innerHTML = `
-                    <div class="p-3.5 sm:p-5 bg-slate-800/40 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-3" onclick="toggleAccordion('case-body-${c.id}')">
-                        <div class="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                            <span class="text-xl sm:text-2xl mt-0.5 sm:mt-0 shrink-0">📁</span>
+                    <div class="p-4 sm:p-5 bg-slate-800/40 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-3.5" onclick="toggleAccordion('case-body-${c.id}')">
+                        <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                            <span class="text-2xl mt-0.5 sm:mt-0 shrink-0">📁</span>
                             <div class="min-w-0 flex-1">
-                                <h3 class="text-base sm:text-xl font-bold text-slate-100 flex items-center flex-wrap gap-1.5 sm:gap-2">
+                                <h3 class="text-base sm:text-xl font-bold text-slate-100 flex items-center flex-wrap gap-2 leading-snug">
                                     <span class="break-words">${escapeHtml(c.title)}</span>
                                     ${c.is_archived ? `
-                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-850 border border-slate-755 text-slate-400 flex items-center gap-1 shrink-0">
+                                        <span class="text-xs px-2.5 py-1 rounded-md font-semibold bg-slate-850 border border-slate-755 text-slate-300 flex items-center gap-1 shrink-0">
                                             📦 已封存
                                         </span>
                                     ` : ''}
                                     ${c.reference_date ? `
-                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-indigo-950/80 border border-indigo-900/60 text-indigo-300 flex items-center gap-1 shrink-0">
+                                        <span class="text-xs px-2.5 py-1 rounded-md font-semibold bg-indigo-950/80 border border-indigo-900/60 text-indigo-300 flex items-center gap-1 shrink-0">
                                             📅 出發日: ${c.reference_date}
                                         </span>
                                     ` : ''}
                                     ${c.is_archived ? '' : getCaseWorkingDaysLeftSpan(c)}
                                 </h3>
-                                ${c.description ? `<p class="text-xs sm:text-sm text-slate-400 mt-0.5 break-words">${escapeHtml(c.description)}</p>` : ''}
+                                ${c.description ? `<p class="text-xs sm:text-sm text-slate-400 mt-1 break-words leading-relaxed">${escapeHtml(c.description)}</p>` : ''}
                             </div>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/50 justify-between sm:justify-end shrink-0">
-                            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1 text-indigo-400 transition-colors shrink-0">
+                        <div class="flex flex-wrap items-center gap-2.5 sm:gap-3 text-slate-400 text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/50 justify-between sm:justify-end shrink-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors shrink-0">
                                     ${tText.driveBtn}
                                 </a>
                                 ${manageButtons}
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
-                                <span class="text-xs text-slate-400">${tText.caseOwner}: ${c.owner.username}</span>
+                                <span class="text-xs sm:text-sm text-slate-400 font-medium">${tText.caseOwner}: ${c.owner.username}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" ${arrowStyle} id="accordion-arrow-${c.id}">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
                             </div>
                         </div>
                     </div>
-                    <div id="case-body-${c.id}" class="p-3 sm:p-5 space-y-4 sm:space-y-6 ${hiddenClass}">
+                    <div id="case-body-${c.id}" class="p-3.5 sm:p-5 space-y-4 sm:space-y-6 ${hiddenClass}">
                         <!-- Task groups -->
                     </div>
                 `;
@@ -3025,41 +3144,41 @@
                     const groupColor = getGroupColor(g.name);
                     const safeKey = getSanitizedKey(c.id, g.name);
                     const groupDiv = document.createElement('div');
-                    groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-3 sm:p-4 space-y-3 sm:space-y-4";
+                    groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-3.5 sm:p-4 space-y-3.5 sm:space-y-4";
                     groupDiv.innerHTML = `
-                        <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                            <h4 class="font-bold text-slate-200 text-sm flex items-center gap-2">
-                                <span class="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style="background-color: ${groupColor}"></span>
+                        <div class="flex items-center justify-between border-b border-slate-850 pb-2.5">
+                            <h4 class="font-bold text-slate-200 text-sm sm:text-base flex items-center gap-2">
+                                <span class="h-3 w-3 rounded-full shrink-0 shadow-sm" style="background-color: ${groupColor}"></span>
                                 ${escapeHtml(g.name)}
                             </h4>
-                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-semibold border border-slate-700/60" style="border-left: 3px solid ${groupColor}">${tText.taskGroup}</span>
+                            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-semibold border border-slate-700/60" style="border-left: 3px solid ${groupColor}">${tText.taskGroup}</span>
                         </div>
-                        <div class="space-y-2" id="group-tasks-${safeKey}">
+                        <div class="space-y-2.5" id="group-tasks-${safeKey}">
                             <!-- Tasks list -->
                         </div>
                         <!-- Quick Add Task -->
-                        <div class="pt-2 border-t border-slate-800/40 space-y-2">
+                        <div class="pt-2.5 border-t border-slate-800/40 space-y-2.5">
                             <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="quick-task-title-${safeKey}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
+                                <input type="text" id="quick-task-title-${safeKey}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 placeholder:text-slate-500" placeholder="${tText.quickTaskPlaceholder}">
                                 <div class="flex gap-2">
-                                    <input type="date" id="quick-task-due-${safeKey}" class="flex-1 sm:flex-none bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
-                                    <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                    <input type="date" id="quick-task-due-${safeKey}" class="flex-1 sm:flex-none bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none">
+                                    <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
                                         ${tText.addBtn}
                                     </button>
                                 </div>
                             </div>
                             <!-- User visibility checkboxes -->
-                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] text-slate-400">
-                                <span>🔒 可見成員：</span>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                                <span class="font-medium text-slate-400">🔒 可見成員：</span>
                                 ${allUsers.map(u => {
                                     const currentUser = allUsers.find(cu => cu.id === currentUserId);
                                     const hasPerm = currentUser && hasCreateCasePermission(currentUser);
                                     const disabledAttr = hasPerm ? '' : 'disabled';
                                     return `
-                                        <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
-                                            <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${safeKey} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
-                                            <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
-                                            <span class="text-slate-300">${u.username}</span>
+                                        <label class="flex items-center gap-1.5 bg-slate-900/60 border border-slate-800/80 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors text-xs">
+                                            <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${safeKey} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3.5 h-3.5">
+                                            <span class="h-2 w-2 rounded-full" style="background-color: ${u.avatar_color}"></span>
+                                            <span class="text-slate-300 font-medium">${u.username}</span>
                                         </label>
                                     `;
                                 }).join('')}
@@ -3070,33 +3189,33 @@
                     const taskList = groupDiv.querySelector(`#group-tasks-${safeKey}`);
                     
                     if (g.tasks.length === 0) {
-                        taskList.innerHTML = `<p class="text-xs text-slate-600 italic">No tasks</p>`;
+                        taskList.innerHTML = `<p class="text-xs sm:text-sm text-slate-500 italic py-1">No tasks</p>`;
                     } else {
                         g.tasks.forEach(t => {
                             const taskItem = document.createElement('div');
                             taskItem.id = `case-task-row-${t.id}`;
-                            taskItem.className = "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150 gap-2.5 sm:gap-4";
+                            taskItem.className = "flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150 gap-3 sm:gap-4";
                             
-                            const isCompletedClass = t.is_completed ? 'line-through text-slate-500 font-normal' : 'text-slate-200 font-medium';
+                            const isCompletedClass = t.is_completed ? 'line-through text-slate-500 font-normal' : 'text-slate-100 font-medium';
                             
                             let dueBadge = '';
                             if (t.due_date) {
-                                let badgeColor = 'bg-slate-800 text-slate-400';
+                                let badgeColor = 'bg-slate-800 text-slate-300 border-slate-700';
                                 if (!t.is_completed) {
                                     const now = new Date();
                                     const dueDate = new Date(t.due_date);
                                     const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 3600);
                                     if (hoursDiff < 0) {
-                                        badgeColor = 'bg-red-950/80 border border-red-900 text-red-400';
+                                        badgeColor = 'bg-red-950/80 border border-red-900 text-red-300 font-semibold';
                                     } else if (hoursDiff <= 48) {
-                                        badgeColor = 'bg-yellow-950/80 border border-yellow-900 text-yellow-400';
+                                        badgeColor = 'bg-yellow-950/80 border border-yellow-900 text-yellow-300 font-semibold';
                                     } else {
-                                        badgeColor = 'bg-indigo-950/80 border border-indigo-900 text-indigo-400';
+                                        badgeColor = 'bg-indigo-950/80 border border-indigo-900 text-indigo-300 font-semibold';
                                     }
                                 } else {
-                                    badgeColor = 'bg-green-950/80 border border-green-900 text-green-400';
+                                    badgeColor = 'bg-green-950/80 border border-green-900 text-green-300 font-semibold';
                                 }
-                                dueBadge = `<span class="text-[10px] px-2 py-0.5 rounded-md font-medium ${badgeColor}">${tText.overdueBadge}: ${t.due_date}</span>`;
+                                dueBadge = `<span class="text-xs px-2.5 py-1 rounded-md ${badgeColor}">${tText.overdueBadge}: ${t.due_date}</span>`;
                             }
 
                             // Avatar indicators
@@ -3104,7 +3223,7 @@
                             if (t.visible_users) {
                                 t.visible_users.forEach(u => {
                                     avatarsHtml += `
-                                        <div class="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white uppercase shadow-sm border border-slate-900" style="background-color: ${u.avatar_color}" title="${u.username} (${u.role})">
+                                        <div class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white uppercase shadow-sm border border-slate-900" style="background-color: ${u.avatar_color}" title="${u.username} (${u.role})">
                                             ${u.username.charAt(0)}
                                         </div>
                                     `;
@@ -3113,50 +3232,50 @@
 
                             const workingDaysHtml = getWorkingDaysLeftSpan(t);
 
-                            // Recent comment preview bubble (designed with a subtle indigo style to contrast with static notes)
+                            // Recent comment preview bubble
                             let commentsHtml = '';
                             if (t.comments && t.comments.length > 0) {
                                 const latestComment = t.comments[t.comments.length - 1];
                                 const commenter = allUsers.find(u => u.id === latestComment.user_id) || { username: 'Unknown', avatar_color: '#94a3b8' };
                                 const otherCount = t.comments.length - 1;
                                 commentsHtml = `
-                                    <div class="flex items-center gap-2 mt-1.5 bg-indigo-950/20 border border-indigo-900/30 px-2.5 py-1 rounded-lg hover:bg-indigo-950/40 hover:border-indigo-800 transition-colors w-fit max-w-[95%] select-none cursor-pointer" onclick="openTaskDrawer(${t.id}); event.stopPropagation()" title="點擊查看完整討論與回覆">
-                                        <span class="h-4 w-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white uppercase shrink-0" style="background-color: ${commenter.avatar_color}">
+                                    <div class="flex items-center gap-2 mt-1.5 bg-indigo-950/30 border border-indigo-900/40 px-3 py-1.5 rounded-lg hover:bg-indigo-950/50 hover:border-indigo-800 transition-colors w-fit max-w-[98%] select-none cursor-pointer" onclick="openTaskDrawer(${t.id}); event.stopPropagation()" title="點擊查看完整討論與回覆">
+                                        <span class="h-4.5 w-4.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase shrink-0" style="background-color: ${commenter.avatar_color}">
                                             ${commenter.username.charAt(0)}
                                         </span>
-                                        <span class="text-[10px] text-indigo-300 font-semibold shrink-0">${commenter.username}:</span>
-                                        <span class="text-[10px] text-slate-350 truncate flex-1 min-w-0">${escapeHtml(latestComment.content)}</span>
+                                        <span class="text-xs text-indigo-300 font-semibold shrink-0">${commenter.username}:</span>
+                                        <span class="text-xs text-slate-300 truncate flex-1 min-w-0">${escapeHtml(latestComment.content)}</span>
                                         ${otherCount > 0 ? `
-                                            <span class="text-[8px] bg-indigo-900/60 text-indigo-200 px-1.5 py-0.5 rounded-full shrink-0 font-medium">+${otherCount} 則討論</span>
+                                            <span class="text-[10px] bg-indigo-900/70 text-indigo-200 px-2 py-0.5 rounded-full shrink-0 font-medium">+${otherCount} 則討論</span>
                                         ` : ''}
                                     </div>
                                 `;
                             }
 
                             taskItem.innerHTML = `
-                                <div class="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
-                                    <input type="checkbox" id="case-task-chk-${t.id}" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5 shrink-0">
+                                <div class="flex items-start gap-3 flex-1 min-w-0">
+                                    <input type="checkbox" id="case-task-chk-${t.id}" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-5 w-5 rounded-md border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5 shrink-0">
                                     <div class="flex flex-col min-w-0 flex-1">
-                                        <span id="case-task-title-${t.id}" class="text-xs sm:text-sm ${isCompletedClass} break-words cursor-pointer leading-snug" onclick="openTaskDrawer(${t.id})">
+                                        <span id="case-task-title-${t.id}" class="text-sm sm:text-base ${isCompletedClass} break-words cursor-pointer leading-relaxed" onclick="openTaskDrawer(${t.id})">
                                             ${escapeHtml(t.title)}${workingDaysHtml}
                                         </span>
                                         ${t.notes && t.notes.trim() ? `
-                                            <p class="text-[11px] sm:text-xs text-slate-400 mt-1 line-clamp-2 bg-slate-950/30 border border-slate-850/50 px-2.5 py-1 rounded-lg hover:bg-slate-900/50 hover:border-slate-800 transition-colors w-fit max-w-[95%] select-none" onclick="openTaskDrawer(${t.id})" style="cursor: pointer;" title="點擊查看完整備註與討論">
+                                            <p class="text-xs sm:text-sm text-slate-300 mt-1.5 line-clamp-2 bg-slate-950/40 border border-slate-850/60 px-3 py-1.5 rounded-lg hover:bg-slate-900/50 hover:border-slate-800 transition-colors w-fit max-w-[98%] select-none leading-relaxed" onclick="openTaskDrawer(${t.id})" style="cursor: pointer;" title="點擊查看完整備註與討論">
                                                 📝 ${escapeHtml(t.notes)}
                                             </p>
                                         ` : ''}
                                         ${commentsHtml}
                                     </div>
                                 </div>
-                                <div class="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-850/40">
+                                <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-850/40">
                                     <div class="flex items-center gap-2">
                                         ${dueBadge}
                                         <div class="flex -space-x-1.5">
                                             ${avatarsHtml}
                                         </div>
                                     </div>
-                                    <button onclick="openTaskDrawer(${t.id})" class="text-slate-500 hover:text-slate-300 p-1 transition-colors ml-auto sm:ml-0" title="開啟任務抽屜">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <button onclick="openTaskDrawer(${t.id})" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors ml-auto sm:ml-0 min-w-[36px] min-h-[36px] flex items-center justify-center" title="開啟任務抽屜">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                         </svg>
                                     </button>
@@ -3297,49 +3416,49 @@
                 let statusBadge = '';
                 let dueText = '';
                 if (item.status === 'red') {
-                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-950/60 border border-red-900/40 text-red-400">🔴 已過期</span>`;
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-950/60 border border-red-900/40 text-red-400">🔴 已過期</span>`;
                     const days = Math.abs(Math.floor(item.hoursDiff / 24));
                     dueText = lang === 'vi-VN' 
-                        ? `<span class="text-red-400 font-semibold">Trễ ${days} ngày</span>`
-                        : `<span class="text-red-400 font-semibold">已逾期 ${days} 天</span>`;
+                        ? `<span class="text-red-400 font-bold">Trễ ${days} ngày</span>`
+                        : `<span class="text-red-400 font-bold">已逾期 ${days} 天</span>`;
                 } else if (item.status === 'yellow') {
-                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-950/60 border border-yellow-900/40 text-yellow-400">🟡 急件</span>`;
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-950/60 border border-yellow-900/40 text-yellow-400">🟡 急件</span>`;
                     const hours = Math.floor(item.hoursDiff);
                     dueText = lang === 'vi-VN'
-                        ? `<span class="text-yellow-400 font-semibold">Hạn trong ${hours} giờ</span>`
-                        : `<span class="text-yellow-400 font-semibold">${hours} 小時內到期</span>`;
+                        ? `<span class="text-yellow-400 font-bold">Hạn trong ${hours} giờ</span>`
+                        : `<span class="text-yellow-400 font-bold">${hours} 小時內到期</span>`;
                 } else {
-                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-950/60 border border-indigo-900/40 text-indigo-300">🔵 進行中</span>`;
+                    statusBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-950/60 border border-indigo-900/40 text-indigo-300">🔵 進行中</span>`;
                     const days = Math.floor(item.hoursDiff / 24);
                     dueText = lang === 'vi-VN'
-                        ? `<span class="text-slate-400">Còn ${days} ngày</span>`
-                        : `<span class="text-slate-400">還剩 ${days} 天</span>`;
+                        ? `<span class="text-slate-300 font-medium">Còn ${days} ngày</span>`
+                        : `<span class="text-slate-300 font-medium">還剩 ${days} 天</span>`;
                 }
 
-                const checkbox = `<input type="checkbox" id="dashboard-task-chk-${t.id}" onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer">`;
+                const checkbox = `<input type="checkbox" id="dashboard-task-chk-${t.id}" onchange="toggleTask(${t.id})" class="h-5 w-5 rounded-md border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">`;
                 const caseLink = `<button onclick="jumpToCase(${item.caseId})" class="text-sm font-bold text-indigo-400 hover:text-indigo-300 text-left hover:underline truncate max-w-[200px] block">${item.caseName}</button>`;
                 
                 const groupColor = getGroupColor(item.groupName);
                 const groupStyle = groupColor ? `style="background-color: ${groupColor}20; border-color: ${groupColor}40; color: ${groupColor}"` : '';
-                const groupBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 border border-slate-700 text-slate-300" ${groupStyle}>${item.groupName}</span>`;
+                const groupBadge = `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200" ${groupStyle}>${item.groupName}</span>`;
 
                 tr.innerHTML = `
-                    <td class="py-3.5 pl-2">${statusBadge}</td>
-                    <td class="py-3.5 pr-2">
-                        <div class="flex items-start gap-2.5">
+                    <td class="py-4 pl-2">${statusBadge}</td>
+                    <td class="py-4 pr-2">
+                        <div class="flex items-start gap-3">
                             ${checkbox}
                             <div>
-                                <span class="font-bold text-slate-200 block">${t.title}</span>
-                                ${t.notes ? `<p class="text-[11px] text-slate-400 mt-0.5 italic max-w-[300px] truncate" title="${t.notes}">${t.notes}</p>` : ''}
+                                <span class="font-bold text-slate-100 text-sm sm:text-base block">${t.title}</span>
+                                ${t.notes ? `<p class="text-xs text-slate-400 mt-1 italic max-w-[320px] truncate" title="${t.notes}">📝 ${t.notes}</p>` : ''}
                             </div>
                         </div>
                     </td>
-                    <td class="py-3.5 pr-2">${caseLink}</td>
-                    <td class="py-3.5 pr-2">${groupBadge}</td>
-                    <td class="py-3.5 pr-2 font-mono text-[11px] text-slate-400">${t.start_date || 'N/A'} ~ ${t.due_date || 'N/A'}</td>
-                    <td class="py-3.5 pr-2 font-mono text-[11px]">${dueText}</td>
-                    <td class="py-3.5 text-right pr-2">
-                        <button onclick="jumpToCaseAndOpenTask(${item.caseId}, ${t.id})" class="text-indigo-400 hover:text-indigo-300 font-semibold font-bold">查看與留言</button>
+                    <td class="py-4 pr-2">${caseLink}</td>
+                    <td class="py-4 pr-2">${groupBadge}</td>
+                    <td class="py-4 pr-2 font-mono text-xs text-slate-400">${t.start_date || 'N/A'} ~ ${t.due_date || 'N/A'}</td>
+                    <td class="py-4 pr-2 font-mono text-xs">${dueText}</td>
+                    <td class="py-4 text-right pr-2">
+                        <button onclick="jumpToCaseAndOpenTask(${item.caseId}, ${t.id})" class="text-indigo-400 hover:text-indigo-300 font-bold text-xs sm:text-sm px-2.5 py-1 rounded-lg hover:bg-indigo-950/40 transition-colors">查看與留言</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
