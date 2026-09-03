@@ -109,47 +109,70 @@
     </div>
 
     <!-- Global Header -->
-    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 py-4 z-30 shrink-0">
-        <div class="flex items-center gap-3">
-            <img src="logo.jpg" class="h-10 w-10 rounded-xl object-cover shadow-lg shadow-brand-500/20 border border-slate-800" alt="CaseFlow OS Logo">
-            <div>
-                <h1 class="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
-                    CaseFlow OS
-                    <span class="text-xs bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-indigo-400 font-normal">GAS v2.0</span>
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4 z-30 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+            <!-- Mobile Menu Hamburger Button -->
+            <button id="btn-mobile-menu" onclick="toggleMobileSidebar()" class="lg:hidden p-2 text-slate-300 hover:text-white rounded-xl bg-slate-800/80 border border-slate-700 hover:bg-slate-700 transition-colors focus:outline-none shrink-0" aria-label="開啟選單">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <img src="logo.jpg" class="h-8 w-8 sm:h-10 sm:w-10 rounded-xl object-cover shadow-lg shadow-brand-500/20 border border-slate-800 shrink-0" alt="CaseFlow OS Logo">
+            <div class="min-w-0">
+                <h1 class="text-base sm:text-xl font-bold text-slate-100 tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
+                    <span>CaseFlow OS</span>
+                    <span class="text-[10px] sm:text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-indigo-400 font-normal shrink-0">v2.0</span>
                 </h1>
-                <p class="text-xs text-slate-400" data-i18n="subtitle">專案協同與權限管家</p>
+                <p class="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block" data-i18n="subtitle">專案協同與權限管家</p>
             </div>
         </div>
 
         <!-- Active User Switcher & Action Button -->
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
             <!-- Active User Switcher -->
-            <div class="flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
-                <span class="text-xs text-slate-400 font-medium" data-i18n="activeUser">當前人員:</span>
-                <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer">
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-slate-950/60 border border-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl">
+                <span class="text-[10px] sm:text-xs text-slate-400 font-medium hidden md:inline" data-i18n="activeUser">當前人員:</span>
+                <select id="user-switcher" onchange="switchUser(this.value)" class="bg-transparent text-xs sm:text-sm text-slate-200 font-semibold focus:outline-none cursor-pointer max-w-[85px] sm:max-w-[140px] truncate">
                     <!-- User options loaded dynamically -->
                 </select>
-                <span id="user-static-label" class="text-sm text-slate-200 font-semibold hidden"></span>
-                <div id="user-avatar-indicator" class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold uppercase transition-all duration-300">
+                <span id="user-static-label" class="text-xs sm:text-sm text-slate-200 font-semibold hidden"></span>
+                <div id="user-avatar-indicator" class="h-5 w-5 sm:h-6 sm:w-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] text-white font-bold uppercase transition-all duration-300 shrink-0">
                     -
                 </div>
             </div>
 
             <!-- Action Button -->
-            <button id="btn-add-case" onclick="openNewCaseModal()" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-sm font-semibold text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200 flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <button id="btn-add-case" onclick="openNewCaseModal()" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-xs sm:text-sm font-semibold text-white px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200 flex items-center gap-1 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 sm:w-4 sm:h-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                <span data-i18n="addCaseBtn">新增案件</span>
+                <span data-i18n="addCaseBtn" class="hidden sm:inline">新增案件</span>
+                <span class="sm:hidden">新增</span>
             </button>
         </div>
     </header>
 
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="mobile-sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity duration-300"></div>
+
     <!-- Main Workspace Layout -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative">
         <!-- Sidebar Navigation -->
-        <aside class="w-64 bg-slate-900/40 border-r border-slate-800/80 flex flex-col p-4 shrink-0">
-            <nav class="space-y-1.5 flex-1">
+        <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col p-4 shrink-0 transform -translate-x-full transition-transform duration-300 ease-in-out lg:static lg:w-64 lg:bg-slate-900/40 lg:border-slate-800/80 lg:translate-x-0 lg:z-auto">
+            <!-- Mobile Sidebar Header with Close Button -->
+            <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-800 lg:hidden">
+                <div class="flex items-center gap-2">
+                    <img src="logo.jpg" class="h-6 w-6 rounded-lg object-cover" alt="Logo">
+                    <span class="font-bold text-sm text-slate-200">選單導覽</span>
+                </div>
+                <button onclick="closeMobileSidebar()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus:outline-none" aria-label="關閉選單">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+
+            <nav class="space-y-1.5 flex-1 overflow-y-auto">
                 <button onclick="switchView('dashboard')" id="tab-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10">
                     <span data-i18n="dashboardTab">📊 個人儀表板</span>
                 </button>
@@ -165,11 +188,11 @@
                 <button onclick="switchView('template-control')" id="tab-template-control" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
                     <span data-i18n="templateTab">⚙️ 範本控管</span>
                 </button>
-                <button id="btn-group-color" onclick="openGroupColorModal()" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
+                <button id="btn-group-color" onclick="openGroupColorModal(); closeMobileSidebar();" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
                     <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
                 </button>
             </nav>
-            <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
+            <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5 mt-3">
                 <div class="font-bold text-slate-300" data-i18n="guideTitle">💡 每日檢視指引</div>
                 <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-red-500"></span><span data-i18n="redLight">🔴 已過期未完成</span></div>
                 <div class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-yellow-500"></span><span data-i18n="yellowLight">🟡 48小時內即將到期</span></div>
@@ -179,7 +202,7 @@
         </aside>
 
         <!-- Dynamic Content Body -->
-        <main class="flex-1 bg-slate-950 p-6 overflow-y-auto relative">
+        <main class="flex-1 bg-slate-950 p-3 sm:p-6 overflow-y-auto relative">
 
             <!-- Dashboard View Container -->
             <div id="view-dashboard" class="w-full space-y-6">
@@ -245,7 +268,7 @@
                 </div>
 
                 <!-- Dashboard Task List Card -->
-                <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                         <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
                             📋 我的個人待辦清單 (My To-Do List)
@@ -432,8 +455,8 @@
     </div>
 
     <!-- Task Detail Drawer / Modal (Right Side Drawer style) -->
-    <div id="task-drawer" class="fixed inset-y-0 right-0 w-[450px] bg-slate-900 border-l border-slate-800 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+    <div id="task-drawer" class="fixed inset-y-0 right-0 w-full sm:w-[450px] max-w-full bg-slate-900 border-l border-slate-800 shadow-2xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2" data-i18n="taskDetailTitle">
                     📋 任務詳情
@@ -2531,8 +2554,31 @@
             }
         }
 
+        // --- Mobile Sidebar Drawer Handlers ---
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('mobile-sidebar-backdrop');
+            if (!sidebar || !backdrop) return;
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('mobile-sidebar-backdrop');
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (backdrop) backdrop.classList.add('hidden');
+        }
+
         // Tab views navigation with lazy rendering evaluation
         function switchView(viewName) {
+            closeMobileSidebar();
             activeView = viewName;
             
             document.getElementById('view-dashboard').classList.add('hidden');
@@ -2932,12 +2978,12 @@
 
                 // Card title & info
                 caseCard.innerHTML = `
-                    <div class="p-5 bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between cursor-pointer gap-4" onclick="toggleAccordion('case-body-${c.id}')">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">📁</span>
-                            <div>
-                                <h3 class="text-xl font-bold text-slate-100 flex items-center flex-wrap gap-2">
-                                    <span>${escapeHtml(c.title)}</span>
+                    <div class="p-3.5 sm:p-5 bg-slate-800/40 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer gap-3" onclick="toggleAccordion('case-body-${c.id}')">
+                        <div class="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                            <span class="text-xl sm:text-2xl mt-0.5 sm:mt-0 shrink-0">📁</span>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-base sm:text-xl font-bold text-slate-100 flex items-center flex-wrap gap-1.5 sm:gap-2">
+                                    <span class="break-words">${escapeHtml(c.title)}</span>
                                     ${c.is_archived ? `
                                         <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-850 border border-slate-755 text-slate-400 flex items-center gap-1 shrink-0">
                                             📦 已封存
@@ -2950,21 +2996,25 @@
                                     ` : ''}
                                     ${c.is_archived ? '' : getCaseWorkingDaysLeftSpan(c)}
                                 </h3>
-                                <p class="text-sm text-slate-400 mt-0.5">${c.description || ''}</p>
+                                ${c.description ? `<p class="text-xs sm:text-sm text-slate-400 mt-0.5 break-words">${escapeHtml(c.description)}</p>` : ''}
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 text-slate-400 text-sm">
-                            <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-indigo-400 transition-colors">
-                                ${tText.driveBtn}
-                            </a>
-                            ${manageButtons}
-                            <span>${tText.caseOwner}: ${c.owner.username}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 transition-transform duration-200" ${arrowStyle} id="accordion-arrow-${c.id}">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                            </svg>
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-slate-400 text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/50 justify-between sm:justify-end shrink-0">
+                            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <a href="${c.drive_url}" target="_blank" onclick="event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg flex items-center gap-1 text-indigo-400 transition-colors shrink-0">
+                                    ${tText.driveBtn}
+                                </a>
+                                ${manageButtons}
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="text-xs text-slate-400">${tText.caseOwner}: ${c.owner.username}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" ${arrowStyle} id="accordion-arrow-${c.id}">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
-                    <div id="case-body-${c.id}" class="p-5 space-y-6 ${hiddenClass}">
+                    <div id="case-body-${c.id}" class="p-3 sm:p-5 space-y-4 sm:space-y-6 ${hiddenClass}">
                         <!-- Task groups -->
                     </div>
                 `;
@@ -2975,7 +3025,7 @@
                     const groupColor = getGroupColor(g.name);
                     const safeKey = getSanitizedKey(c.id, g.name);
                     const groupDiv = document.createElement('div');
-                    groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-4 space-y-4";
+                    groupDiv.className = "border border-slate-800/60 rounded-xl bg-slate-950/20 p-3 sm:p-4 space-y-3 sm:space-y-4";
                     groupDiv.innerHTML = `
                         <div class="flex items-center justify-between border-b border-slate-850 pb-2">
                             <h4 class="font-bold text-slate-200 text-sm flex items-center gap-2">
@@ -2989,22 +3039,24 @@
                         </div>
                         <!-- Quick Add Task -->
                         <div class="pt-2 border-t border-slate-800/40 space-y-2">
-                            <div class="flex gap-2">
+                            <div class="flex flex-col sm:flex-row gap-2">
                                 <input type="text" id="quick-task-title-${safeKey}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500" placeholder="${tText.quickTaskPlaceholder}">
-                                <input type="date" id="quick-task-due-${safeKey}" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
-                                <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                                    ${tText.addBtn}
-                                </button>
+                                <div class="flex gap-2">
+                                    <input type="date" id="quick-task-due-${safeKey}" class="flex-1 sm:flex-none bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
+                                    <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                        ${tText.addBtn}
+                                    </button>
+                                </div>
                             </div>
                             <!-- User visibility checkboxes -->
-                            <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
+                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] text-slate-400">
                                 <span>🔒 可見成員：</span>
                                 ${allUsers.map(u => {
                                     const currentUser = allUsers.find(cu => cu.id === currentUserId);
                                     const hasPerm = currentUser && hasCreateCasePermission(currentUser);
                                     const disabledAttr = hasPerm ? '' : 'disabled';
                                     return `
-                                        <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
+                                        <label class="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 px-1.5 sm:px-2 py-0.5 rounded cursor-pointer hover:bg-slate-800 transition-colors">
                                             <input type="checkbox" value="${u.id}" ${disabledAttr} checked class="quick-task-vis-${safeKey} rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 w-3 h-3">
                                             <span class="h-1.5 w-1.5 rounded-full" style="background-color: ${u.avatar_color}"></span>
                                             <span class="text-slate-300">${u.username}</span>
@@ -3023,7 +3075,7 @@
                         g.tasks.forEach(t => {
                             const taskItem = document.createElement('div');
                             taskItem.id = `case-task-row-${t.id}`;
-                            taskItem.className = "flex items-center justify-between p-3 rounded-lg border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150";
+                            taskItem.className = "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150 gap-2.5 sm:gap-4";
                             
                             const isCompletedClass = t.is_completed ? 'line-through text-slate-500 font-normal' : 'text-slate-200 font-medium';
                             
@@ -3082,26 +3134,28 @@
                             }
 
                             taskItem.innerHTML = `
-                                <div class="flex items-start gap-3 flex-1 min-w-0">
-                                    <input type="checkbox" id="case-task-chk-${t.id}" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">
+                                <div class="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                                    <input type="checkbox" id="case-task-chk-${t.id}" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5 shrink-0">
                                     <div class="flex flex-col min-w-0 flex-1">
-                                        <span id="case-task-title-${t.id}" class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
-                                            ${t.title}${workingDaysHtml}
+                                        <span id="case-task-title-${t.id}" class="text-xs sm:text-sm ${isCompletedClass} break-words cursor-pointer leading-snug" onclick="openTaskDrawer(${t.id})">
+                                            ${escapeHtml(t.title)}${workingDaysHtml}
                                         </span>
                                         ${t.notes && t.notes.trim() ? `
-                                            <p class="text-xs text-slate-400 mt-1.5 line-clamp-2 bg-slate-950/30 border border-slate-850/50 px-2.5 py-1.5 rounded-lg hover:bg-slate-900/50 hover:border-slate-800 transition-colors w-fit max-w-[95%] select-none" onclick="openTaskDrawer(${t.id})" style="cursor: pointer;" title="點擊查看完整備註與討論">
+                                            <p class="text-[11px] sm:text-xs text-slate-400 mt-1 line-clamp-2 bg-slate-950/30 border border-slate-850/50 px-2.5 py-1 rounded-lg hover:bg-slate-900/50 hover:border-slate-800 transition-colors w-fit max-w-[95%] select-none" onclick="openTaskDrawer(${t.id})" style="cursor: pointer;" title="點擊查看完整備註與討論">
                                                 📝 ${escapeHtml(t.notes)}
                                             </p>
                                         ` : ''}
                                         ${commentsHtml}
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3 shrink-0">
-                                    ${dueBadge}
-                                    <div class="flex -space-x-1.5">
-                                        ${avatarsHtml}
+                                <div class="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-850/40">
+                                    <div class="flex items-center gap-2">
+                                        ${dueBadge}
+                                        <div class="flex -space-x-1.5">
+                                            ${avatarsHtml}
+                                        </div>
                                     </div>
-                                    <button onclick="openTaskDrawer(${t.id})" class="text-slate-500 hover:text-slate-300 p-1 transition-colors">
+                                    <button onclick="openTaskDrawer(${t.id})" class="text-slate-500 hover:text-slate-300 p-1 transition-colors ml-auto sm:ml-0" title="開啟任務抽屜">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                         </svg>
