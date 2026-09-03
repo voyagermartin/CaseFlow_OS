@@ -1055,17 +1055,12 @@
                 dashboardTab: "📊 個人儀表板",
                 calendarTab: "📅 日曆模式",
                 caseTreeTab: "📋 案件樹狀",
-                ganttTab: "📊 甘特圖模式",
                 guideTitle: "💡 每日檢視指引",
                 redLight: "🔴 已過期未完成",
                 yellowLight: "🟡 48小時內即將到期",
                 blueLight: "🔵 進行中(充足時間)",
                 greenLight: "🟢 已完成任務",
                 loadingText: "載入中...",
-                ganttTitle: "甘特圖時程全局圖",
-                dayView: "日",
-                weekView: "週",
-                monthView: "月",
                 taskDetailTitle: "📋 任務詳情",
                 taskTitleLabel: "任務標題",
                 notesLabel: "執行備註 (Notes)",
@@ -1152,17 +1147,12 @@
                 dashboardTab: "📊 Bảng điều khiển",
                 calendarTab: "📅 Chế độ Lịch",
                 caseTreeTab: "📋 Cấu trúc Dự án",
-                ganttTab: "📊 Biểu đồ Gantt",
                 guideTitle: "💡 Hướng dẫn kiểm tra hàng ngày",
                 redLight: "🔴 Quá hạn chưa hoàn thành",
                 yellowLight: "🟡 Sắp đến hạn trong 48 giờ",
                 blueLight: "🔵 Đang thực hiện (đủ thời gian)",
                 greenLight: "🟢 Đã hoàn thành",
                 loadingText: "Đang tải...",
-                ganttTitle: "Biểu đồ Gantt toàn cảnh",
-                dayView: "Ngày",
-                weekView: "Tuần",
-                monthView: "Tháng",
                 taskDetailTitle: "📋 Chi tiết công việc",
                 taskTitleLabel: "Tiêu đề công việc",
                 notesLabel: "Ghi chú thực hiện (Notes)",
@@ -1403,7 +1393,6 @@
 
                 // Mark other views as dirty and render only active view for 0ms startup
                 isCalendarDirty = true;
-                isGanttDirty = true;
                 isDashboardDirty = true;
                 isCaseTreeDirty = true;
                 renderActiveViewOnly();
@@ -2519,7 +2508,6 @@
 
             // Mark all views dirty and render current active view
             isCalendarDirty = true;
-            isGanttDirty = true;
             isDashboardDirty = true;
             isCaseTreeDirty = true;
             renderActiveViewOnly();
