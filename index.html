@@ -535,7 +535,15 @@
 
             <!-- Dates Section -->
             <div class="space-y-2">
-                <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
+                <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-500 font-semibold uppercase">時程與期限設定</label>
+                    <button type="button" onclick="toggleDateCalculator()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 hover:underline transition-colors focus:outline-none">
+                        <span data-i18n="calcBtn">⚡ 時程推算</span>
+                        <svg id="calc-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1">
                         <span class="text-[10px] text-slate-400">開始日期 (Start Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
@@ -544,6 +552,64 @@
                     <div class="space-y-1">
                         <span class="text-[10px] text-slate-400">截止日期 (Due Date) <span class="text-[9px] text-emerald-500 font-normal">(自動儲存)</span></span>
                         <input type="date" id="drawer-task-due-date" onchange="saveTaskDates(true)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <!-- 雙向時程偏移計算機面板 (Collapsible Date Offset Calculator) -->
+                <div id="drawer-date-calc-panel" class="hidden bg-slate-950/80 border border-indigo-500/30 rounded-xl p-3.5 space-y-3 shadow-inner mt-2">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5" data-i18n="calcTitle">
+                            ⚡ 雙向時程偏移計算機
+                        </span>
+                        <span class="text-[10px] bg-indigo-950/80 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-800/50">
+                            正推 / 倒算
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-slate-400 block font-medium" data-i18n="calcBaseDate">📌 基準日 (出發日/指定日)</label>
+                            <input type="date" id="drawer-calc-base-date" onchange="updateDateCalcPreview()" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-slate-400 block font-medium" data-i18n="calcDirection">🔄 推算方向</label>
+                            <select id="drawer-calc-direction" onchange="updateDateCalcPreview()" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="backward" selected data-i18n="calcBackward">◀ 往前 (出發前/死線)</option>
+                                <option value="forward" data-i18n="calcForward">▶ 往後 (出發後/結案)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5 items-end">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-slate-400 block font-medium" data-i18n="calcDays">🔢 偏移天數</label>
+                            <input type="number" id="drawer-calc-days" value="7" min="0" max="365" oninput="updateDateCalcPreview()" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-850 transition-colors h-[36px]">
+                                <input type="checkbox" id="drawer-calc-workday-only" checked onchange="updateDateCalcPreview()" class="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
+                                <span class="text-[10px] text-slate-300 select-none" data-i18n="calcWorkdaysOnly">僅計臺灣工作天</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 計算結果預覽與一鍵套用 -->
+                    <div class="bg-slate-900/90 rounded-lg p-2.5 border border-indigo-900/40 flex flex-col gap-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-400 text-[11px] flex items-center gap-1">
+                                <span>🎯 推算目標:</span>
+                                <span id="drawer-calc-summary-hint" class="text-[10px] text-slate-500"></span>
+                            </span>
+                            <span id="drawer-calc-result-text" class="font-bold text-indigo-300 text-sm tracking-wide">--</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button type="button" onclick="applyCalcDate('start')" class="w-full bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-semibold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                <span data-i18n="calcApplyStart">⬅️ 套用為開始日</span>
+                            </button>
+                            <button type="button" onclick="applyCalcDate('due')" class="w-full bg-emerald-600/90 hover:bg-emerald-600 text-white text-xs font-semibold py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                <span data-i18n="calcApplyDue">➡️ 套用為截止日</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1135,6 +1201,16 @@
                 applyTemplate: "套用案件範本",
                 referenceDate: "出發日期 (基準日)",
                 refDatePlaceholder: "請選取案件的起點/出發日期",
+                calcBtn: "⚡ 時程推算",
+                calcTitle: "⚡ 雙向時程偏移計算機",
+                calcBaseDate: "📌 基準日 (出發日/指定日)",
+                calcDirection: "🔄 推算方向",
+                calcBackward: "◀ 往前 (出發前/死線)",
+                calcForward: "▶ 往後 (出發後/結案)",
+                calcDays: "🔢 偏移天數",
+                calcWorkdaysOnly: "僅計臺灣工作天",
+                calcApplyStart: "⬅️ 套用為開始日",
+                calcApplyDue: "➡️ 套用為截止日",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -1222,6 +1298,16 @@
                 applyTemplate: "Áp dụng mẫu dự án",
                 referenceDate: "Ngày xuất phát (Ngày chuẩn)",
                 refDatePlaceholder: "Chọn ngày bắt đầu/xuất phát của dự án",
+                calcBtn: "⚡ Tính lịch trình",
+                calcTitle: "⚡ Máy tính độ lệch thời gian",
+                calcBaseDate: "📌 Ngày chuẩn (Ngày xuất phát/Chỉ định)",
+                calcDirection: "🔄 Hướng tính toán",
+                calcBackward: "◀ Lùi lại (Trước xuất phát/Hạn chót)",
+                calcForward: "▶ Tiến tới (Sau xuất phát/Kết án)",
+                calcDays: "🔢 Số ngày lệch",
+                calcWorkdaysOnly: "Chỉ tính ngày làm việc (Đài Loan)",
+                calcApplyStart: "⬅️ Áp dụng làm ngày bắt đầu",
+                calcApplyDue: "➡️ Áp dụng làm hạn chót",
             }
         };
 
@@ -2137,6 +2223,153 @@
             }
             
             return isForward ? count : -count;
+        }
+
+        // --- Date Offset Calculation Engine (Forward / Backward + Working Days / Calendar Days) ---
+        function calculateOffsetDate(baseDateStr, days, direction = 'backward', isWorkingDaysOnly = true) {
+            if (!baseDateStr) return '';
+            const numDays = parseInt(days, 10);
+            if (isNaN(numDays) || numDays < 0) return baseDateStr;
+            if (numDays === 0) return baseDateStr;
+
+            const baseParts = baseDateStr.split('-');
+            if (baseParts.length !== 3) return baseDateStr;
+            
+            const baseDate = new Date(Date.UTC(parseInt(baseParts[0], 10), parseInt(baseParts[1], 10) - 1, parseInt(baseParts[2], 10)));
+            if (isNaN(baseDate.getTime())) return baseDateStr;
+
+            const holidays = getTaiwanHolidays();
+            const makeupWorkdays = getTaiwanMakeupWorkdays();
+
+            const isForward = (direction === 'forward');
+            let current = new Date(baseDate.getTime());
+
+            if (!isWorkingDaysOnly) {
+                // Calendar days direct offset
+                if (isForward) {
+                    current.setUTCDate(current.getUTCDate() + numDays);
+                } else {
+                    current.setUTCDate(current.getUTCDate() - numDays);
+                }
+                const y = current.getUTCFullYear();
+                const m = String(current.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(current.getUTCDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            // Taiwan working days offset (skips weekends and holidays, includes makeup workdays)
+            let count = 0;
+            let safety = 0;
+            while (count < numDays && safety < 1000) {
+                safety++;
+                if (isForward) {
+                    current.setUTCDate(current.getUTCDate() + 1);
+                } else {
+                    current.setUTCDate(current.getUTCDate() - 1);
+                }
+
+                const dayOfWeek = current.getUTCDay(); // 0 is Sunday, 6 is Saturday
+                const y = current.getUTCFullYear();
+                const m = String(current.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(current.getUTCDate()).padStart(2, '0');
+                const dateStr = `${y}-${m}-${d}`;
+
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const isHoliday = holidays.has(dateStr);
+                const isMakeup = makeupWorkdays.has(dateStr);
+
+                const isWorkDay = (!isWeekend && !isHoliday) || (isWeekend && isMakeup);
+                if (isWorkDay) {
+                    count++;
+                }
+            }
+
+            const y = current.getUTCFullYear();
+            const m = String(current.getUTCMonth() + 1).padStart(2, '0');
+            const d = String(current.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // --- Date Calculator Drawer UI Controls ---
+        function toggleDateCalculator() {
+            const panel = document.getElementById('drawer-date-calc-panel');
+            const icon = document.getElementById('calc-toggle-icon');
+            if (!panel) return;
+            
+            const isHidden = panel.classList.contains('hidden');
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                if (icon) icon.classList.add('rotate-180');
+                updateDateCalcPreview();
+            } else {
+                panel.classList.add('hidden');
+                if (icon) icon.classList.remove('rotate-180');
+            }
+        }
+
+        function getComputedCalcDate() {
+            const baseDate = document.getElementById('drawer-calc-base-date')?.value || '';
+            const direction = document.getElementById('drawer-calc-direction')?.value || 'backward';
+            const days = parseInt(document.getElementById('drawer-calc-days')?.value, 10) || 0;
+            const isWorkdayOnly = document.getElementById('drawer-calc-workday-only')?.checked ?? true;
+
+            return calculateOffsetDate(baseDate, days, direction, isWorkdayOnly);
+        }
+
+        function updateDateCalcPreview() {
+            const resultDateStr = getComputedCalcDate();
+            const resultEl = document.getElementById('drawer-calc-result-text');
+            const hintEl = document.getElementById('drawer-calc-summary-hint');
+            if (!resultEl) return;
+            
+            if (!resultDateStr) {
+                resultEl.textContent = "--";
+                if (hintEl) hintEl.textContent = "";
+                return;
+            }
+
+            const direction = document.getElementById('drawer-calc-direction')?.value || 'backward';
+            const days = parseInt(document.getElementById('drawer-calc-days')?.value, 10) || 0;
+            const isWorkdayOnly = document.getElementById('drawer-calc-workday-only')?.checked ?? true;
+
+            if (hintEl) {
+                const dirText = (direction === 'forward') ? "順推" : "倒算";
+                const typeText = isWorkdayOnly ? "工作天" : "日曆天";
+                hintEl.textContent = `(${dirText} ${days} ${typeText})`;
+            }
+
+            const parts = resultDateStr.split('-');
+            if (parts.length === 3) {
+                const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
+                const dayName = isNaN(d.getDay()) ? "" : ` (${dayNames[d.getDay()]})`;
+                resultEl.textContent = `${resultDateStr}${dayName}`;
+            } else {
+                resultEl.textContent = resultDateStr;
+            }
+        }
+
+        async function applyCalcDate(targetType) {
+            const resultDateStr = getComputedCalcDate();
+            if (!resultDateStr) {
+                alert("請先指定有效的基準日與天數！");
+                return;
+            }
+
+            if (targetType === 'start') {
+                const startInput = document.getElementById('drawer-task-start-date');
+                if (startInput) {
+                    startInput.value = resultDateStr;
+                }
+            } else if (targetType === 'due') {
+                const dueInput = document.getElementById('drawer-task-due-date');
+                if (dueInput) {
+                    dueInput.value = resultDateStr;
+                }
+            }
+
+            // Automatically batch save dates
+            await saveTaskDates(true);
         }
 
         function getDueDateTime(dueDateStr) {
@@ -3417,10 +3650,14 @@
             selectedTaskId = numTaskId;
             
             let taskObj = null;
+            let parentCase = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
                     const found = g.tasks.find(t => parseInt(t.id) === numTaskId);
-                    if (found) taskObj = found;
+                    if (found) {
+                        taskObj = found;
+                        parentCase = c;
+                    }
                 });
             });
 
@@ -3434,6 +3671,15 @@
             originalNotes = taskObj.notes || '';
             originalStartDate = taskObj.start_date || '';
             originalDueDate = taskObj.due_date || '';
+
+            // Initialize Date Calculator base date
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            const baseDateEl = document.getElementById('drawer-calc-base-date');
+            if (baseDateEl) {
+                baseDateEl.value = (parentCase && parentCase.reference_date) ? parentCase.reference_date : todayStr;
+            }
+            updateDateCalcPreview();
 
             // Handle UI elements when task is still syncing with cloud
             const commentInput = document.getElementById('new-comment-input');
