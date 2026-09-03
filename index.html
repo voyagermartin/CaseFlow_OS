@@ -1422,12 +1422,13 @@
                     allRoles = rolesRes || [];
                     allCases = casesRes || [];
                     allTemplates = templatesRes || [];
+                    loginUser = allUsers.find(u => u.id === targetUserId) || allUsers[0] || null;
                 } else {
                     allUsers = initialRes.users || [];
                     allRoles = initialRes.roles || [];
                     allCases = initialRes.cases || [];
                     allTemplates = initialRes.templates || [];
-                    loginUser = initialRes.loginUser || null;
+                    loginUser = initialRes.loginUser || allUsers.find(u => u.id === targetUserId) || allUsers[0] || null;
                 }
 
                 // Check if we are running in authenticated Web App mode
@@ -1457,22 +1458,7 @@
                 }
 
                 updateUserIndicatorAndLanguage();
-
-                // Update debug variables after API loads successfully
-                const debugUsersCountEl = document.getElementById('debug-users-count');
-                const debugCurrentIdEl = document.getElementById('debug-current-id');
-                const debugLoginUserEl = document.getElementById('debug-login-user');
-                const debugCasesCountEl = document.getElementById('debug-cases-count');
-                const debugStatusEl = document.getElementById('debug-status');
-
-                if (debugUsersCountEl) debugUsersCountEl.textContent = allUsers.length;
-                if (debugCurrentIdEl) debugCurrentIdEl.textContent = currentUserId || "null";
-                if (debugLoginUserEl) debugLoginUserEl.textContent = loginUser ? `${loginUser.username} (ID: ${loginUser.id})` : "null";
-                if (debugCasesCountEl) debugCasesCountEl.textContent = allCases.length;
-                if (debugStatusEl) {
-                    debugStatusEl.textContent = "Ready";
-                    debugStatusEl.style.color = "#34d399"; // green
-                }
+                updateDebugPanel();
 
                 renderCalendar();
                 renderCaseTree();
@@ -2543,6 +2529,24 @@
             }
         }
 
+        function updateDebugPanel() {
+            const debugUsersCountEl = document.getElementById('debug-users-count');
+            const debugCurrentIdEl = document.getElementById('debug-current-id');
+            const debugLoginUserEl = document.getElementById('debug-login-user');
+            const debugCasesCountEl = document.getElementById('debug-cases-count');
+            const debugStatusEl = document.getElementById('debug-status');
+
+            if (debugUsersCountEl) debugUsersCountEl.textContent = allUsers.length;
+            if (debugCurrentIdEl) debugCurrentIdEl.textContent = currentUserId || "null";
+            const effectiveUser = loginUser || allUsers.find(u => u.id === currentUserId) || allUsers[0] || null;
+            if (debugLoginUserEl) debugLoginUserEl.textContent = effectiveUser ? `${effectiveUser.username} (ID: ${effectiveUser.id})` : "null";
+            if (debugCasesCountEl) debugCasesCountEl.textContent = allCases.length;
+            if (debugStatusEl) {
+                debugStatusEl.textContent = "Ready";
+                debugStatusEl.style.color = "#34d399"; // green
+            }
+        }
+
         // Load active view data
         async function reloadAllViews(silent = false) {
             if (!currentUserId) return;
@@ -2567,6 +2571,7 @@
             }
             
             updateUserIndicatorAndLanguage();
+            updateDebugPanel();
             renderCalendar();
             renderCaseTree();
             renderGantt();

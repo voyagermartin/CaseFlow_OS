@@ -641,11 +641,14 @@ function getUsers(ss) {
 /**
  * Fetch and construct filtered Case tree for a specific user.
  */
-function getCasesForUser(userId, ss) {
+function getCasesForUser(userId, ss, usersList) {
   if (!ss) ss = getSpreadsheet();
-  const users = getUsers(ss);
+  const users = usersList || getUsers(ss);
   const userMap = {};
   users.forEach(u => { userMap[u.id] = u; });
+
+  const currentUser = users.find(u => u.id === userId);
+  const isSuper = currentUser ? (currentUser.is_super_master === true || currentUser.id === 1 || currentUser.username === "Martin") : (userId === 1);
 
   // Load all comments
   const commentsSheet = ss.getSheetByName("Comments");
@@ -686,8 +689,8 @@ function getCasesForUser(userId, ss) {
     const visibleUserIdsStr = taskValues[i][8] ? taskValues[i][8].toString() : "";
     const visibleUserIds = parseUserIds(visibleUserIdsStr).split(",").map(idStr => parseInt(idStr.trim())).filter(id => !isNaN(id));
     
-    // Authorization filter: if visibleUserIds list is non-empty, user must be in the list
-    if (visibleUserIds.length > 0 && !visibleUserIds.includes(userId)) {
+    // Authorization filter: if visibleUserIds list is non-empty, user must be in the list (unless super master)
+    if (!isSuper && visibleUserIds.length > 0 && !visibleUserIds.includes(userId)) {
       continue;
     }
 
@@ -747,15 +750,6 @@ function getCasesForUser(userId, ss) {
 
   // Load all cases
   const casesSheet = ss.getSheetByName("Cases");
-  if (casesSheet) {
-    // Legacy sheets self-healing header check
-    if (casesSheet.getLastColumn() < 7 || casesSheet.getRange(1, 7).getValue() === "") {
-      casesSheet.getRange(1, 7).setValue("reference_date");
-    }
-    if (casesSheet.getLastColumn() < 8 || casesSheet.getRange(1, 8).getValue() === "") {
-      casesSheet.getRange(1, 8).setValue("is_archived");
-    }
-  }
   const caseValues = casesSheet ? casesSheet.getDataRange().getValues() : [];
   const cases = [];
   for (let i = 1; i < caseValues.length; i++) {
@@ -770,11 +764,7 @@ function getCasesForUser(userId, ss) {
     const rawRefDate = caseValues[i][6];
     let referenceDate = rawRefDate ? formatDateString(rawRefDate) : "";
     if (!referenceDate) {
-      const extracted = extractDateFromTitle(title);
-      if (extracted) {
-        referenceDate = extracted;
-        casesSheet.getRange(i + 1, 7).setValue(extracted);
-      }
+      referenceDate = extractDateFromTitle(title);
     }
     
     const isArchived = caseValues[i].length > 7 ? (caseValues[i][7] === true || caseValues[i][7] === "TRUE") : false;
@@ -782,8 +772,8 @@ function getCasesForUser(userId, ss) {
     const groupNames = parseGroupNames(groupNamesStr);
     const caseTasks = tasksByCaseId[cId] || [];
     
-    // Only return the case if user is the owner OR has at least one visible task in it
-    if (ownerId !== userId && caseTasks.length === 0) {
+    // Only return the case if user is the owner OR has at least one visible task in it (unless super master)
+    if (!isSuper && ownerId !== userId && caseTasks.length === 0) {
       continue;
     }
 
@@ -1424,16 +1414,16 @@ function getTemplates(ss) {
 
 function getInitialData(userId, trueUser) {
   const ss = getSpreadsheet();
-  const users = getUsers(ss);
   const roles = getRoles(ss);
-  const cases = getCasesForUser(userId, ss);
+  const users = getUsers(ss);
+  const cases = getCasesForUser(userId, ss, users);
   const templates = getTemplates(ss);
   return {
     users: users,
     roles: roles,
     cases: cases,
     templates: templates,
-    loginUser: trueUser || null
+    loginUser: trueUser || users.find(u => u.id === userId) || users[0] || null
   };
 }
 
