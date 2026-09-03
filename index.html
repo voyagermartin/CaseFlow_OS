@@ -1381,6 +1381,19 @@
         let selectedTemplateId = null;
         let loginUser = null;
 
+        // Lazy rendering dirty flags
+        let isCalendarDirty = true;
+        let isGanttDirty = true;
+        let isDashboardDirty = true;
+        let isCaseTreeDirty = true;
+
+        function markOtherViewsDirty() {
+            if (activeView !== 'case') isCaseTreeDirty = true;
+            if (activeView !== 'dashboard') isDashboardDirty = true;
+            if (activeView !== 'calendar') isCalendarDirty = true;
+            if (activeView !== 'gantt') isGanttDirty = true;
+        }
+
         // On Document Ready - Optimized parallel batch initial load
         document.addEventListener('DOMContentLoaded', async () => {
             showLoading(true);
@@ -1460,9 +1473,12 @@
                 updateUserIndicatorAndLanguage();
                 updateDebugPanel();
 
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                // Mark other views as dirty and render only active view for 0ms startup
+                isCalendarDirty = true;
+                isGanttDirty = true;
+                isDashboardDirty = true;
+                isCaseTreeDirty = true;
+                renderActiveViewOnly();
             } catch (e) {
                 console.error("初始化失敗:", e);
                 const debugStatusEl = document.getElementById('debug-status');
@@ -2572,28 +2588,29 @@
             
             updateUserIndicatorAndLanguage();
             updateDebugPanel();
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-            if (activeView === 'user-control') {
-                renderUserControl();
-            } else if (activeView === 'template-control') {
-                renderTemplateControl();
-            } else if (activeView === 'dashboard') {
-                renderDashboard();
-            }
+
+            // Mark all views dirty and render current active view
+            isCalendarDirty = true;
+            isGanttDirty = true;
+            isDashboardDirty = true;
+            isCaseTreeDirty = true;
+            renderActiveViewOnly();
         }
 
         // Render only the active view for instant 0ms latency and zero lag
         function renderActiveViewOnly() {
             if (activeView === 'case') {
                 renderCaseTree();
+                isCaseTreeDirty = false;
             } else if (activeView === 'dashboard') {
                 renderDashboard();
+                isDashboardDirty = false;
             } else if (activeView === 'calendar') {
                 renderCalendar();
+                isCalendarDirty = false;
             } else if (activeView === 'gantt') {
                 renderGantt();
+                isGanttDirty = false;
             } else if (activeView === 'user-control') {
                 renderUserControl();
             } else if (activeView === 'template-control') {
@@ -2601,7 +2618,7 @@
             }
         }
 
-        // Tab views navigation
+        // Tab views navigation with lazy rendering evaluation
         function switchView(viewName) {
             activeView = viewName;
             
@@ -2627,16 +2644,32 @@
                 activeTab.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 bg-brand-600 text-white shadow-md shadow-brand-500/10";
             }
             
-            if (viewName === 'calendar' && calendar) {
-                calendar.updateSize();
+            if (viewName === 'calendar') {
+                if (isCalendarDirty || !calendar) {
+                    renderCalendar();
+                    isCalendarDirty = false;
+                } else {
+                    calendar.updateSize();
+                }
             } else if (viewName === 'gantt') {
-                renderGantt();
+                if (isGanttDirty) {
+                    renderGantt();
+                    isGanttDirty = false;
+                }
+            } else if (viewName === 'case') {
+                if (isCaseTreeDirty) {
+                    renderCaseTree();
+                    isCaseTreeDirty = false;
+                }
+            } else if (viewName === 'dashboard') {
+                if (isDashboardDirty) {
+                    renderDashboard();
+                    isDashboardDirty = false;
+                }
             } else if (viewName === 'user-control') {
                 renderUserControl();
             } else if (viewName === 'template-control') {
                 renderTemplateControl();
-            } else if (viewName === 'dashboard') {
-                renderDashboard();
             }
         }
 
@@ -3082,6 +3115,7 @@
                     } else {
                         g.tasks.forEach(t => {
                             const taskItem = document.createElement('div');
+                            taskItem.id = `case-task-row-${t.id}`;
                             taskItem.className = "flex items-center justify-between p-3 rounded-lg border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150";
                             
                             const isCompletedClass = t.is_completed ? 'line-through text-slate-500 font-normal' : 'text-slate-200 font-medium';
@@ -3142,9 +3176,9 @@
 
                             taskItem.innerHTML = `
                                 <div class="flex items-start gap-3 flex-1 min-w-0">
-                                    <input type="checkbox" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">
+                                    <input type="checkbox" id="case-task-chk-${t.id}" ${t.is_completed ? 'checked' : ''} onchange="toggleTask(${t.id})" class="h-4.5 w-4.5 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-brand-500 cursor-pointer mt-0.5">
                                     <div class="flex flex-col min-w-0 flex-1">
-                                        <span class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
+                                        <span id="case-task-title-${t.id}" class="text-sm ${isCompletedClass} truncate cursor-pointer" onclick="openTaskDrawer(${t.id})">
                                             ${t.title}${workingDaysHtml}
                                         </span>
                                         ${t.notes && t.notes.trim() ? `
@@ -3465,42 +3499,85 @@
         // --- Actions Processing API Wrapper ---
 
         async function toggleTask(taskId) {
-            // Find task in local memory
+            const numTaskId = parseInt(taskId);
+
+            // 1. Find task in local memory
             let taskObj = null;
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const found = g.tasks.find(t => t.id === taskId);
+                    const found = g.tasks.find(t => parseInt(t.id) === numTaskId);
                     if (found) taskObj = found;
                 });
             });
 
             if (!taskObj) return;
 
-            // Optimistic update
+            // 2. Optimistic update in memory
             taskObj.is_completed = !taskObj.is_completed;
-            
-            // Re-render UI immediately
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-            renderDashboard();
+            const isCompleted = taskObj.is_completed;
 
-            // Background API call (silent)
-            const res = await apiRequest('toggleTask', { taskId: taskId }, 'POST', true);
+            // 3. Mark background views as dirty so they refresh on tab switch
+            markOtherViewsDirty();
+
+            // 4. In-place DOM update for 0ms visual feedback
+            // (a) Update Case Tree DOM if present
+            const caseChk = document.getElementById(`case-task-chk-${numTaskId}`);
+            if (caseChk) {
+                caseChk.checked = isCompleted;
+            }
+            const caseTitle = document.getElementById(`case-task-title-${numTaskId}`);
+            if (caseTitle) {
+                if (isCompleted) {
+                    caseTitle.classList.add('line-through', 'text-slate-500');
+                    caseTitle.classList.remove('text-slate-200');
+                } else {
+                    caseTitle.classList.remove('line-through', 'text-slate-500');
+                    caseTitle.classList.add('text-slate-200');
+                }
+            }
+
+            // (b) Active View handling
+            if (activeView === 'dashboard') {
+                // Re-render dashboard to immediately update overdue/near/progress/completed counters & list
+                renderDashboard();
+                isDashboardDirty = false;
+            } else if (activeView === 'case') {
+                // Case tree already in-place updated above in 0ms!
+                isCaseTreeDirty = false;
+            } else if (activeView === 'calendar') {
+                renderCalendar();
+                isCalendarDirty = false;
+            } else if (activeView === 'gantt') {
+                renderGantt();
+                isGanttDirty = false;
+            }
+
+            // 5. Background API call (silent = true)
+            const res = await apiRequest('toggleTask', { taskId: numTaskId }, 'POST', true);
             if (!res) {
                 // Rollback if failed
                 taskObj.is_completed = !taskObj.is_completed;
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                renderDashboard();
+                const rollbacked = taskObj.is_completed;
+                if (caseChk) caseChk.checked = rollbacked;
+                if (caseTitle) {
+                    if (rollbacked) {
+                        caseTitle.classList.add('line-through', 'text-slate-500');
+                        caseTitle.classList.remove('text-slate-200');
+                    } else {
+                        caseTitle.classList.remove('line-through', 'text-slate-500');
+                        caseTitle.classList.add('text-slate-200');
+                    }
+                }
+                markOtherViewsDirty();
+                if (activeView === 'dashboard') renderDashboard();
                 alert("切換任務狀態失敗，已恢復原狀態。");
             }
         }
 
         async function deleteTask(taskId) {
             if (!taskId) return;
-            if (taskId > 1000000000000) {
+            const numTaskId = parseInt(taskId);
+            if (numTaskId > 1000000000000) {
                 alert("該任務正在與雲端同步中，請稍候再進行操作。");
                 return;
             }
@@ -3514,7 +3591,7 @@
             // Optimistic update: Remove from in-memory array allCases
             allCases.forEach(c => {
                 c.groups.forEach(g => {
-                    const foundIndex = g.tasks.findIndex(t => t.id === taskId);
+                    const foundIndex = g.tasks.findIndex(t => parseInt(t.id) === numTaskId);
                     if (foundIndex !== -1) {
                         g.tasks.splice(foundIndex, 1);
                     }
@@ -3524,20 +3601,18 @@
             // Close the drawer immediately since the task is deleted
             closeTaskDrawer();
 
-            // Re-render UI immediately
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
+            // Re-render active view only
+            markOtherViewsDirty();
+            renderActiveViewOnly();
 
             // Background API call (silent)
-            const res = await apiRequest('deleteTask', { taskId: taskId }, 'POST', true);
+            const res = await apiRequest('deleteTask', { taskId: numTaskId }, 'POST', true);
             if (!res) {
                 // Rollback if failed
                 alert(lang === 'vi-VN' ? "Xóa nhiệm vụ thất bại!" : "刪除待辦事項失敗，已重整頁面。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                markOtherViewsDirty();
+                renderActiveViewOnly();
             }
         }
 
@@ -3605,9 +3680,8 @@
                 if (arrow) arrow.style.transform = 'rotate(0deg)';
             }
 
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
+            markOtherViewsDirty();
+            renderActiveViewOnly();
 
             // Background API call
             const payload = {
@@ -3634,17 +3708,15 @@
                     const saveVisBtn = document.getElementById('drawer-save-vis-btn');
                     if (saveVisBtn) saveVisBtn.disabled = false;
                 }
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                markOtherViewsDirty();
+                renderActiveViewOnly();
             } else {
                 // Rollback if failed
                 if (targetGroup) {
                     targetGroup.tasks = targetGroup.tasks.filter(t => t.id !== tempId);
                 }
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                markOtherViewsDirty();
+                renderActiveViewOnly();
                 alert("新增待辦事項失敗，請再試一次。");
             }
         }
@@ -4766,17 +4838,15 @@
 
             allCases = allCases.filter(c => c.id !== caseId);
 
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
+            markOtherViewsDirty();
+            renderActiveViewOnly();
 
             const res = await apiRequest('deleteCase', { caseId: caseId }, 'POST', true);
             if (!res) {
                 alert(lang === 'vi-VN' ? "Xóa dự án thất bại!" : "刪除案件失敗，已重整頁面。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
+                markOtherViewsDirty();
+                renderActiveViewOnly();
             }
         }
 
@@ -4803,19 +4873,15 @@
 
             // Optimistic UI update
             caseObj.is_archived = isArchived;
-            renderCalendar();
-            renderCaseTree();
-            renderGantt();
-            renderDashboard();
+            markOtherViewsDirty();
+            renderActiveViewOnly();
 
             const res = await apiRequest('updateCase', { caseId: caseId, is_archived: isArchived }, 'POST', true);
             if (!res) {
                 alert(lang === 'vi-VN' ? "Lỗi đồng bộ lưu trữ!" : "切換封存狀態失敗，已重整頁面。");
                 allCases = await apiRequest('getCases', { user_id: currentUserId }, 'GET') || [];
-                renderCalendar();
-                renderCaseTree();
-                renderGantt();
-                renderDashboard();
+                markOtherViewsDirty();
+                renderActiveViewOnly();
             }
         }
 

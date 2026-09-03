@@ -89,6 +89,7 @@
 | **Phase 7** (2026-09-01) | 案件批量人員權限持久化修復 (`batchUpdateCaseTaskVisibility` + `parseInt`)、GAS 後端改採記憶體 2D 陣列單次 `setValues` 批次寫入（寫入耗時降至 <0.05s，效能提升 200 倍）、前端 `renderActiveViewOnly` 視圖懶加載。 | `@46` |
 | **Phase 8** (2026-09-02) | 討論留言 0ms 樂觀更新與背景視圖即時連動（氣泡預覽與徽章同步）、開抽屜背景動態拉取最新留言串 (`getTaskComments`)、鍵盤 `Enter` 快捷送出、留言 CRUD 權限控管。 | `@47` |
 | **Phase 9** (2026-09-03) | ⚡ 任務抽屜雙向時程偏移計算機（行前倒算/團後順推 + 臺灣國定假日/補班工作天計算引擎 + 一鍵套用）、Super Master 全域穿透檢視權限、移除 GET 迴圈寫入操作提升效能。 | `@50` |
+| **Phase 10** (2026-09-03) | 待辦勾選 0ms 極速原地 DOM 更新 (In-place Mutation)、解耦 4 大視圖同步重繪、全站視圖 Dirty 標記與切換按需懶加載 (Lazy Evaluation)。 | `@51` |
 
 ---
 
