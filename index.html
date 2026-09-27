@@ -35,6 +35,8 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     <!-- FullCalendar Locales -->
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales-all.global.min.js"></script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -1307,8 +1309,10 @@
             { id: 7, template_id: 2, group_name: "簽證與保險", title: "投保旅行平安險", start_day_offset: -20, due_day_offset: -7, notes: "需有名單身分證號" }
         ];
 
-        // --- Client State ---
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg/exec";
+        // --- Supabase Client & Connection Credentials ---
+        const SUPABASE_URL = 'https://lzfiemnygaarzgvvonwt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6ZmllbW55Z2FhcnpndnZvbnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NDgwODcsImV4cCI6MjEwNjAyNDA4N30.3o-wB6osep9PhxajGvapoXTDdLc8hAuwhj77duFEi8M';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Injected by Apps Script template engine. Will be empty string when running locally or on GitHub Pages.
         const loggedInUserEmail = "<?= userEmail ?>";
@@ -1340,72 +1344,227 @@
             if (activeView !== 'calendar') isCalendarDirty = true;
         }
 
-        // On Document Ready - Optimized parallel batch initial load
+        function parseUserIds(input) {
+            if (!input) return [];
+            if (Array.isArray(input)) return input.map(v => parseInt(v)).filter(n => !isNaN(n));
+            let val = String(input).trim();
+            if (val.startsWith("[") && val.endsWith("]")) {
+                try { val = JSON.parse(val); } catch (e) {}
+            }
+            if (Array.isArray(val)) return val.map(v => parseInt(v)).filter(n => !isNaN(n));
+            return val.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        }
+
+        function assembleCasesData(rawCases, rawTasks, rawComments, rawUsers, userId) {
+            const userMap = {};
+            rawUsers.forEach(u => { userMap[u.id] = u; });
+
+            const currentUser = rawUsers.find(u => u.id === userId);
+            const isSuper = currentUser ? (currentUser.is_super_master === true || currentUser.id === 1 || currentUser.username === "Martin") : (userId === 1);
+
+            const commentsByTaskId = {};
+            rawComments.forEach(c => {
+                if (!commentsByTaskId[c.task_id]) commentsByTaskId[c.task_id] = [];
+                commentsByTaskId[c.task_id].push({
+                    id: c.id,
+                    task_id: c.task_id,
+                    user_id: c.user_id,
+                    content: c.content,
+                    created_at: c.created_at
+                });
+            });
+
+            const tasksByCaseId = {};
+            rawTasks.forEach(t => {
+                const visibleUserIds = parseUserIds(t.visible_user_ids);
+                if (!isSuper && visibleUserIds.length > 0 && !visibleUserIds.includes(userId)) {
+                    return;
+                }
+
+                const taskObj = {
+                    id: t.id,
+                    case_id: t.case_id,
+                    group_name: cleanGroupName(t.group_name),
+                    title: t.title,
+                    due_date: t.due_date || "",
+                    start_date: t.start_date || "",
+                    is_completed: t.is_completed === true || t.is_completed === 'TRUE',
+                    notes: t.notes || "",
+                    visible_user_ids: visibleUserIds,
+                    visible_users: visibleUserIds.map(uId => userMap[uId]).filter(Boolean),
+                    comments: commentsByTaskId[t.id] || []
+                };
+
+                if (!tasksByCaseId[t.case_id]) tasksByCaseId[t.case_id] = [];
+                tasksByCaseId[t.case_id].push(taskObj);
+            });
+
+            const cases = [];
+            rawCases.forEach(c => {
+                const caseTasks = tasksByCaseId[c.id] || [];
+                if (!isSuper && c.owner_id !== userId && caseTasks.length === 0) {
+                    return;
+                }
+
+                const groupNames = parseGroupNames(c.group_names);
+                const groupMap = {};
+                groupNames.forEach(gn => {
+                    const cleanedGn = cleanGroupName(gn);
+                    if (cleanedGn) groupMap[cleanedGn] = [];
+                });
+
+                caseTasks.forEach(t => {
+                    const cleanedGn = cleanGroupName(t.group_name);
+                    if (!groupMap[cleanedGn]) groupMap[cleanedGn] = [];
+                    groupMap[cleanedGn].push(t);
+                });
+
+                const groups = Object.keys(groupMap).map((gn, index) => ({
+                    id: index + 1,
+                    name: gn,
+                    tasks: groupMap[gn]
+                }));
+
+                cases.push({
+                    id: c.id,
+                    title: c.title,
+                    description: c.description || "",
+                    owner_id: c.owner_id,
+                    owner: userMap[c.owner_id] || { username: 'System', role: '' },
+                    drive_url: c.drive_url || "",
+                    reference_date: c.reference_date || "",
+                    group_names: c.group_names || "",
+                    is_archived: c.is_archived === true || c.is_archived === 'TRUE',
+                    groups: groups
+                });
+            });
+
+            return cases;
+        }
+
+        async function loadSupabaseData(userId = currentUserId) {
+            const [rolesRes, usersRes, casesRes, tasksRes, commentsRes, caseTemplatesRes, templateTasksRes] = await Promise.all([
+                supabaseClient.from('roles').select('*'),
+                supabaseClient.from('users').select('*'),
+                supabaseClient.from('cases').select('*').order('reference_date', { ascending: true }),
+                supabaseClient.from('tasks').select('*'),
+                supabaseClient.from('comments').select('*').order('created_at', { ascending: true }),
+                supabaseClient.from('case_templates').select('*'),
+                supabaseClient.from('template_tasks').select('*')
+            ]);
+
+            if (rolesRes.error) console.error("Error fetching roles:", rolesRes.error);
+            if (usersRes.error) console.error("Error fetching users:", usersRes.error);
+            if (casesRes.error) console.error("Error fetching cases:", casesRes.error);
+            if (tasksRes.error) console.error("Error fetching tasks:", tasksRes.error);
+            if (commentsRes.error) console.error("Error fetching comments:", commentsRes.error);
+            if (caseTemplatesRes.error) console.error("Error fetching case_templates:", caseTemplatesRes.error);
+            if (templateTasksRes.error) console.error("Error fetching template_tasks:", templateTasksRes.error);
+
+            allRoles = rolesRes.data || [];
+            allUsers = usersRes.data || [];
+
+            const rawCases = casesRes.data || [];
+            const rawTasks = tasksRes.data || [];
+            const rawComments = commentsRes.data || [];
+            const rawTemplates = caseTemplatesRes.data || [];
+            const rawTemplateTasks = templateTasksRes.data || [];
+
+            // Assemble templates
+            const tasksByTemplateId = {};
+            rawTemplateTasks.forEach(tt => {
+                if (!tasksByTemplateId[tt.template_id]) tasksByTemplateId[tt.template_id] = [];
+                tasksByTemplateId[tt.template_id].push({
+                    id: tt.id,
+                    template_id: tt.template_id,
+                    group_name: cleanGroupName(tt.group_name),
+                    title: tt.title,
+                    start_day_offset: tt.start_day_offset,
+                    due_day_offset: tt.due_day_offset,
+                    notes: tt.notes || ""
+                });
+            });
+
+            allTemplates = rawTemplates.map(t => ({
+                id: t.id,
+                template_name: t.template_name,
+                description: t.description || "",
+                group_names: parseGroupNames(t.group_names),
+                default_description: t.default_description || "",
+                briefing_options: t.briefing_options || "",
+                tasks: tasksByTemplateId[t.id] || []
+            }));
+
+            // Assemble cases
+            allCases = assembleCasesData(rawCases, rawTasks, rawComments, allUsers, userId);
+            
+            const targetUserId = userId || 1;
+            loginUser = allUsers.find(u => u.id === targetUserId) || allUsers[0] || null;
+
+            return { users: allUsers, roles: allRoles, cases: allCases, templates: allTemplates, loginUser };
+        }
+
+        async function refreshActiveViewQuietly() {
+            try {
+                await loadSupabaseData(currentUserId);
+                markOtherViewsDirty();
+                renderActiveViewOnly();
+            } catch (e) {
+                console.warn("Background realtime refresh error:", e);
+            }
+        }
+
+        // Mount Supabase Realtime WebSocket Channels
+        supabaseClient.channel('public-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+                if (typeof refreshActiveViewQuietly === 'function') refreshActiveViewQuietly();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, () => {
+                if (typeof refreshActiveViewQuietly === 'function') refreshActiveViewQuietly();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                if (typeof refreshActiveViewQuietly === 'function') refreshActiveViewQuietly();
+            })
+            .subscribe();
+
+        // On Document Ready - Supabase Batch Initial Load
         document.addEventListener('DOMContentLoaded', async () => {
-            // Apply saved font size scale
             const currentFontScale = getFontScale();
             applyFontScale(currentFontScale);
             updateFontScaleButtons(currentFontScale);
 
             showLoading(true);
 
-            // Update debug hostname and container flag
-            const isGASContainer = window.location.hostname.includes('google.com') || window.location.hostname.includes('googleusercontent.com');
             const debugHostnameEl = document.getElementById('debug-hostname');
             const debugIsgasEl = document.getElementById('debug-isgas');
             const debugEmailEl = document.getElementById('debug-email');
             const debugStatusEl = document.getElementById('debug-status');
 
             if (debugHostnameEl) debugHostnameEl.textContent = window.location.hostname || "localfile";
-            if (debugIsgasEl) debugIsgasEl.textContent = isGASContainer ? "YES" : "NO";
+            if (debugIsgasEl) debugIsgasEl.textContent = "SUPABASE_ACTIVE";
             if (debugEmailEl) debugEmailEl.textContent = (typeof loggedInUserEmail !== 'undefined') ? loggedInUserEmail : "undefined";
-            if (debugStatusEl) debugStatusEl.textContent = "Loading API...";
+            if (debugStatusEl) debugStatusEl.textContent = "Connecting Supabase...";
+
             try {
                 const savedUserId = localStorage.getItem('activeUserId');
                 let targetUserId = savedUserId ? parseInt(savedUserId) : 1;
 
-                // Single unified batch API request with backward-compatible fallback
-                let initialRes = await apiRequest('getInitialData', { user_id: targetUserId }, 'GET', true);
-                
+                await loadSupabaseData(targetUserId);
 
-                if (!initialRes || !initialRes.users || initialRes.users.length === 0) {
-                    const [usersRes, rolesRes, casesRes, templatesRes] = await Promise.all([
-                        apiRequest('getUsers', null, 'GET', true),
-                        apiRequest('getRoles', null, 'GET', true),
-                        apiRequest('getCases', { user_id: targetUserId }, 'GET', true),
-                        apiRequest('getTemplates', null, 'GET', true)
-                    ]);
-                    allUsers = usersRes || [];
-                    allRoles = rolesRes || [];
-                    allCases = casesRes || [];
-                    allTemplates = templatesRes || [];
-                    loginUser = allUsers.find(u => u.id === targetUserId) || allUsers[0] || null;
-                } else {
-                    allUsers = initialRes.users || [];
-                    allRoles = initialRes.roles || [];
-                    allCases = initialRes.cases || [];
-                    allTemplates = initialRes.templates || [];
-                    loginUser = initialRes.loginUser || allUsers.find(u => u.id === targetUserId) || allUsers[0] || null;
-                }
-
-                // Check if we are running in authenticated Web App mode
                 const isAuthenticatedMode = (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?"));
 
                 if (loginUser && isAuthenticatedMode) {
                     if (loginUser.is_super_master === true || loginUser.id === 1) {
-                        // Keep targetUserId for testing impersonation
                         if (allUsers.some(u => u.id == targetUserId)) {
                             currentUserId = targetUserId;
                         } else {
                             currentUserId = loginUser.id;
                         }
                     } else {
-                        // Lock non-super-master to their own ID
                         currentUserId = loginUser.id;
                         localStorage.setItem('activeUserId', currentUserId);
                     }
                 } else {
-                    // Local / GitHub Pages development mode: bypass locking, always allow switching
                     if (allUsers.some(u => u.id == targetUserId)) {
                         currentUserId = targetUserId;
                     } else if (allUsers.length > 0) {
@@ -1417,24 +1576,22 @@
                 updateUserIndicatorAndLanguage();
                 updateDebugPanel();
 
-                // Mark other views as dirty and render only active view for 0ms startup
                 isCalendarDirty = true;
                 isDashboardDirty = true;
                 isCaseTreeDirty = true;
                 renderActiveViewOnly();
             } catch (e) {
-                console.error("初始化失敗:", e);
+                console.error("Supabase 初始化失敗:", e);
                 const debugStatusEl = document.getElementById('debug-status');
                 if (debugStatusEl) {
                     debugStatusEl.textContent = "Error: " + e.toString();
-                    debugStatusEl.style.color = "#f87171"; // red
+                    debugStatusEl.style.color = "#f87171";
                 }
-                alert("系統初始化失敗！\n請將此錯誤訊息截圖提供給開發人員以進行修復：\n\n" + e.toString());
+                alert("系統 Supabase 初始化失敗！\n錯誤訊息：\n\n" + e.toString());
             } finally {
                 showLoading(false);
             }
         });
-
 
         // Run UI Multilingual Translation
         function translateUI(lang) {
@@ -1451,135 +1608,348 @@
             });
         }
 
-        function waitForGoogleScript() {
-            return new Promise((resolve) => {
-                let attempts = 0;
-                const check = () => {
-                    if (typeof google !== 'undefined' && google.script && google.script.run) {
-                        resolve(true);
-                    } else if (attempts > 50) {
-                        resolve(false);
-                    } else {
-                        attempts++;
-                        setTimeout(check, 50);
-                    }
-                };
-                check();
-            });
-        }
-
-        // Global Request Wrapper
+        // Global Supabase Request Handler
         async function apiRequest(action, payload = null, method = 'GET', silent = false) {
             if (!silent) showLoading(true);
-
-            // If running inside Google Apps Script (HTML Service container), wait for injection and use native google.script.run
-            const isGASContainer = window.location.hostname.includes('google.com') || window.location.hostname.includes('googleusercontent.com');
-            if (isGASContainer) {
-                const available = await waitForGoogleScript();
-                if (available) {
-                    return new Promise((resolve, reject) => {
-                        google.script.run
-                            .withSuccessHandler((res) => {
-                                if (!silent) showLoading(false);
-                                if (res && res.status === 'error') {
-                                    reject(new Error(res.message));
-                                } else {
-                                    resolve(res);
-                                }
-                            })
-                            .withFailureHandler((err) => {
-                                if (!silent) showLoading(false);
-                                reject(err);
-                            })
-                            .apiCall(action, payload);
-                    });
-                } else {
-                    console.warn("google.script.run not ready in time. Falling back to fetch.");
-                }
-            }
-
             try {
-                if (GAS_API_URL) {
-                    // Check URL format to avoid common user copy-paste mistakes (like pasting sheet URL)
-                    if (!GAS_API_URL.includes("script.google.com/macros/s/") || !GAS_API_URL.includes("/exec")) {
-                        throw new Error("網址格式錯誤！\n請貼上以 /exec 結尾的 Google Apps Script 網頁應用程式 (Web App) 網址。\n不要貼上 Google 試算表或 Apps Script 編輯器的編輯網址。");
-                    }
-
-                    // Inject signature-based authentication parameters if active
-                    let authEmail = "";
-                    let authSignature = "";
-                    if (typeof loggedInUserEmail !== 'undefined' && loggedInUserEmail && !loggedInUserEmail.startsWith("<?")) {
-                        authEmail = loggedInUserEmail;
-                        authSignature = loggedInUserSignature;
-                    }
-
-                    let finalPayload = payload ? { ...payload } : {};
-                    if (authEmail) {
-                        finalPayload.auth_email = authEmail;
-                        finalPayload.auth_signature = authSignature;
-                    }
-
-                    // REAL GAS API Connection
-                    // Force GET to bypass Google Apps Script CORS redirect block on POST requests when cross-origin
-                    let actualMethod = method;
-                    if (actualMethod === 'POST' && window.location.hostname !== 'script.google.com') {
-                        actualMethod = 'GET';
-                    }
-
-                    if (actualMethod === 'GET') {
-                        let url = `${GAS_API_URL}?action=${action}`;
-                        if (finalPayload) {
-                            Object.keys(finalPayload).forEach(k => {
-                                let val = finalPayload[k];
-                                if (val === undefined) return;
-                                if (val === null) {
-                                    val = "";
-                                } else if (typeof val === 'object') {
-                                    val = JSON.stringify(val);
-                                }
-                                url += `&${k}=${encodeURIComponent(val)}`;
-                            });
-                        }
-                        const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
-                        const text = await res.text();
-                        let json;
-                        try {
-                            json = JSON.parse(text);
-                        } catch (e) {
-                            throw new Error(`回傳格式非 JSON。原始回傳前 200 字元：\n${text.substring(0, 200)}`);
-                        }
-                        if (json.status === 'error') throw new Error(json.message);
-                        return json;
-                    } else {
-                        const bodyPayload = { action: action, ...finalPayload };
-                        const res = await fetch(GAS_API_URL, {
-                            method: 'POST',
-                            body: JSON.stringify(bodyPayload),
-                            redirect: 'follow',
-                            credentials: 'omit'
+                if (action === 'getInitialData') {
+                    const userId = payload ? (parseInt(payload.user_id) || currentUserId) : currentUserId;
+                    return await loadSupabaseData(userId);
+                }
+                if (action === 'getUsers') {
+                    const { data, error } = await supabaseClient.from('users').select('*');
+                    if (error) throw error;
+                    allUsers = data || [];
+                    return allUsers;
+                }
+                if (action === 'getRoles') {
+                    const { data, error } = await supabaseClient.from('roles').select('*');
+                    if (error) throw error;
+                    allRoles = data || [];
+                    return allRoles;
+                }
+                if (action === 'getCases') {
+                    const userId = payload ? (parseInt(payload.user_id) || currentUserId) : currentUserId;
+                    await loadSupabaseData(userId);
+                    return allCases;
+                }
+                if (action === 'getTemplates') {
+                    const { data: rawTemplates, error: tErr } = await supabaseClient.from('case_templates').select('*');
+                    const { data: rawTasks, error: ttErr } = await supabaseClient.from('template_tasks').select('*');
+                    if (tErr) throw tErr;
+                    if (ttErr) throw ttErr;
+                    const tasksByTemplateId = {};
+                    (rawTasks || []).forEach(tt => {
+                        if (!tasksByTemplateId[tt.template_id]) tasksByTemplateId[tt.template_id] = [];
+                        tasksByTemplateId[tt.template_id].push({
+                            id: tt.id,
+                            template_id: tt.template_id,
+                            group_name: cleanGroupName(tt.group_name),
+                            title: tt.title,
+                            start_day_offset: tt.start_day_offset,
+                            due_day_offset: tt.due_day_offset,
+                            notes: tt.notes || ""
                         });
-                        const text = await res.text();
-                        let json;
-                        try {
-                            json = JSON.parse(text);
-                        } catch (e) {
-                            throw new Error(`回傳格式非 JSON。原始回傳前 200 字元：\n${text.substring(0, 200)}`);
-                        }
-                        if (json.status === 'error') throw new Error(json.message);
-                        return json;
+                    });
+                    allTemplates = (rawTemplates || []).map(t => ({
+                        id: t.id,
+                        template_name: t.template_name,
+                        description: t.description || "",
+                        group_names: parseGroupNames(t.group_names),
+                        default_description: t.default_description || "",
+                        briefing_options: t.briefing_options || "",
+                        tasks: tasksByTemplateId[t.id] || []
+                    }));
+                    return allTemplates;
+                }
+                if (action === 'getTaskComments') {
+                    const taskId = payload ? parseInt(payload.taskId) : null;
+                    if (!taskId) return [];
+                    const { data, error } = await supabaseClient.from('comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
+                    if (error) throw error;
+                    return data || [];
+                }
+                if (action === 'toggleTask') {
+                    const taskId = parseInt(payload.taskId);
+                    let taskObj = null;
+                    allCases.forEach(c => {
+                        c.groups.forEach(g => {
+                            const found = g.tasks.find(t => parseInt(t.id) === taskId);
+                            if (found) taskObj = found;
+                        });
+                    });
+                    const newCompleted = taskObj ? taskObj.is_completed : true;
+                    const { error } = await supabaseClient.from('tasks').update({ is_completed: newCompleted }).eq('id', taskId);
+                    if (error) throw error;
+                    return { status: 'success', taskId, is_completed: newCompleted };
+                }
+                if (action === 'createTask') {
+                    const visStr = Array.isArray(payload.visible_user_ids) ? payload.visible_user_ids.join(',') : (payload.visible_user_ids || '');
+                    const { data, error } = await supabaseClient.from('tasks').insert([{
+                        case_id: payload.case_id,
+                        group_name: cleanGroupName(payload.group_name),
+                        title: payload.title,
+                        due_date: payload.due_date || null,
+                        start_date: payload.start_date || null,
+                        is_completed: false,
+                        notes: '',
+                        visible_user_ids: visStr
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', taskId: data[0].id };
+                }
+                if (action === 'deleteTask') {
+                    const taskId = parseInt(payload.taskId);
+                    const { error } = await supabaseClient.from('tasks').delete().eq('id', taskId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'updateTask') {
+                    const taskId = parseInt(payload.taskId);
+                    const updateObj = {};
+                    if (payload.notes !== undefined) updateObj.notes = payload.notes;
+                    if (payload.start_date !== undefined) updateObj.start_date = payload.start_date || null;
+                    if (payload.due_date !== undefined) updateObj.due_date = payload.due_date || null;
+                    if (payload.visible_user_ids !== undefined) {
+                        updateObj.visible_user_ids = Array.isArray(payload.visible_user_ids) ? payload.visible_user_ids.join(',') : (payload.visible_user_ids || '');
                     }
-                } else {
-                    // standalone MOCK database
-                    return await runMockApi(action, payload, method);
+                    if (payload.is_completed !== undefined) updateObj.is_completed = payload.is_completed;
+                    const { error } = await supabaseClient.from('tasks').update(updateObj).eq('id', taskId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'addComment') {
+                    const { data, error } = await supabaseClient.from('comments').insert([{
+                        task_id: parseInt(payload.taskId),
+                        user_id: payload.user_id || currentUserId,
+                        content: payload.content
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', commentId: data[0].id };
+                }
+                if (action === 'updateComment') {
+                    const commentId = parseInt(payload.commentId);
+                    const { error } = await supabaseClient.from('comments').update({ content: payload.content }).eq('id', commentId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'deleteComment') {
+                    const commentId = parseInt(payload.commentId);
+                    const { error } = await supabaseClient.from('comments').delete().eq('id', commentId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'createCase') {
+                    let finalTitle = payload.title || '';
+                    if (payload.template_id) {
+                        const tmpl = allTemplates.find(x => x.id === parseInt(payload.template_id));
+                        if (tmpl && tmpl.template_name) {
+                            const tName = tmpl.template_name.trim();
+                            if (tName && !finalTitle.endsWith('-' + tName)) {
+                                finalTitle = finalTitle + '-' + tName;
+                            }
+                        }
+                    }
+                    const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : (payload.groups || '一般待辦');
+                    const { data: newCases, error: cErr } = await supabaseClient.from('cases').insert([{
+                        title: finalTitle,
+                        description: payload.description || '',
+                        owner_id: payload.owner_id || currentUserId,
+                        drive_url: payload.drive_url || "https://drive.google.com/drive/folders/mock-id",
+                        group_names: groupsStr,
+                        reference_date: payload.reference_date || null,
+                        is_archived: false
+                    }]).select();
+                    if (cErr) throw cErr;
+                    const newCaseId = newCases[0].id;
+
+                    if (payload.template_id && payload.reference_date) {
+                        const tmplObj = allTemplates.find(t => t.id === parseInt(payload.template_id));
+                        if (tmplObj && tmplObj.tasks && tmplObj.tasks.length > 0) {
+                            const refParts = payload.reference_date.split('-');
+                            const refDate = new Date(refParts[0], refParts[1] - 1, refParts[2]);
+                            const allUserIdsStr = allUsers.map(u => u.id).join(',');
+
+                            const tasksToInsert = tmplObj.tasks.map(tt => {
+                                const start = new Date(refDate);
+                                start.setDate(refDate.getDate() + tt.start_day_offset);
+                                const startStr = start.toISOString().split('T')[0];
+
+                                const due = new Date(refDate);
+                                due.setDate(refDate.getDate() + tt.due_day_offset);
+                                const dueStr = due.toISOString().split('T')[0];
+
+                                return {
+                                    case_id: newCaseId,
+                                    group_name: cleanGroupName(tt.group_name),
+                                    title: tt.title,
+                                    due_date: dueStr,
+                                    start_date: startStr,
+                                    is_completed: false,
+                                    notes: tt.notes || '',
+                                    visible_user_ids: allUserIdsStr
+                                };
+                            });
+                            await supabaseClient.from('tasks').insert(tasksToInsert);
+                        }
+                    }
+                    return { status: 'success', caseId: newCaseId };
+                }
+                if (action === 'updateCase') {
+                    const caseId = parseInt(payload.caseId);
+                    const updateObj = {};
+                    if (payload.title !== undefined) updateObj.title = payload.title;
+                    if (payload.description !== undefined) updateObj.description = payload.description;
+                    if (payload.driveUrl !== undefined) updateObj.drive_url = payload.driveUrl;
+                    if (payload.reference_date !== undefined) updateObj.reference_date = payload.reference_date || null;
+                    if (payload.groups !== undefined) {
+                        updateObj.group_names = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                    }
+                    if (payload.is_archived !== undefined) updateObj.is_archived = payload.is_archived;
+
+                    const { error: cErr } = await supabaseClient.from('cases').update(updateObj).eq('id', caseId);
+                    if (cErr) throw cErr;
+
+                    if (payload.visibility_mode && payload.visibility_mode !== 'none' && Array.isArray(payload.visible_user_ids)) {
+                        const selectedUserIds = payload.visible_user_ids;
+                        const { data: cTasks } = await supabaseClient.from('tasks').select('*').eq('case_id', caseId);
+                        if (cTasks && cTasks.length > 0) {
+                            for (const t of cTasks) {
+                                let curVis = parseUserIds(t.visible_user_ids);
+                                if (payload.visibility_mode === 'overwrite') {
+                                    curVis = [...selectedUserIds];
+                                } else if (payload.visibility_mode === 'append') {
+                                    selectedUserIds.forEach(uid => { if (!curVis.includes(uid)) curVis.push(uid); });
+                                }
+                                await supabaseClient.from('tasks').update({ visible_user_ids: curVis.join(',') }).eq('id', t.id);
+                            }
+                        }
+                    }
+                    return { status: 'success' };
+                }
+                if (action === 'deleteCase') {
+                    const caseId = parseInt(payload.caseId);
+                    const { error } = await supabaseClient.from('cases').delete().eq('id', caseId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'createUser') {
+                    const { data, error } = await supabaseClient.from('users').insert([{
+                        username: payload.username,
+                        role_id: payload.roleId,
+                        avatar_color: payload.avatar_color,
+                        language: payload.language,
+                        google_email: payload.google_email
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', userId: data[0].id };
+                }
+                if (action === 'updateUser') {
+                    const userId = parseInt(payload.userId);
+                    const { error } = await supabaseClient.from('users').update({
+                        username: payload.username,
+                        role_id: payload.roleId,
+                        avatar_color: payload.avatar_color,
+                        language: payload.language,
+                        google_email: payload.google_email
+                    }).eq('id', userId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'deleteUser') {
+                    const userId = parseInt(payload.userId);
+                    const { error } = await supabaseClient.from('users').delete().eq('id', userId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'createRole') {
+                    const { data, error } = await supabaseClient.from('roles').insert([{
+                        role_name: payload.role_name,
+                        can_create_case: payload.can_create_case
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', roleId: data[0].id };
+                }
+                if (action === 'updateRole') {
+                    const roleId = parseInt(payload.roleId);
+                    const { error } = await supabaseClient.from('roles').update({
+                        role_name: payload.role_name,
+                        can_create_case: payload.can_create_case
+                    }).eq('id', roleId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'deleteRole') {
+                    const roleId = parseInt(payload.roleId);
+                    const { error } = await supabaseClient.from('roles').delete().eq('id', roleId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'createTemplate') {
+                    const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                    const { data, error } = await supabaseClient.from('case_templates').insert([{
+                        template_name: payload.template_name,
+                        description: payload.description || '',
+                        default_description: payload.default_description || '',
+                        briefing_options: payload.briefing_options || '',
+                        group_names: groupsStr
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', templateId: data[0].id };
+                }
+                if (action === 'updateTemplate') {
+                    const templateId = parseInt(payload.templateId);
+                    const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
+                    const { error } = await supabaseClient.from('case_templates').update({
+                        template_name: payload.template_name,
+                        description: payload.description || '',
+                        default_description: payload.default_description || '',
+                        briefing_options: payload.briefing_options || '',
+                        group_names: groupsStr
+                    }).eq('id', templateId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'deleteTemplate') {
+                    const templateId = parseInt(payload.templateId);
+                    const { error } = await supabaseClient.from('case_templates').delete().eq('id', templateId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'createTemplateTask') {
+                    const { data, error } = await supabaseClient.from('template_tasks').insert([{
+                        template_id: parseInt(payload.template_id),
+                        group_name: cleanGroupName(payload.group_name),
+                        title: payload.title,
+                        start_day_offset: parseInt(payload.start_day_offset) || 0,
+                        due_day_offset: parseInt(payload.due_day_offset) || 0,
+                        notes: payload.notes || ''
+                    }]).select();
+                    if (error) throw error;
+                    return { status: 'success', taskId: data[0].id };
+                }
+                if (action === 'updateTemplateTask') {
+                    const taskId = parseInt(payload.taskId);
+                    const { error } = await supabaseClient.from('template_tasks').update({
+                        group_name: cleanGroupName(payload.group_name),
+                        title: payload.title,
+                        start_day_offset: parseInt(payload.start_day_offset) || 0,
+                        due_day_offset: parseInt(payload.due_day_offset) || 0,
+                        notes: payload.notes || ''
+                    }).eq('id', taskId);
+                    if (error) throw error;
+                    return { status: 'success' };
+                }
+                if (action === 'deleteTemplateTask') {
+                    const taskId = parseInt(payload.taskId);
+                    const { error } = await supabaseClient.from('template_tasks').delete().eq('id', taskId);
+                    if (error) throw error;
+                    return { status: 'success' };
                 }
             } catch (err) {
-                console.error("API 請求錯誤:", err);
+                console.error(`Supabase API Request Error [${action}]:`, err);
                 if (!silent) {
-                    if (err.message.includes("Unexpected token") || err.message.includes("is not valid JSON")) {
-                        alert(`API 連線失敗！\n\n這通常是因為您的 GAS 部署設定中「誰有權限存取 (Who has access)」未設定為「所有人 (Anyone)」，導致 Google 要求登入並回傳了 HTML 格式 of 登入頁面而非 JSON。\n\n詳細錯誤資訊：${err.message}`);
-                    } else {
-                        alert(`API Error: ${err.message}`);
-                    }
+                    alert(`Supabase 操作失敗 [${action}]：\n` + (err.message || err.toString()));
                 }
                 return null;
             } finally {

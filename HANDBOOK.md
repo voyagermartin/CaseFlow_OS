@@ -6,37 +6,38 @@
 
 ## 🌟 1. 系統定位與核心架構
 
-**CaseFlow OS** 是一個以 **Google Workspace (Google Sheets / Google Drive)** 為後端資料庫，透過 **Google Apps Script (GAS)** 與 **GitHub Pages** 雙軌運作的事件驅動專案作業系統 (Event-Driven OS)。
+**CaseFlow OS** 是一個以 **Supabase PostgreSQL** 為核心即時雲端資料庫，透過 **Supabase Client-side SDK (JavaScript)** 與 **GitHub Pages** 運作的事件驅動專案作業系統 (Event-Driven OS)。
 
 ### 🛠️ 技術規格
-- **後端與資料庫**：Google Apps Script (GAS) Web App + Google Sheets 雲端試算表（7 大核心工作表）。
-- **前端介面**：HTML5 + Vanilla JS + Tailwind CSS，整合 FullCalendar v6（日曆）。
-- **極速效能架構**：
-  - **後端**：全面改採**單一記憶體 2D 陣列批次寫入 (`setValues`)** 與 `SpreadsheetApp.flush()` 強制落盤防護，寫入耗時降至 `<0.05s`。
-  - **前端**：單通道載入 (`getInitialData`) + `Promise.all` 降級備援（首頁載入 `<0.3s`）；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應，消除全站 DOM 銷毀重繪卡頓。
+- **後端與資料庫**：Supabase PostgreSQL 雲端資料庫（7 大核心資料表：`roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks`）。
+- **前端介面**：HTML5 + Vanilla JS + Tailwind CSS + `@supabase/supabase-js v2`，整合 FullCalendar v6（日曆）。
+- **極速效能與 Realtime 架構**：
+  - **資料層**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)。
+  - **即時連線 (WebSocket Realtime)**：掛載 Supabase Realtime 頻道監聽 (`tasks`, `cases`, `comments`)，團隊成員修改資料時自動無感刷新全站視圖。
+  - **前端效能**：`Promise.all` 7 表併行載入 (`loadSupabaseData`)；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應，消除全站 DOM 銷毀重繪卡頓。
 - **行動優先與自適應字級架構 (Mobile-First UX)**：
   - **行動抽屜選單**：`<1024px` 預設隱藏側邊欄，透過頂欄 ☰ 漢堡按鈕與毛玻璃遮罩展開，切換分頁自動平滑收合。
   - **個人化字級調節器 (Font Scaler)**：動態控制根元素 `html.font-scale-*`（標準 16px / 舒適 18px / 大字 20px），透過 `localStorage` 跨裝置持久化記憶。
   - **44px 拇指友善觸控與 iOS 體驗**：加大 Checkbox (`h-5 w-5`) 與按鈕熱區，表單輸入框自適應 `text-base`/`text-sm` 消除 iOS Safari 點擊輸入時自動拉近放大跳動。
 - **門禁與權限控管**：
-  - **Email 白名單門禁**：以 `Users.google_email` 為進站名單（`#login-modal`）。
+  - **Email 白名單門禁**：以 `users.google_email` 為進站名單（`#login-modal`）。
   - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域專案與任務檢視穿透權限，外加單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
 
 ---
 
-## 🗄️ 2. Google Sheets 雲端資料庫架構 (7 大工作表)
+## 🗄️ 2. Supabase Cloud PostgreSQL 資料庫架構 (7 大資料表)
 
-👉 **[官方雲端資料庫 Google Sheets 連結](https://docs.google.com/spreadsheets/d/19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk/edit)**
+👉 **Supabase 專屬 Project URL**: `https://lzfiemnygaarzgvvonwt.supabase.co`
 
-| 工作表 | 作用 | 核心欄位結構 (Key Schema) |
+| 資料表 | 作用 | 核心欄位結構 (Key Schema) |
 | :--- | :--- | :--- |
-| **`Users`** | 成員帳號、角色、顏色、語系與管理權限 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
-| **`Roles`** | 角色名稱與專案建立權限定義 | `id`, `role_name`, `can_create_case` |
-| **`Cases`** | 專案總表、Drive 掛載、出發基準日與封存 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date`, `is_archived` |
-| **`Tasks`** | 待辦項目、起訖死線、備註與可見人員 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
-| **`Comments`** | 任務即時討論留言串 | `id`, `task_id`, `user_id`, `content`, `created_at` |
-| **`CaseTemplates`** | SOP 專案範本、預置描述與行前 Briefing 選項 | `id`, `template_name`, `description`, `group_names`, `default_description`, `briefing_options` |
-| **`TemplateTasks`** | 範本標準待辦、相對偏移天數與備註 | `id`, `template_id`, `group_name`, `title`, `start_day_offset`, `due_day_offset`, `notes` |
+| **`roles`** | 角色名稱與專案建立權限定義 | `id`, `role_name`, `can_create_case` |
+| **`users`** | 成員帳號、角色、顏色、語系與管理權限 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
+| **`cases`** | 專案總表、Drive 掛載、出發基準日與封存 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date`, `is_archived` |
+| **`tasks`** | 待辦項目、起訖死線、備註與可見人員 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
+| **`comments`** | 任務即時討論留言串 | `id`, `task_id`, `user_id`, `content`, `created_at` |
+| **`case_templates`** | SOP 專案範本、預置描述與行前 Briefing 選項 | `id`, `template_name`, `description`, `group_names`, `default_description`, `briefing_options` |
+| **`template_tasks`** | 範本標準待辦、相對偏移天數與備註 | `id`, `template_id`, `group_name`, `title`, `start_day_offset`, `due_day_offset`, `notes` |
 
 ---
 
@@ -70,17 +71,16 @@
 
 ## ⚙️ 4. 部署方式與 AI 合作協議
 
-### 🚀 GAS 部署指南
-1. 於 Google 試算表開啟 **擴充功能 ➔ Apps Script**，同步 [Code.js](file:///d:/Projects/CaseFlow_OS/Code.js)。
-2. Web App 執行身分為 `USER_DEPLOYING`（我），存取權限為 `ANYONE_ANONYMOUS`（所有人）。
-3. 前端 [index.html](file:///d:/Projects/CaseFlow_OS/index.html) 設定 `GAS_API_URL` 即可完成雙向連線。
+### 🚀 部署指南 (GitHub Pages)
+1. 靜態網頁架構託管於 **GitHub Pages**。
+2. 前端 [index.html](file:///f:/Projects/CaseFlow_OS/index.html) 引入 `@supabase/supabase-js` CDN 並設置 `SUPABASE_URL` 與 `SUPABASE_ANON_KEY` 即可完成雲端雙向連線。
 
 ### 🤝 AI 自動化部署協議
 - AI 完成程式碼修改與驗證後，全權代理執行以下流程：
-  1. `clasp push`（推播 GAS 雲端）
-  2. `clasp deploy -i [Deployment_ID]`（更新固定主要 Web App 發布版本）
-  3. `git commit` & `git push`（同步 GitHub 儲存庫）
-- 使用者僅於最終發布環境進行功能驗證。
+  1. `git add .`
+  2. `git commit -m "..."`
+  3. `git push origin main`（同步 GitHub 儲存庫並觸發 GitHub Pages 自動部署）
+- 使用者僅於最終發布網頁環境進行功能驗證。
 
 ---
 
@@ -101,6 +101,7 @@
 | **Phase 11** (2026-09-03) | 移除甘特圖模式（減重前端架構與消除依賴庫負載）、儀表板 0ms 原地動畫回饋 (`dashboard-task-row` in-place mutation) 與平滑重繪、清除殘留字典（正式基準點）。 | `@53` |
 | **Phase 12** (2026-09-03) | 📱 手機視角與響應式重構：側邊欄轉為行動抽屜 (Drawer) + 漢堡選單按鈕 + 背景遮罩 + 切換分頁自動收合；案件樹狀排版自適應與任務抽屜全寬優化。 | `@54` |
 | **Phase 13** (2026-09-03) | 🔠 字體層級全面升級與個人化字級調節器：消除微型字 (10px->12~14px)、側邊欄新增 [標準 100% / 舒適 115% / 大字 125%] 即時切換並持久化、流動式 Badge 防破版、44px 拇指觸控友善與輸入框防 iOS 自動縮放；徹底清理未授權提示殘存遮罩。 | `@57` |
+| **Phase 14** (2026-09-27) | ⚡ 全面資料層遷移至 Supabase PostgreSQL 雲端資料庫：淘汰 GAS Web App 即時資料庫連線，改採 Supabase Client SDK 直連 7 大 PostgreSQL 表，並掛載 WebSocket Realtime 頻道對 `tasks` / `cases` / `comments` 實現跨裝置無感靜默刷新。 | `v3.0` |
 
 ---
 
@@ -138,5 +139,25 @@
 6. **🛡️ 未授權提示殘留遮罩徹底清理與樣式防護**：
    - 完整拔除未使用的未授權帳戶阻擋遮罩 HTML 與 JS 判斷，並於 CSS 注入 `.hidden { display: none !important; }`，徹底杜絕畫面底部出現「前往 Gmail 收信 / 切換帳戶」之殘留提示。
 7. **當前最新部署與版本標記**：
-   - **GAS 雲端部署版本**：`@57`
-   - **GitHub 記錄點**：`ac5205b` / 準備進行本手冊之 Commit 落地。
+   - **GAS 雲端部署版本**：`@57` (Legacy)
+   - **GitHub 記錄點**：`ac5205b`
+
+### 📅 2026-09-27 開發日誌摘要 (Phase 14 - Supabase 全面資料層遷移)
+
+今日完成專案核心架構重構，將資料層由 Google Apps Script 全面遷移至 Supabase PostgreSQL 雲端資料庫：
+
+1. **🔥 Supabase Client SDK 整合與憑證配置**：
+   - 在 `index.html` 頂部配置官方 Supabase SDK CDN 及專屬憑證 (`SUPABASE_URL` 與 `SUPABASE_ANON_KEY`)。
+2. **⚡ `loadSupabaseData` 7 大資料表 `Promise.all` 併行載入**：
+   - 原有向 GAS 發送 HTTP 請求之邏輯重構為 `Promise.all` 併行讀取 `roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks` 7 張 PostgreSQL 表。
+3. **🛠️ CRUD 操作全數改採 Supabase SDK**：
+   - 待辦勾選 (`toggleTask`)、新增/編輯/刪除待辦 (`tasks`)、任務備註/時程/可見人員權限。
+   - 新增案件 (`createCase`)、編輯/刪除/封存案件 (`cases`)，且自動觸發範本標準任務之批量生成與 cascade 刪除。
+   - 留言討論區 (`comments`) 新增、編輯與刪除。
+   - 人員/職位與 SOP 範本組件之 CRUD 全數對齊 Supabase 資料表。
+4. **📡 Supabase Realtime WebSocket 訂閱監聽**：
+   - 訂閱 `tasks`, `cases`, `comments` 之變更事件，在團隊成員進行更新時自動觸發靜默背景刷新 (`refreshActiveViewQuietly`)。
+5. **當前最新部署與版本標記**：
+   - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
+   - **GitHub 記錄點**：`main` 分支 Clean 同步。
+
