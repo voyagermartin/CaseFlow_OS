@@ -6,13 +6,13 @@
 
 ## 🌟 1. 系統定位與核心架構
 
-**CaseFlow OS** 是一個以 **Supabase PostgreSQL** 為核心即時雲端資料庫，透過 **Supabase Client-side SDK (JavaScript)** 與 **GitHub Pages** 運作的事件驅動專案作業系統 (Event-Driven OS)。
+**CaseFlow OS** 是一個以 **Supabase Cloud PostgreSQL** 為核心即時雲端資料庫，透過 **Supabase Client-side SDK (JavaScript)** 與 **GitHub Pages** 雙軌運作的事件驅動專案作業系統 (Event-Driven OS)。
 
 ### 🛠️ 技術規格
-- **後端與資料庫**：Supabase PostgreSQL 雲端資料庫（7 大核心資料表：`roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks`）。
+- **後端與資料庫**：Supabase Cloud PostgreSQL 雲端資料庫（7 大核心資料表：`roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks`）。
 - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS + `@supabase/supabase-js v2`，整合 FullCalendar v6（日曆）。
 - **極速效能與 Realtime 架構**：
-  - **資料層**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)。
+  - **資料層與歷史資料備份**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)；已完整將原 Google Sheets 資料庫 24 筆案件、308 筆待辦事項、23 條留言無損匯入。
   - **即時連線 (WebSocket Realtime)**：掛載 Supabase Realtime 頻道監聽 (`tasks`, `cases`, `comments`)，團隊成員修改資料時自動無感刷新全站視圖。
   - **前端效能**：`Promise.all` 7 表併行載入 (`loadSupabaseData`)；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應，消除全站 DOM 銷毀重繪卡頓。
 - **行動優先與自適應字級架構 (Mobile-First UX)**：
@@ -142,22 +142,24 @@
    - **GAS 雲端部署版本**：`@57` (Legacy)
    - **GitHub 記錄點**：`ac5205b`
 
-### 📅 2026-09-27 開發日誌摘要 (Phase 14 - Supabase 全面資料層遷移)
+### 📅 2026-09-27 開發日誌摘要 (Phase 14 - Supabase 全面資料層遷移與歷史資料無損轉移)
 
-今日完成專案核心架構重構，將資料層由 Google Apps Script 全面遷移至 Supabase PostgreSQL 雲端資料庫：
+今日完成專案重大架構躍進，將資料層由 Google Apps Script (GAS) 全面遷移至 Supabase PostgreSQL 雲端資料庫，並完成歷史全量資料搬遷：
 
 1. **🔥 Supabase Client SDK 整合與憑證配置**：
    - 在 `index.html` 頂部配置官方 Supabase SDK CDN 及專屬憑證 (`SUPABASE_URL` 與 `SUPABASE_ANON_KEY`)。
 2. **⚡ `loadSupabaseData` 7 大資料表 `Promise.all` 併行載入**：
-   - 原有向 GAS 發送 HTTP 請求之邏輯重構為 `Promise.all` 併行讀取 `roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks` 7 張 PostgreSQL 表。
-3. **🛠️ CRUD 操作全數改採 Supabase SDK**：
+   - 重構資料載入流程，以 `Promise.all` 併行讀取 `roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks` 7 張 PostgreSQL 資料表。
+3. **📦 歷史全量資料無損轉移與核對**：
+   - 撰寫並執行專屬資料搬遷腳本，將原本 Google Sheets 雲端試算表中之 24 筆案件、308 筆待辦事項、23 筆留言討論、3 位成員帳號、5 個權限職位、3 個範本與 30 筆預置任務成功無損轉移至 Supabase PostgreSQL 雲端資料庫。
+4. **🛠️ 全站 CRUD 操作對齊 Supabase SDK**：
    - 待辦勾選 (`toggleTask`)、新增/編輯/刪除待辦 (`tasks`)、任務備註/時程/可見人員權限。
    - 新增案件 (`createCase`)、編輯/刪除/封存案件 (`cases`)，且自動觸發範本標準任務之批量生成與 cascade 刪除。
    - 留言討論區 (`comments`) 新增、編輯與刪除。
    - 人員/職位與 SOP 範本組件之 CRUD 全數對齊 Supabase 資料表。
-4. **📡 Supabase Realtime WebSocket 訂閱監聽**：
+5. **📡 Supabase Realtime WebSocket 訂閱監聽**：
    - 訂閱 `tasks`, `cases`, `comments` 之變更事件，在團隊成員進行更新時自動觸發靜默背景刷新 (`refreshActiveViewQuietly`)。
-5. **當前最新部署與版本標記**：
+6. **🎯 下階段開發基準標記 (Benchmark Milestone)**：
    - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
-   - **GitHub 記錄點**：`main` 分支 Clean 同步。
+   - **GitHub 記錄點**：`main` 分支歷史資料備份與 Supabase 雙軌定案 Commit。
 
