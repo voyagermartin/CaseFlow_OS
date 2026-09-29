@@ -14,6 +14,7 @@
 - **極速效能與 Realtime 架構**：
   - **資料層與歷史資料備份**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)；已完整將原 Google Sheets 資料庫 24 筆案件、308 筆待辦事項、23 條留言無損匯入。
   - **即時連線 (WebSocket Realtime)**：掛載 Supabase Realtime 頻道監聽 (`tasks`, `cases`, `comments`)，團隊成員修改資料時自動無感刷新全站視圖。
+  - **主鍵序號自愈與容錯寫入 (`safeInsert`)**：針對歷史資料匯入可能引起的 sequence 滯後問題，內建 `safeInsert` 自動捕捉 `23505 duplicate key` 錯誤，0ms 動態以 `max(id) + 1` 恢復重試，確保留言與任務寫入 100% 成功。
   - **前端效能**：`Promise.all` 7 表併行載入 (`loadSupabaseData`)；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應，消除全站 DOM 銷毀重繪卡頓。
 - **行動優先與自適應字級架構 (Mobile-First UX)**：
   - **行動抽屜選單**：`<1024px` 預設隱藏側邊欄，透過頂欄 ☰ 漢堡按鈕與毛玻璃遮罩展開，切換分頁自動平滑收合。
@@ -54,7 +55,9 @@
 ### 📋 C. 案件樹狀模式 (Case Tree View)
 - **卡片管理**：標題採用自適應 `text-base sm:text-xl font-bold`，預設收合帶有 `openCaseIds` 記憶；支援專案「📦 封存 / 🔓 解封」（封存案件可透過開關顯示，預設自儀表板與日曆隱藏）。
 - **案件出發日自愈與排序**：自動從出發日或團號編碼（如 `JX260916A`）提取日期並升序排列，直顯出發日大字徽章。
-- **待辦事項大字階排版**：待辦項目採用 `text-sm sm:text-base font-semibold` 搭配放鬆行距，搭配 `h-5 w-5` 大尺寸核取方塊。
+- **任務群組自愈與保底容器**：若案件無預設群組或為空白，系統自愈回退為「一般待辦」群組容器，確保每個案件開展時隨時具備快速新增待辦表單。
+- **➕ 原地新增任務群組**：案件卡片底部內建「➕ 新增任務群組」即時展開式輸入工具，支援輸入後按 `Enter` 或點擊建立，0ms 原地樂觀渲染新任務組與快速新增待辦框，並自動持久化同步至雲端專案 `group_names`。
+- **⚡ 待辦事項快速建立與 `Enter` 快捷流**：待辦項目採用 `text-sm sm:text-base font-semibold` 搭配放鬆行距與 `h-5 w-5` 大尺寸核取方塊；快速新增待辦支援標題與截止日按下 `Enter` 鍵立即送出，鍵盤流流暢操作。
 - **編輯案件內建批量權限設定**：編輯案件時可直接勾選人員，提供「➕ 批量加入 (預設)」、「🔄 覆蓋重設」、「⏸️ 不變更」3 種模式一鍵套用至該案件所有待辦。
 - **即時留言氣泡預覽與抽屜背景拉取**：樹狀圖直顯最新留言氣泡與 `+X 則討論` 徽章；點擊待辦開啟抽屜時背景自動拉取雲端最新留言串 (`getTaskComments`)，支援 `Enter` 快捷送出與 inline 編輯。
 - **⚡ 雙向時程偏移計算機 (Date Calculator)**：
@@ -73,7 +76,7 @@
 
 ### 🚀 部署指南 (GitHub Pages)
 1. 靜態網頁架構託管於 **GitHub Pages**。
-2. 前端 [index.html](file:///f:/Projects/CaseFlow_OS/index.html) 引入 `@supabase/supabase-js` CDN 並設置 `SUPABASE_URL` 與 `SUPABASE_ANON_KEY` 即可完成雲端雙向連線。
+2. 前端 [index.html](file:///d:/Projects/CaseFlow_OS/index.html) 引入 `@supabase/supabase-js` CDN 並設置 `SUPABASE_URL` 與 `SUPABASE_ANON_KEY` 即可完成雲端雙向連線。
 
 ### 🤝 AI 自動化部署協議
 - AI 完成程式碼修改與驗證後，全權代理執行以下流程：
@@ -162,7 +165,7 @@
    - 訂閱 `tasks`, `cases`, `comments` 之變更事件，在團隊成員進行更新時自動觸發靜默背景刷新 (`refreshActiveViewQuietly`)。
 6. **🎯 下階段開發基準標記 (Benchmark Milestone)**：
    - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
-   - **GitHub 記錄點**：`main` 分支歷史資料備份與 Supabase 雙軌定案 Commit。
+   - **GitHub 記錄點**：`f098f70`
 
 ### 📅 2026-09-29 開發日誌摘要 (Phase 15 - PostgreSQL 序號自愈與案件任務群組彈性擴展)
 
@@ -177,5 +180,7 @@
    - 每個案件卡片底部新增「➕ 新增任務群組」展開式輸入工具，支援輸入新組名後按 `Enter` 或點擊「建立群組」在 0ms 內原地樂觀渲染新任務組與快速新增待辦表單，並在背景自動同步更新專案 `group_names` 欄位。
 4. **⚡ 待辦事項快速輸入 `Enter` 快捷鍵支援**：
    - 快速新增待辦之標題與截止日輸入框全面支援按下 `Enter` 鍵立即送出，免滑鼠點擊即可連續鍵盤流快速建構工作清單。
-
-
+5. **🎯 下階段開發基準標記 (Benchmark Milestone)**：
+   - **版本**：`v3.1`
+   - **資料庫狀態**：Supabase PostgreSQL 7 大資料表序號校準完畢 + 前端 `safeInsert` 容錯自愈防護。
+   - **主要模組狀態**：案件樹（含「一般待辦」保底與即時「新增任務群組」）、任務詳情抽屜（含時程計算機與留言板）、個人儀表板、日曆視圖皆正常運作。
