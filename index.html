@@ -1608,6 +1608,27 @@
             });
         }
 
+        // Safe Supabase Insert with automatic sequence conflict recovery
+        async function safeInsert(table, rows) {
+            const isArray = Array.isArray(rows);
+            const rowList = isArray ? rows : [rows];
+            let { data, error } = await supabaseClient.from(table).insert(rowList).select();
+            if (error && (error.code === '23505' || String(error.message).includes('unique constraint') || String(error.message).includes('already exists'))) {
+                console.warn(`[safeInsert] Sequence collision detected on table "${table}", resolving via max(id) calculation...`);
+                const { data: maxRows } = await supabaseClient.from(table).select('id').order('id', { ascending: false }).limit(1);
+                let curMax = (maxRows && maxRows[0] && maxRows[0].id) ? parseInt(maxRows[0].id) : 0;
+                const fallbackRows = rowList.map(r => {
+                    curMax += 1;
+                    return { ...r, id: curMax };
+                });
+                const retryRes = await supabaseClient.from(table).insert(fallbackRows).select();
+                data = retryRes.data;
+                error = retryRes.error;
+            }
+            if (error) throw error;
+            return data;
+        }
+
         // Global Supabase Request Handler
         async function apiRequest(action, payload = null, method = 'GET', silent = false) {
             if (!silent) showLoading(true);
@@ -1663,7 +1684,7 @@
                     return allTemplates;
                 }
                 if (action === 'getTaskComments') {
-                    const taskId = payload ? parseInt(payload.taskId) : null;
+                    const taskId = payload ? parseInt(payload.taskId || payload.task_id) : null;
                     if (!taskId) return [];
                     const { data, error } = await supabaseClient.from('comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
                     if (error) throw error;
@@ -1685,8 +1706,8 @@
                 }
                 if (action === 'createTask') {
                     const visStr = Array.isArray(payload.visible_user_ids) ? payload.visible_user_ids.join(',') : (payload.visible_user_ids || '');
-                    const { data, error } = await supabaseClient.from('tasks').insert([{
-                        case_id: payload.case_id,
+                    const data = await safeInsert('tasks', {
+                        case_id: parseInt(payload.case_id || payload.caseId),
                         group_name: cleanGroupName(payload.group_name),
                         title: payload.title,
                         due_date: payload.due_date || null,
@@ -1694,8 +1715,7 @@
                         is_completed: false,
                         notes: '',
                         visible_user_ids: visStr
-                    }]).select();
-                    if (error) throw error;
+                    });
                     return { status: 'success', taskId: data[0].id };
                 }
                 if (action === 'deleteTask') {
@@ -1719,22 +1739,21 @@
                     return { status: 'success' };
                 }
                 if (action === 'addComment') {
-                    const { data, error } = await supabaseClient.from('comments').insert([{
-                        task_id: parseInt(payload.taskId),
-                        user_id: payload.user_id || currentUserId,
+                    const data = await safeInsert('comments', {
+                        task_id: parseInt(payload.taskId || payload.task_id),
+                        user_id: parseInt(payload.user_id || payload.userId || currentUserId),
                         content: payload.content
-                    }]).select();
-                    if (error) throw error;
-                    return { status: 'success', commentId: data[0].id };
+                    });
+                    return { status: 'success', commentId: data[0].id, comment: data[0] };
                 }
                 if (action === 'updateComment') {
-                    const commentId = parseInt(payload.commentId);
+                    const commentId = parseInt(payload.commentId || payload.id);
                     const { error } = await supabaseClient.from('comments').update({ content: payload.content }).eq('id', commentId);
                     if (error) throw error;
                     return { status: 'success' };
                 }
                 if (action === 'deleteComment') {
-                    const commentId = parseInt(payload.commentId);
+                    const commentId = parseInt(payload.commentId || payload.id);
                     const { error } = await supabaseClient.from('comments').delete().eq('id', commentId);
                     if (error) throw error;
                     return { status: 'success' };
@@ -1751,16 +1770,15 @@
                         }
                     }
                     const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : (payload.groups || '一般待辦');
-                    const { data: newCases, error: cErr } = await supabaseClient.from('cases').insert([{
+                    const newCases = await safeInsert('cases', {
                         title: finalTitle,
                         description: payload.description || '',
-                        owner_id: payload.owner_id || currentUserId,
+                        owner_id: parseInt(payload.owner_id || currentUserId),
                         drive_url: payload.drive_url || "https://drive.google.com/drive/folders/mock-id",
                         group_names: groupsStr,
                         reference_date: payload.reference_date || null,
                         is_archived: false
-                    }]).select();
-                    if (cErr) throw cErr;
+                    });
                     const newCaseId = newCases[0].id;
 
                     if (payload.template_id && payload.reference_date) {
@@ -1790,7 +1808,7 @@
                                     visible_user_ids: allUserIdsStr
                                 };
                             });
-                            await supabaseClient.from('tasks').insert(tasksToInsert);
+                            await safeInsert('tasks', tasksToInsert);
                         }
                     }
                     return { status: 'success', caseId: newCaseId };
@@ -1834,21 +1852,20 @@
                     return { status: 'success' };
                 }
                 if (action === 'createUser') {
-                    const { data, error } = await supabaseClient.from('users').insert([{
+                    const data = await safeInsert('users', {
                         username: payload.username,
-                        role_id: payload.roleId,
+                        role_id: parseInt(payload.roleId),
                         avatar_color: payload.avatar_color,
                         language: payload.language,
                         google_email: payload.google_email
-                    }]).select();
-                    if (error) throw error;
+                    });
                     return { status: 'success', userId: data[0].id };
                 }
                 if (action === 'updateUser') {
                     const userId = parseInt(payload.userId);
                     const { error } = await supabaseClient.from('users').update({
                         username: payload.username,
-                        role_id: payload.roleId,
+                        role_id: parseInt(payload.roleId),
                         avatar_color: payload.avatar_color,
                         language: payload.language,
                         google_email: payload.google_email
@@ -1863,11 +1880,10 @@
                     return { status: 'success' };
                 }
                 if (action === 'createRole') {
-                    const { data, error } = await supabaseClient.from('roles').insert([{
+                    const data = await safeInsert('roles', {
                         role_name: payload.role_name,
                         can_create_case: payload.can_create_case
-                    }]).select();
-                    if (error) throw error;
+                    });
                     return { status: 'success', roleId: data[0].id };
                 }
                 if (action === 'updateRole') {
@@ -1887,14 +1903,13 @@
                 }
                 if (action === 'createTemplate') {
                     const groupsStr = Array.isArray(payload.groups) ? payload.groups.join(', ') : payload.groups;
-                    const { data, error } = await supabaseClient.from('case_templates').insert([{
+                    const data = await safeInsert('case_templates', {
                         template_name: payload.template_name,
                         description: payload.description || '',
                         default_description: payload.default_description || '',
                         briefing_options: payload.briefing_options || '',
                         group_names: groupsStr
-                    }]).select();
-                    if (error) throw error;
+                    });
                     return { status: 'success', templateId: data[0].id };
                 }
                 if (action === 'updateTemplate') {
@@ -1917,15 +1932,14 @@
                     return { status: 'success' };
                 }
                 if (action === 'createTemplateTask') {
-                    const { data, error } = await supabaseClient.from('template_tasks').insert([{
+                    const data = await safeInsert('template_tasks', {
                         template_id: parseInt(payload.template_id),
                         group_name: cleanGroupName(payload.group_name),
                         title: payload.title,
                         start_day_offset: parseInt(payload.start_day_offset) || 0,
                         due_day_offset: parseInt(payload.due_day_offset) || 0,
                         notes: payload.notes || ''
-                    }]).select();
-                    if (error) throw error;
+                    });
                     return { status: 'success', taskId: data[0].id };
                 }
                 if (action === 'updateTemplateTask') {
