@@ -1127,6 +1127,10 @@
                 addNewGroupTitle: "➕ 新增自訂任務組",
                 newGroupPlaceholder: "輸入任務組名稱 (如: 簽證, 財務)...",
                 addGroupBtn: "新增",
+                addGroupTitleBtn: "新增任務群組",
+                addGroupPlaceholder: "例如：票務組、LOCAL組、簽證組...",
+                createGroupActionBtn: "建立群組",
+                defaultGroupName: "一般待辦",
                 renameGroupPrompt: "請輸入新的任務組名稱：",
                 confirmDeleteGroup: "確定要刪除任務組「{name}」的專屬色彩設定嗎？",
                 emptyGroupListHint: "目前尚未新增任何自訂任務組，請在上方輸入名稱新增！",
@@ -1223,6 +1227,10 @@
                 addNewGroupTitle: "➕ Thêm nhóm công việc mới",
                 newGroupPlaceholder: "Nhập tên nhóm (VD: Visa, Tài chính)...",
                 addGroupBtn: "Thêm",
+                addGroupTitleBtn: "Thêm nhóm nhiệm vụ",
+                addGroupPlaceholder: "VD: Nhóm vé, Nhóm local, Nhóm visa...",
+                createGroupActionBtn: "Tạo nhóm",
+                defaultGroupName: "Nhiệm vụ chung",
                 renameGroupPrompt: "Vui lòng nhập tên nhóm công việc mới:",
                 confirmDeleteGroup: "Bạn có chắc muốn xóa cài đặt màu nhóm \"{name}\" không?",
                 emptyGroupListHint: "Chưa có nhóm công việc nào, hãy nhập tên ở trên để thêm!",
@@ -1414,10 +1422,15 @@
                 });
 
                 caseTasks.forEach(t => {
-                    const cleanedGn = cleanGroupName(t.group_name);
+                    const cleanedGn = cleanGroupName(t.group_name) || "一般待辦";
                     if (!groupMap[cleanedGn]) groupMap[cleanedGn] = [];
                     groupMap[cleanedGn].push(t);
                 });
+
+                // Guarantee at least one group exists so users can immediately quick-add tasks
+                if (Object.keys(groupMap).length === 0) {
+                    groupMap["一般待辦"] = [];
+                }
 
                 const groups = Object.keys(groupMap).map((gn, index) => ({
                     id: index + 1,
@@ -3440,6 +3453,10 @@
                 
                 const caseBody = caseCard.querySelector(`#case-body-${c.id}`);
                 
+                if (!c.groups || c.groups.length === 0) {
+                    c.groups = [{ id: 1, name: "一般待辦", tasks: [] }];
+                }
+
                 c.groups.forEach(g => {
                     const groupColor = getGroupColor(g.name);
                     const safeKey = getSanitizedKey(c.id, g.name);
@@ -3459,9 +3476,9 @@
                         <!-- Quick Add Task -->
                         <div class="pt-2.5 border-t border-slate-800/40 space-y-2.5">
                             <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="text" id="quick-task-title-${safeKey}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 placeholder:text-slate-500" placeholder="${tText.quickTaskPlaceholder}">
+                                <input type="text" id="quick-task-title-${safeKey}" onkeydown="if(event.key === 'Enter') { event.preventDefault(); quickAddTask(${c.id}, \`${escapeHtml(g.name).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`); }" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 placeholder:text-slate-500" placeholder="${tText.quickTaskPlaceholder}">
                                 <div class="flex gap-2">
-                                    <input type="date" id="quick-task-due-${safeKey}" class="flex-1 sm:flex-none bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none">
+                                    <input type="date" id="quick-task-due-${safeKey}" onkeydown="if(event.key === 'Enter') { event.preventDefault(); quickAddTask(${c.id}, \`${escapeHtml(g.name).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`); }" class="flex-1 sm:flex-none bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none">
                                     <button data-case-id="${c.id}" data-group-name="${escapeHtml(g.name)}" onclick="handleQuickAddSubmit(this)" class="bg-slate-800 hover:bg-brand-600 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
                                         ${tText.addBtn}
                                     </button>
@@ -3489,7 +3506,7 @@
                     const taskList = groupDiv.querySelector(`#group-tasks-${safeKey}`);
                     
                     if (g.tasks.length === 0) {
-                        taskList.innerHTML = `<p class="text-xs sm:text-sm text-slate-500 italic py-1">No tasks</p>`;
+                        taskList.innerHTML = `<p class="text-xs sm:text-sm text-slate-500 italic py-1">尚無待辦事項，請在下方快速新增</p>`;
                     } else {
                         g.tasks.forEach(t => {
                             const taskItem = document.createElement('div');
@@ -3587,6 +3604,26 @@
                     
                     caseBody.appendChild(groupDiv);
                 });
+
+                // Append Add Group Action UI
+                const addGroupContainer = document.createElement('div');
+                addGroupContainer.className = "pt-1";
+                addGroupContainer.innerHTML = `
+                    <div id="add-group-btn-container-${c.id}">
+                        <button onclick="toggleAddGroupForm(${c.id})" class="text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-900/60 px-3.5 py-2 rounded-xl font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+                            <span>➕</span>
+                            <span>${tText.addGroupTitleBtn || '新增任務群組'}</span>
+                        </button>
+                    </div>
+                    <div id="add-group-form-${c.id}" class="hidden flex flex-col sm:flex-row gap-2 mt-2 p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
+                        <input type="text" id="add-group-input-${c.id}" onkeydown="if(event.key==='Enter'){event.preventDefault();submitQuickAddGroup(${c.id});}" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-brand-500 placeholder:text-slate-500" placeholder="${tText.addGroupPlaceholder || '例如：票務組、LOCAL組、簽證組...'}">
+                        <div class="flex gap-2">
+                            <button onclick="submitQuickAddGroup(${c.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap">${tText.createGroupActionBtn || '建立群組'}</button>
+                            <button onclick="toggleAddGroupForm(${c.id})" class="bg-slate-800 hover:bg-slate-750 text-slate-400 text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">${tText.cancelBtn || '取消'}</button>
+                        </div>
+                    </div>
+                `;
+                caseBody.appendChild(addGroupContainer);
                 
                 container.appendChild(caseCard);
             });
@@ -4026,6 +4063,64 @@
                 renderActiveViewOnly();
                 alert("新增待辦事項失敗，請再試一次。");
             }
+        }
+
+        // --- Quick Add Group to Case ---
+        function toggleAddGroupForm(caseId) {
+            const form = document.getElementById(`add-group-form-${caseId}`);
+            const btnContainer = document.getElementById(`add-group-btn-container-${caseId}`);
+            if (form) {
+                const isHidden = form.classList.contains('hidden');
+                if (isHidden) {
+                    form.classList.remove('hidden');
+                    if (btnContainer) btnContainer.classList.add('hidden');
+                    const input = document.getElementById(`add-group-input-${caseId}`);
+                    if (input) input.focus();
+                } else {
+                    form.classList.add('hidden');
+                    if (btnContainer) btnContainer.classList.remove('hidden');
+                }
+            }
+        }
+
+        async function submitQuickAddGroup(caseId) {
+            const input = document.getElementById(`add-group-input-${caseId}`);
+            if (!input) return;
+            const groupName = cleanGroupName(input.value.trim());
+            if (!groupName) return;
+
+            const targetCase = allCases.find(c => c.id === caseId);
+            if (!targetCase) return;
+
+            if (!targetCase.groups) targetCase.groups = [];
+            if (targetCase.groups.some(g => cleanGroupName(g.name).toLowerCase() === groupName.toLowerCase())) {
+                const user = allUsers.find(u => u.id === currentUserId);
+                const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+                alert(lang === 'vi-VN' ? "Nhóm nhiệm vụ này đã tồn tại!" : "該案件已存在相同的任務群組！");
+                return;
+            }
+
+            // Optimistically add group
+            const newGroup = {
+                id: Date.now(),
+                name: groupName,
+                tasks: []
+            };
+            targetCase.groups.push(newGroup);
+
+            const allGroupNames = targetCase.groups.map(g => g.name);
+            targetCase.group_names = allGroupNames.join(', ');
+
+            input.value = '';
+            toggleAddGroupForm(caseId);
+            markOtherViewsDirty();
+            renderActiveViewOnly();
+
+            // Background save to Supabase
+            await apiRequest('updateCase', {
+                caseId: caseId,
+                groups: allGroupNames
+            }, 'POST', true);
         }
 
         // --- Task Drawer Handling ---
@@ -4595,7 +4690,8 @@
                 // Pre-populate groups and default description based on template
                 const t = allTemplates.find(x => x.id === parseInt(templateId));
                 if (t) {
-                    if (groupsInput) groupsInput.value = t.group_names.join(', ');
+                    const tmplGroups = (Array.isArray(t.group_names) && t.group_names.length > 0) ? t.group_names.join(', ') : (t.group_names || '一般待辦');
+                    if (groupsInput) groupsInput.value = tmplGroups;
                     if (descInput) {
                         descInput.value = t.default_description || "";
                     }
