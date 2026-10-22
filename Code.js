@@ -880,7 +880,7 @@ function createCase(title, description, ownerId, groups, templateId, referenceDa
     throw new Error("找不到使用者！");
   }
   const isSuper = user.is_super_master === true || user.id === 1 || user.username === "Martin";
-  const hasPerm = user.can_create_case === true || user.role_name === "Owner/Admin" || user.role_name === "Operation" || user.role_name === "Sales";
+  const hasPerm = user.can_create_case === true || user.role_name === "Owner/Admin" || user.role_name === "Operation" || user.role_name === "OP" || user.role_name === "Sales";
   if (!isSuper && !hasPerm) {
     throw new Error("您無權限建立案件！");
   }

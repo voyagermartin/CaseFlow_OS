@@ -32,7 +32,7 @@
 
 | 資料表 | 作用 | 核心欄位結構 (Key Schema) |
 | :--- | :--- | :--- |
-| **`roles`** | 角色名稱與專案建立權限定義 | `id`, `role_name`, `can_create_case` |
+| **`roles`** | 角色名稱與專案建立及成員指派權限定義 | `id`, `role_name`, `can_create_case` |
 | **`users`** | 成員帳號、角色、顏色、語系與管理權限 | `id`, `username`, `role_id`, `avatar_color`, `language`, `google_email`, `is_super_master` |
 | **`cases`** | 專案總表、Drive 掛載、出發基準日與封存 | `id`, `title`, `description`, `owner_id`, `drive_url`, `group_names`, `reference_date`, `is_archived` |
 | **`tasks`** | 待辦項目、起訖死線、備註與可見人員 | `id`, `case_id`, `group_name`, `title`, `due_date`, `start_date`, `is_completed`, `notes`, `visible_user_ids` |
@@ -106,6 +106,7 @@
 | **Phase 13** (2026-09-03) | 🔠 字體層級全面升級與個人化字級調節器：消除微型字 (10px->12~14px)、側邊欄新增 [標準 100% / 舒適 115% / 大字 125%] 即時切換並持久化、流動式 Badge 防破版、44px 拇指觸控友善與輸入框防 iOS 自動縮放；徹底清理未授權提示殘存遮罩。 | `@57` |
 | **Phase 14** (2026-09-27) | ⚡ 全面資料層遷移至 Supabase PostgreSQL 雲端資料庫：淘汰 GAS Web App 即時資料庫連線，改採 Supabase Client SDK 直連 7 大 PostgreSQL 表，並掛載 WebSocket Realtime 頻道對 `tasks` / `cases` / `comments` 實現跨裝置無感靜默刷新。 | `v3.0` |
 | **Phase 15** (2026-09-29) | 🛠️ PostgreSQL 序號自愈與 `safeInsert` 衝突容錯機制、案件無群組自動自愈回退（「一般待辦」保證隨時可快速新增任務）、案件樹內建即時「➕ 新增任務群組」組件與 `Enter` 快捷鍵新增待辦。 | `v3.1` |
+| **Phase 16** (2026-10-22) | 🛡️ 人員與職位權限鏈路修復：解決 Supabase 使用者資料未關聯角色權限之問題，落實 OP「可新增案件與指派成員」權限；支援案件樹 OP 編輯案件與批量指派成員、快速待辦與任務抽屜可見人員設定與雲端持久化。 | `v3.2` |
 
 ---
 
@@ -184,3 +185,25 @@
    - **版本**：`v3.1`
    - **資料庫狀態**：Supabase PostgreSQL 7 大資料表序號校準完畢 + 前端 `safeInsert` 容錯自愈防護。
    - **主要模組狀態**：案件樹（含「一般待辦」保底與即時「新增任務群組」）、任務詳情抽屜（含時程計算機與留言板）、個人儀表板、日曆視圖皆正常運作。
+
+### 📅 2026-10-22 開發日誌摘要 (Phase 16 - 人員與職位權限鏈路修復，落實 OP 新增案件與指派成員權限)
+
+今日針對「人員控管中 OP 可新增案件與指派成員權限未實現」問題進行全鏈路排查與重構修復：
+
+1. **🔗 Supabase 使用者資料表動態注入職位中繼資料 (`enrichUsersWithRoles`)**：
+   - 原因排查：Supabase PostgreSQL 採正規化設計，`users` 表僅儲存 `role_id`，未冗餘 `role_name` 與 `can_create_case`；前端 `loadSupabaseData` 與 `apiRequest('getUsers')` 載入時漏失關聯對應，導致 OP（Josie、Ning、Apple）之 `role_name` 與 `can_create_case` 均為 `undefined`。
+   - 解決方案：實作 `enrichUsersWithRoles`，在資料載入時以 `rolesMap` 即時將 `role_name` 與 `can_create_case` 賦予每位使用者物件，消除人員切換器與控管清單中職位顯示為 `undefined` 的問題。
+2. **🛡️ 權限檢驗器 (`hasCreateCasePermission`) 多重容錯與 'OP' 職位名稱識別**：
+   - 擴展 `hasCreateCasePermission`：新增以 `user.role_id` 於 `allRoles` 查表作為雙重保底；將判定白名單擴增支援真實資料庫之 `'OP'` 角色名稱（相容原 `'Operation'`、`'Owner/Admin'`、`'Sales'`）。
+3. **🚀 案件樹狀圖 OP「編輯案件與批量指派成員」權限解鎖**：
+   - 重構案件卡片操作按鈕權限：解耦「編輯/指派成員」與「刪除/封存」之權限分離：
+     - `canEdit`（✏️ 編輯案件與批量人員指派）：開放給 SuperMaster、案件建立者，以及具備「可新增案件與指派成員」權限之職位（如 OP）。
+     - `canDelete`（🗑️ 刪除案件 / 📦 封存案件）：維持嚴格限定由 SuperMaster 或案件原建立者操作，確保專案安全。
+4. **👥 快速待辦與任務抽屜可見人員設定流暢化**：
+   - 修正 Quick Add Task 區塊中「🔒 可見成員」Checkboxes：OP 登入時解除 `disabled` 唯讀限制，可自由指定可見人員。
+   - 修正任務詳情抽屜（Task Drawer）「可見人員設定」Checkboxes 與「更新可見權限」按鈕：OP 登入時完整啟用，支援即時勾選更新並持久化至雲端 `tasks.visible_user_ids`。
+   - 人員控管中心 (User & Role Control) 表格欄位名升級為「可新增案件與指派成員」，燈號標籤升級為「可新增與指派 / 唯讀」。
+5. **🎯 當前開發基準標記 (Benchmark Milestone)**：
+   - **版本**：`v3.2`
+   - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
+   - **核心權限驗證**：OP 登入時新增案件、快速待辦指派、任務抽屜可見人員更新、案件樹編輯與批量指派成員 100% 正常運作。

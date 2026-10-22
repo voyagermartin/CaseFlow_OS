@@ -461,7 +461,7 @@
                                 <thead>
                                     <tr class="border-b border-slate-800 text-slate-400">
                                         <th class="py-2.5 font-semibold">職位名稱</th>
-                                        <th class="py-2.5 font-semibold">可否新增案件</th>
+                                        <th class="py-2.5 font-semibold">可新增案件與指派成員</th>
                                         <th class="py-2.5 font-semibold text-right">操作</th>
                                     </tr>
                                 </thead>
@@ -1061,10 +1061,30 @@
         function hasCreateCasePermission(user) {
             if (!user) return false;
             if (isSuperMaster(user)) return true;
-            if (user.can_create_case === true) return true;
-            const rName = user.role_name;
-            if (rName === 'Owner/Admin' || rName === 'Operation' || rName === 'Sales') return true;
+            if (user.can_create_case === true || user.can_create_case === 'true') return true;
+            
+            // Fallback check against allRoles by role_id if available
+            if (user.role_id && typeof allRoles !== 'undefined' && Array.isArray(allRoles)) {
+                const matchedRole = allRoles.find(r => r.id === user.role_id);
+                if (matchedRole && (matchedRole.can_create_case === true || matchedRole.can_create_case === 'true')) {
+                    return true;
+                }
+            }
+            
             return false;
+        }
+
+        function enrichUsersWithRoles(usersList, rolesList) {
+            const rolesMap = {};
+            (rolesList || []).forEach(r => { rolesMap[r.id] = r; });
+            return (usersList || []).map(u => {
+                const roleObj = rolesMap[u.role_id] || { role_name: 'Unknown', can_create_case: false };
+                return {
+                    ...u,
+                    role_name: roleObj.role_name,
+                    can_create_case: roleObj.can_create_case === true || roleObj.can_create_case === 'true'
+                };
+            });
         }
 
         // Multi-language UI Dictionary
@@ -1274,14 +1294,14 @@
         // --- Mock In-Memory Database ---
         let mockRoles = [
             { id: 1, role_name: "Owner/Admin", can_create_case: true },
-            { id: 2, role_name: "Operation", can_create_case: true },
+            { id: 2, role_name: "OP", can_create_case: true },
             { id: 3, role_name: "Sales", can_create_case: true },
             { id: 4, role_name: "Local Agent", can_create_case: false }
         ];
 
         let mockUsers = [
             { id: 1, username: "Martin", role_id: 1, role_name: "Owner/Admin", can_create_case: true, avatar_color: "#4f46e5", language: "zh-TW", google_email: "martin@example.com", is_super_master: true },
-            { id: 2, username: "OP_Ning", role_id: 2, role_name: "Operation", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "", is_super_master: false },
+            { id: 2, username: "OP_Ning", role_id: 2, role_name: "OP", can_create_case: true, avatar_color: "#0ea5e9", language: "zh-TW", google_email: "", is_super_master: false },
             { id: 3, username: "Sales_Yang", role_id: 3, role_name: "Sales", can_create_case: true, avatar_color: "#f59e0b", language: "zh-TW", google_email: "", is_super_master: false },
             { id: 4, username: "Local_Nguyen", role_id: 4, role_name: "Local Agent", can_create_case: false, avatar_color: "#10b981", language: "vi-VN", google_email: "", is_super_master: false }
         ];
@@ -1475,7 +1495,7 @@
             if (templateTasksRes.error) console.error("Error fetching template_tasks:", templateTasksRes.error);
 
             allRoles = rolesRes.data || [];
-            allUsers = usersRes.data || [];
+            allUsers = enrichUsersWithRoles(usersRes.data || [], allRoles);
 
             const rawCases = casesRes.data || [];
             const rawTasks = tasksRes.data || [];
@@ -1653,13 +1673,14 @@
                 if (action === 'getUsers') {
                     const { data, error } = await supabaseClient.from('users').select('*');
                     if (error) throw error;
-                    allUsers = data || [];
+                    allUsers = enrichUsersWithRoles(data || [], allRoles);
                     return allUsers;
                 }
                 if (action === 'getRoles') {
                     const { data, error } = await supabaseClient.from('roles').select('*');
                     if (error) throw error;
                     allRoles = data || [];
+                    allUsers = enrichUsersWithRoles(allUsers, allRoles);
                     return allRoles;
                 }
                 if (action === 'getCases') {
@@ -3391,18 +3412,34 @@
                 caseCard.className = `bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-950/50 ${opacityClass}`;
                 
                 const currentUser = allUsers.find(u => u.id === currentUserId);
-                const canManage = currentUser && (isSuperMaster(currentUser) || (c.owner_id === currentUserId && hasCreateCasePermission(currentUser)));
-                const manageButtons = canManage ? `
-                    <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件">
-                        ✏️ 編輯
-                    </button>
-                    <button onclick="toggleArchiveCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-amber-400 hover:text-amber-200 transition-colors" title="${c.is_archived ? '解除封存' : '封存案件'}">
-                        ${c.is_archived ? '🔓 解封' : '📦 封存'}
-                    </button>
-                    <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
-                        🗑️ 刪除
-                    </button>
-                ` : '';
+                const isSuper = isSuperMaster(currentUser);
+                const isOwner = c.owner_id === currentUserId;
+                const hasCreatePerm = currentUser && hasCreateCasePermission(currentUser);
+
+                // Edit case & batch assign members: allowed for SuperMaster, Case Owner, or any user with Case Creation & Member Assignment permission (e.g. OP)
+                const canEdit = currentUser && (isSuper || isOwner || hasCreatePerm);
+
+                // Delete / Archive case: restricted to SuperMaster or the Case Owner
+                const canDelete = currentUser && (isSuper || isOwner);
+
+                let manageButtons = '';
+                if (canEdit) {
+                    manageButtons += `
+                        <button onclick="openEditCaseModal(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white transition-colors" title="編輯案件與指派成員">
+                            ✏️ 編輯
+                        </button>
+                    `;
+                }
+                if (canDelete) {
+                    manageButtons += `
+                        <button onclick="toggleArchiveCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-amber-400 hover:text-amber-200 transition-colors" title="${c.is_archived ? '解除封存' : '封存案件'}">
+                            ${c.is_archived ? '🔓 解封' : '📦 封存'}
+                        </button>
+                        <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
+                            🗑️ 刪除
+                        </button>
+                    `;
+                }
 
                 const isExpanded = openCaseIds.has(c.id.toString());
                 const hiddenClass = isExpanded ? '' : 'hidden';
@@ -4871,7 +4908,7 @@
                     <td class="py-3 font-semibold">${r.role_name}</td>
                     <td class="py-3">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.can_create_case ? 'bg-green-950/60 border border-green-900 text-green-400' : 'bg-slate-850 border border-slate-700 text-slate-400'}">
-                            ${r.can_create_case ? '可新增' : '唯讀'}
+                            ${r.can_create_case ? '可新增與指派' : '唯讀'}
                         </span>
                     </td>
                     <td class="py-3 text-right">${editBtn}${deleteBtn}</td>
