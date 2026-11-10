@@ -519,6 +519,7 @@
             <div class="space-y-1">
                 <label class="text-xs text-slate-500 font-semibold uppercase" data-i18n="taskTitleLabel">任務標題</label>
                 <div id="drawer-task-title" class="text-lg font-bold text-slate-200"></div>
+                <div id="drawer-case-drive-container" class="pt-1.5"></div>
             </div>
 
             <!-- Dates Section -->
@@ -1341,6 +1342,7 @@
         const SUPABASE_URL = 'https://lzfiemnygaarzgvvonwt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6ZmllbW55Z2FhcnpndnZvbnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NDgwODcsImV4cCI6MjEwNjAyNDA4N30.3o-wB6osep9PhxajGvapoXTDdLc8hAuwhj77duFEi8M';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg/exec';
 
         // Injected by Apps Script template engine. Will be empty string when running locally or on GitHub Pages.
         const loggedInUserEmail = "<?= userEmail ?>";
@@ -4187,6 +4189,24 @@
             if (!taskObj) return;
 
             document.getElementById('drawer-task-title').textContent = taskObj.title;
+
+            // Render Case Google Drive folder shortcut in drawer
+            const driveContainer = document.getElementById('drawer-case-drive-container');
+            if (driveContainer) {
+                if (parentCase && parentCase.drive_url && parentCase.drive_url !== "https://drive.google.com/drive/folders/mock-id") {
+                    driveContainer.innerHTML = `
+                        <a href="${parentCase.drive_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 bg-slate-950 border border-slate-800 hover:border-indigo-700/60 px-3 py-1.5 rounded-xl transition-colors font-medium">
+                            <span>📂 案件雲端資料夾</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                    `;
+                } else {
+                    driveContainer.innerHTML = '';
+                }
+            }
+
             document.getElementById('drawer-task-notes').value = taskObj.notes || '';
             document.getElementById('drawer-task-start-date').value = taskObj.start_date || '';
             document.getElementById('drawer-task-due-date').value = taskObj.due_date || '';
@@ -4859,6 +4879,17 @@
 
             const res = await apiRequest('createCase', payload, 'POST');
             if (res) {
+                // Background trigger Google Drive folder creation with 4 standard subdirectories (TKT, LOCAL, PP, INS)
+                const createdCaseId = res.caseId || (res.case && res.case.id);
+                if (createdCaseId) {
+                    const folderName = `${payload.reference_date || ''}_${payload.title}`.trim();
+                    fetch(GAS_WEBAPP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'createDriveFolder', caseId: createdCaseId, folderName: folderName })
+                    }).catch(err => console.warn('Background folder creation triggered', err));
+                }
                 titleInput.value = '';
                 descInput.value = '';
                 if (refDateInput) refDateInput.value = '';

@@ -109,6 +109,7 @@
 | **Phase 15** (2026-09-29) | 🛠️ PostgreSQL 序號自愈與 `safeInsert` 衝突容錯機制、案件無群組自動自愈回退（「一般待辦」保證隨時可快速新增任務）、案件樹內建即時「➕ 新增任務群組」組件與 `Enter` 快捷鍵新增待辦。 | `v3.1` |
 | **Phase 16** (2026-10-22) | 🛡️ 人員與職位權限鏈路修復：解決 Supabase 使用者資料未關聯角色權限之問題，落實 OP「可新增案件與指派成員」權限；支援案件樹 OP 編輯案件與批量指派成員、快速待辦與任務抽屜可見人員設定與雲端持久化。 | `v3.2` |
 | **Phase 17** (2026-11-10) | 📦 案件封存與解封權限解耦：正式開放 OP 與具備建立案件權限之成員執行案件封存與解封 (`canArchive`)，並於 `toggleArchiveCaseAction` 與 `deleteCaseAction` 加入防禦性權限檢查；高風險「刪除案件」嚴格維持限定 SuperMaster 與案件原建立者。 | `v3.3` |
+| **Phase 18** (2026-11-10) | 📁 Google Drive 母資料夾與 4 大標準子目錄 (TKT/LOCAL/PP/INS) 自動建立：發起新案件時透過非同步 GAS 背景自動於 Drive 指定母目錄建立案件同名資料夾與 4 個標準子目錄，並透過 Supabase REST API 自動回填 `drive_url`，案件樹卡片與任務抽屜支援直連導航開啟。 | `v3.4` |
 
 ---
 
@@ -219,9 +220,26 @@
 2. **🛡️ 函數級防禦性權限校驗 (`toggleArchiveCaseAction` & `deleteCaseAction`)**：
    - 於 `toggleArchiveCaseAction` 加入防禦性檢查：驗證 `isSuper || isOwner || hasCreatePerm`，非授權使用者嘗試操作時即時彈出阻擋提示並中止請求。
    - 於 `deleteCaseAction` 加入防禦性檢查：確保刪除高危操作嚴格限定由 SuperMaster 或案件原建立者操作（`isSuper || isOwner`），杜絕誤刪風險。
-3. **🎯 當前開發基準標記 (Benchmark Milestone - 下階段開發起點)**：
+3. **🎯 開發基準標記 (Milestone)**：
    - **版本**：`v3.3`
+   - **基準 Commit**：`85c56e2`
+
+### 📅 2026-11-10 開發日誌摘要 (Phase 18 - 發起案件自動於 Google Drive 建立母資料夾與 4 大標準子目錄)
+
+今日完成案件開展時之雲端硬碟自動化目錄建置與 Supabase 雙向回填：
+
+1. **📁 GAS 後端 `createDriveFolder` 處理分支實作 (`Code.js`)**：
+   - 接收 `action: 'createDriveFolder'`、`caseId` 與 `folderName`。
+   - 透過 `DriveApp.getFolderById(PARENT_FOLDER_ID)` 取得指定之雲端母目錄，並建立案件同名主目錄。
+   - 自動於該主目錄內建 4 大標準子資料夾：`TKT`（票務與交通）、`LOCAL`（地接與住宿）、`PP`（護照與簽證）、`INS`（保險）。
+   - 透過 `UrlFetchApp` 呼叫 Supabase REST API（`PATCH /rest/v1/cases?id=eq.${caseId}`），將新生成的 `drive_url` 自動回填持久化至 PostgreSQL。
+2. **⚡ 前端非同步 Fire-and-forget 連動 (`index.html`)**：
+   - 於 `submitNewCase` 建立案件成功時，以非同步背景模式 `fetch(GAS_WEBAPP_URL, { mode: 'no-cors' })` 觸發目錄生成，完全不阻擋前端使用者介面操作。
+   - 案件樹卡片直連按鈕（`📂 雲端資料夾`）與任務詳情抽屜（Task Drawer）均已完整對應 `case.drive_url`，可一鍵直達新分頁開啟專案母資料夾。
+3. **🎯 當前開發基準標記 (Benchmark Milestone - 下階段開發起點)**：
+   - **版本**：`v3.4`
    - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
    - **核心模組驗證狀態**：
-     1. **OP 權限全鏈路 (v3.3)**：可建立案件、案件樹「✏️ 編輯」與批量指派成員、快速待辦與抽屜可見人員設定、案件「📦 封存 / 🔓 解封」全面解鎖啟用。
-     2. **高風險防護**：永久刪除案件依舊嚴格限定 SuperMaster 與案件建立者。
+     1. **Google Drive 自動化**：建立案件即自動於 Drive 建立母資料夾與 4 大標準子目錄（TKT/LOCAL/PP/INS），並回填 Supabase `drive_url`。
+     2. **導航直連**：案件卡片與任務抽屜「📂 案件雲端資料夾」快捷連結即時對應。
+     3. **既有核心全鏈路 (v3.3)**：OP 建立案件、案件樹「✏️ 編輯」與批量指派成員、快速待辦與抽屜可見人員設定、案件「📦 封存 / 🔓 解封」全面穩定運作。

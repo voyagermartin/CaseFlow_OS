@@ -1,4 +1,7 @@
 const SPREADSHEET_ID = "19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk";
+const PARENT_FOLDER_ID = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || "貼上你的母資料夾ID";
+const SUPABASE_URL = PropertiesService.getScriptProperties().getProperty("SUPABASE_URL") || "https://lzfiemnygaarzgvvonwt.supabase.co";
+const SUPABASE_ANON_KEY = PropertiesService.getScriptProperties().getProperty("SUPABASE_ANON_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6ZmllbW55Z2FhcnpndnZvbnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NDgwODcsImV4cCI6MjEwNjAyNDA4N30.3o-wB6osep9PhxajGvapoXTDdLc8hAuwhj77duFEi8M";
 
 function getSpreadsheet() {
   try {
@@ -508,6 +511,8 @@ function handleRequest(action, params) {
   } else if (action === "deleteUser") {
     const targetUserId = getInt(params.userId || params.user_id || params.id);
     return deleteUser(targetUserId);
+  } else if (action === "createDriveFolder") {
+    return createDriveFolder(getInt(params.caseId || params.case_id), params.folderName || params.folder_name);
   } else {
     throw new Error("Unknown action: " + action);
   }
@@ -1561,5 +1566,62 @@ function testDebug() {
     }
   } catch (e) {
     debugSheet.appendRow(["Error", e.toString()]);
+  }
+}
+
+/**
+ * Auto-create case main folder and 4 standard subdirectories (TKT, LOCAL, PP, INS)
+ * and update drive_url in Supabase via REST API (PATCH).
+ */
+function createDriveFolder(caseId, folderName) {
+  try {
+    const parentId = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || PARENT_FOLDER_ID;
+    if (!parentId || parentId === "貼上你的母資料夾ID") {
+      console.warn("PARENT_FOLDER_ID 尚未配置有效 Google Drive 資料夾 ID");
+      return { status: "error", message: "PARENT_FOLDER_ID not configured" };
+    }
+    const rootFolder = DriveApp.getFolderById(parentId);
+    const safeFolderName = (folderName && String(folderName).trim()) ? String(folderName).trim() : ("Case_" + caseId);
+    const caseFolder = rootFolder.createFolder(safeFolderName);
+    
+    // Auto-create 4 standard subdirectories: TKT, LOCAL, PP, INS
+    const subFolders = ['TKT', 'LOCAL', 'PP', 'INS'];
+    subFolders.forEach(function(sub) {
+      caseFolder.createFolder(sub);
+    });
+
+    const folderUrl = caseFolder.getUrl();
+
+    // Update Supabase cases table via REST API (PATCH)
+    const supabaseUrl = PropertiesService.getScriptProperties().getProperty("SUPABASE_URL") || SUPABASE_URL;
+    const supabaseKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_ANON_KEY") || SUPABASE_ANON_KEY;
+    const patchUrl = `${supabaseUrl}/rest/v1/cases?id=eq.${caseId}`;
+    const options = {
+      method: "patch",
+      contentType: "application/json",
+      headers: {
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Prefer": "return=representation"
+      },
+      payload: JSON.stringify({ drive_url: folderUrl }),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(patchUrl, options);
+    const resCode = response.getResponseCode();
+    const resText = response.getContentText();
+
+    return {
+      status: "success",
+      caseId: caseId,
+      drive_url: folderUrl,
+      subFolders: subFolders,
+      supabaseStatus: resCode,
+      supabaseResponse: resText
+    };
+  } catch (error) {
+    console.error("createDriveFolder error: " + error.toString());
+    return { status: "error", message: error.toString() };
   }
 }
