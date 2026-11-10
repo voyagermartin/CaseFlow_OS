@@ -3419,7 +3419,10 @@
                 // Edit case & batch assign members: allowed for SuperMaster, Case Owner, or any user with Case Creation & Member Assignment permission (e.g. OP)
                 const canEdit = currentUser && (isSuper || isOwner || hasCreatePerm);
 
-                // Delete / Archive case: restricted to SuperMaster or the Case Owner
+                // Archive / Unarchive case: allowed for SuperMaster, Case Owner, or any user with Case Creation & Member Assignment permission (e.g. OP)
+                const canArchive = currentUser && (isSuper || isOwner || hasCreatePerm);
+
+                // Delete case: strictly restricted to SuperMaster or the Case Owner
                 const canDelete = currentUser && (isSuper || isOwner);
 
                 let manageButtons = '';
@@ -3430,11 +3433,15 @@
                         </button>
                     `;
                 }
-                if (canDelete) {
+                if (canArchive) {
                     manageButtons += `
                         <button onclick="toggleArchiveCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1 rounded-lg text-amber-400 hover:text-amber-200 transition-colors" title="${c.is_archived ? '解除封存' : '封存案件'}">
                             ${c.is_archived ? '🔓 解封' : '📦 封存'}
                         </button>
+                    `;
+                }
+                if (canDelete) {
+                    manageButtons += `
                         <button onclick="deleteCaseAction(${c.id}); event.stopPropagation()" class="text-xs bg-slate-800 hover:bg-rose-950 border border-slate-700 hover:border-rose-750 px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-200 transition-colors" title="刪除案件">
                             🗑️ 刪除
                         </button>
@@ -5268,7 +5275,14 @@
             if (!caseObj) return;
 
             const user = allUsers.find(u => u.id === currentUserId);
+            const isSuper = isSuperMaster(user);
+            const isOwner = caseObj.owner_id === currentUserId;
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+
+            if (!isSuper && !isOwner) {
+                alert(lang === 'vi-VN' ? "Bạn không có quyền xóa dự án này!" : "您無權限刪除此案件！");
+                return;
+            }
 
             const confirmMsg = lang === 'vi-VN' 
                 ? `Bạn có chắc chắn muốn xóa dự án "${caseObj.title}"?\nTất cả công việc và thảo luận liên quan sẽ bị xóa vĩnh viễn!` 
@@ -5300,7 +5314,15 @@
             if (!caseObj) return;
 
             const user = allUsers.find(u => u.id === currentUserId);
+            const isSuper = isSuperMaster(user);
+            const isOwner = caseObj.owner_id === currentUserId;
+            const hasCreatePerm = user && hasCreateCasePermission(user);
             const lang = user ? user.language || 'zh-TW' : 'zh-TW';
+
+            if (!isSuper && !isOwner && !hasCreatePerm) {
+                alert(lang === 'vi-VN' ? "Bạn không có quyền lưu trữ dự án này!" : "您無權限封存此案件！");
+                return;
+            }
 
             const isArchived = !caseObj.is_archived;
             const confirmMsg = lang === 'vi-VN'

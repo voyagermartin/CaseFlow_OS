@@ -23,7 +23,7 @@
 - **門禁與權限控管**：
   - **Email 白名單門禁**：以 `users.google_email` 為進站名單（`#login-modal`）。
   - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域專案與任務檢視穿透權限，外加單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
-  - **動態 RBAC 權限體系**：由 `roles.can_create_case` 全域動態賦權，載入時由 `enrichUsersWithRoles` 動態注入使用者物件，完整涵蓋「可新增案件」與「自由指派任務可見成員」雙重職能；案件管理按鈕採「編輯/批量指派（開放 OP/具權限者）」與「刪除/封存（限定 SuperMaster/建立者）」安全解耦機制。
+  - **動態 RBAC 權限體系**：由 `roles.can_create_case` 全域動態賦權，載入時由 `enrichUsersWithRoles` 動態注入使用者物件，完整涵蓋「可新增案件」與「自由指派任務可見成員」雙重職能；案件管理按鈕採安全解耦機制：「編輯/批量指派」與「封存/解封」（開放 OP/具權限者、SuperMaster 與案件建立者），高風險「刪除案件」（嚴格限定 SuperMaster 與案件原建立者）。
 
 ---
 
@@ -108,6 +108,7 @@
 | **Phase 14** (2026-09-27) | ⚡ 全面資料層遷移至 Supabase PostgreSQL 雲端資料庫：淘汰 GAS Web App 即時資料庫連線，改採 Supabase Client SDK 直連 7 大 PostgreSQL 表，並掛載 WebSocket Realtime 頻道對 `tasks` / `cases` / `comments` 實現跨裝置無感靜默刷新。 | `v3.0` |
 | **Phase 15** (2026-09-29) | 🛠️ PostgreSQL 序號自愈與 `safeInsert` 衝突容錯機制、案件無群組自動自愈回退（「一般待辦」保證隨時可快速新增任務）、案件樹內建即時「➕ 新增任務群組」組件與 `Enter` 快捷鍵新增待辦。 | `v3.1` |
 | **Phase 16** (2026-10-22) | 🛡️ 人員與職位權限鏈路修復：解決 Supabase 使用者資料未關聯角色權限之問題，落實 OP「可新增案件與指派成員」權限；支援案件樹 OP 編輯案件與批量指派成員、快速待辦與任務抽屜可見人員設定與雲端持久化。 | `v3.2` |
+| **Phase 17** (2026-11-10) | 📦 案件封存與解封權限解耦：正式開放 OP 與具備建立案件權限之成員執行案件封存與解封 (`canArchive`)，並於 `toggleArchiveCaseAction` 與 `deleteCaseAction` 加入防禦性權限檢查；高風險「刪除案件」嚴格維持限定 SuperMaster 與案件原建立者。 | `v3.3` |
 
 ---
 
@@ -204,12 +205,23 @@
    - 修正 Quick Add Task 區塊中「🔒 可見成員」Checkboxes：OP 登入時解除 `disabled` 唯讀限制，可自由指定可見人員。
    - 修正任務詳情抽屜（Task Drawer）「可見人員設定」Checkboxes 與「更新可見權限」按鈕：OP 登入時完整啟用，支援即時勾選更新並持久化至雲端 `tasks.visible_user_ids`。
    - 人員控管中心 (User & Role Control) 表格欄位名升級為「可新增案件與指派成員」，燈號標籤升級為「可新增與指派 / 唯讀」。
-5. **🎯 當前開發基準標記 (Benchmark Milestone - 下階段開發起點)**：
+5. **🎯 開發基準標記 (Milestone)**：
    - **版本**：`v3.2`
    - **基準 Commit**：`e7d4d45`
+
+### 📅 2026-11-10 開發日誌摘要 (Phase 17 - 案件封存與解封權限重構，解鎖 OP 封存案件權限)
+
+今日針對案件管理中「封存案件與解鎖封存權限」進行安全解耦與權限重構：
+
+1. **🔓 案件樹狀圖「📦 封存 / 🔓 解封」按鈕權限解耦 (`canArchive`)**：
+   - 原先架構將「封存/解封」按鈕直接與高危險的「刪除案件」綑綁在 `canDelete`（僅限 SuperMaster 或 Case Owner）。
+   - 重構後將其獨立為 `canArchive = currentUser && (isSuper || isOwner || hasCreatePerm)`，使 OP 成員（如 Josie、Ning、Apple）與具備建立案件權限者可直接在案件卡片執行案件封存與解除封存。
+2. **🛡️ 函數級防禦性權限校驗 (`toggleArchiveCaseAction` & `deleteCaseAction`)**：
+   - 於 `toggleArchiveCaseAction` 加入防禦性檢查：驗證 `isSuper || isOwner || hasCreatePerm`，非授權使用者嘗試操作時即時彈出阻擋提示並中止請求。
+   - 於 `deleteCaseAction` 加入防禦性檢查：確保刪除高危操作嚴格限定由 SuperMaster 或案件原建立者操作（`isSuper || isOwner`），杜絕誤刪風險。
+3. **🎯 當前開發基準標記 (Benchmark Milestone - 下階段開發起點)**：
+   - **版本**：`v3.3`
    - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
    - **核心模組驗證狀態**：
-     1. **OP 權限全鏈路**：新增案件按鈕、快速待辦指派（`🔒 可見成員`）、任務抽屜指派（`更新可見權限`）、案件樹編輯（`✏️ 編輯` 與批量成員指派）全面啟用且 100% 通過實際雲端測試。
-     2. **案件卡片安全防護**：解耦編輯與刪除/封存權限，確保資料安全與團隊協同彈性。
-     3. **人員控管中心與切換器**：成員職位名稱正確顯示（不再為 `undefined`），欄位與標籤精確對齊「可新增案件與指派成員」。
-     4. **既有核心功能**：PostgreSQL 序號衝突自愈 (`safeInsert`)、出發日自愈排序、任務群組保底回退、即時「➕ 新增任務群組」、臺灣工作天時程計算機、行動滑出抽屜與 3 段個人化字級調節器均穩定運作。
+     1. **OP 權限全鏈路 (v3.3)**：可建立案件、案件樹「✏️ 編輯」與批量指派成員、快速待辦與抽屜可見人員設定、案件「📦 封存 / 🔓 解封」全面解鎖啟用。
+     2. **高風險防護**：永久刪除案件依舊嚴格限定 SuperMaster 與案件建立者。
