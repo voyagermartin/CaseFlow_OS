@@ -97,6 +97,7 @@
 | **Phase 17** (2026-11-10) | 📦 案件封存與解封權限重構：解耦「封存/解封」與「刪除」權限，正式開放 OP 執行案件封存/解封 (`canArchive`)，並加入防禦性權限檢查。 | `v3.3` |
 | **Phase 18** (2026-11-10) | 📁 Google Drive 自動化目錄建置：發起新案件自動於 Drive 母目錄建立案件同名資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`)，並自動回填 Supabase `drive_url`。 | `v3.4` |
 | **Phase 19** (2026-11-10) | 🔐 GAS OAuth 授權鏈修復與雲端自動化實測驗證：補齊 `appsscript.json` 之 `oauthScopes`（Drive 完整讀寫與 External Request），新增 `testOrAuthorizeDrive` 診斷工具，修復 `DriveApp` 與 `UrlFetchApp` 權限阻擋，完成端點實測並為歷史案件 (Case #36) 補建資料夾。 | `v3.4.1` |
+| **Phase 20** (2026-11-10) | 🧹 UI 調校與 2027 全量案件 Drive 目錄批次補建：將右下角 Debugger 面板預設隱藏並支援 `Ctrl+Shift+D` 快捷切換；批次為 2027 年 1 月 1 日起出發之全數 9 筆案件於 Google Drive 自動建立「日期_案件名」專屬資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`) 並回寫 Supabase。 | `v3.4.2` |
 
 ---
 
@@ -114,7 +115,7 @@
 
 > 本區塊作為後續功能擴充與 AI 協同開發的最新穩定起點。
 
-* **目前系統版本**：`v3.4.1`
+* **目前系統版本**：`v3.4.2`
 * **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
 * **Google Apps Script 部署**：`@64` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
 * **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
@@ -124,7 +125,9 @@
   - `https://www.googleapis.com/auth/script.external_request` (Supabase REST API 回寫)
 * **功能驗證狀態**：
   1. ✅ **Google Drive 自動建檔與回寫**：建立案件即自動在母目錄建立案件同名資料夾（`日期_案件名稱`）與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動非同步透過 REST API 回填 Supabase `drive_url`。
-  2. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
-  3. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
-  4. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
-  5. ✅ **基礎架構穩定性**：`safeInsert` 主鍵衝突自動自愈、視圖懶加載 (Lazy Evaluation)、原地 DOM 更新 (In-place Mutation)、3 段個人化字級調節器穩定運作。
+  2. ✅ **歷史/未來案件全數掛載**：2027 年出發之 9 筆案件（Case #35, #36, #6, #31, #4, #14, #34, #32, #30）已全數補建資料夾與 4 大子目錄，雲端目錄連結 100% 寫入資料庫。
+  3. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
+  4. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
+  5. ✅ **介面乾淨度優化**：`CaseFlow OS Debugger` 預設隱藏，保留 `Ctrl+Shift+D` 快捷調出機制，日常使用介面維持清爽。
+  6. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
+  7. ✅ **基礎架構穩定性**：`safeInsert` 主鍵衝突自動自愈、視圖懶加載 (Lazy Evaluation)、原地 DOM 更新 (In-place Mutation)、3 段個人化字級調節器穩定運作。
