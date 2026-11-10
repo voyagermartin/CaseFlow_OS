@@ -116,7 +116,7 @@
 
 * **目前系統版本**：`v3.4.1`
 * **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
-* **Google Apps Script 部署**：`@63` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
+* **Google Apps Script 部署**：`@64` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
 * **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
 * **OAuth 授權規格 (appsscript.json)**：
   - `https://www.googleapis.com/auth/spreadsheets`
