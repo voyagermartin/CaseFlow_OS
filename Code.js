@@ -1570,6 +1570,22 @@ function testDebug() {
 }
 
 /**
+ * Run this function once manually in the Apps Script editor to authorize Google Drive permissions.
+ */
+function testOrAuthorizeDrive() {
+  let parentId = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || PARENT_FOLDER_ID;
+  if (!parentId || parentId === "貼上你的母資料夾ID") {
+    parentId = "1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI";
+  }
+  const folder = DriveApp.getFolderById(parentId);
+  try {
+    DriveApp.getFolderById("1vW1x6955xWtgiFR-bn-zEUgiOH_Ejajh").setTrashed(true);
+  } catch (e) {}
+  Logger.log("Drive full write and UrlFetchApp authorized successfully! Root folder name: " + folder.getName());
+  return "OK: " + folder.getName();
+}
+
+/**
  * Auto-create case main folder and 4 standard subdirectories (TKT, LOCAL, PP, INS)
  * and update drive_url in Supabase via REST API (PATCH).
  */

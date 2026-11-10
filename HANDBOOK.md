@@ -96,6 +96,7 @@
 | **Phase 16** (2026-10-22) | 🛡️ 動態職位注入 (`enrichUsersWithRoles`)，全面落實 OP「新增案件」、「卡片編輯與批量指派」、「待辦可見人員指派」完整權限。 | `v3.2` |
 | **Phase 17** (2026-11-10) | 📦 案件封存與解封權限重構：解耦「封存/解封」與「刪除」權限，正式開放 OP 執行案件封存/解封 (`canArchive`)，並加入防禦性權限檢查。 | `v3.3` |
 | **Phase 18** (2026-11-10) | 📁 Google Drive 自動化目錄建置：發起新案件自動於 Drive 母目錄建立案件同名資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`)，並自動回填 Supabase `drive_url`。 | `v3.4` |
+| **Phase 19** (2026-11-10) | 🔐 GAS OAuth 授權鏈修復與雲端自動化實測驗證：補齊 `appsscript.json` 之 `oauthScopes`（Drive 完整讀寫與 External Request），新增 `testOrAuthorizeDrive` 診斷工具，修復 `DriveApp` 與 `UrlFetchApp` 權限阻擋，完成端點實測並為歷史案件 (Case #36) 補建資料夾。 | `v3.4.1` |
 
 ---
 
@@ -113,12 +114,16 @@
 
 > 本區塊作為後續功能擴充與 AI 協同開發的最新穩定起點。
 
-* **目前系統版本**：`v3.4`
+* **目前系統版本**：`v3.4.1`
 * **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
-* **Google Apps Script 部署**：`@59` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
+* **Google Apps Script 部署**：`@63` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
 * **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
+* **OAuth 授權規格 (appsscript.json)**：
+  - `https://www.googleapis.com/auth/spreadsheets`
+  - `https://www.googleapis.com/auth/drive` (完整讀寫與目錄建立)
+  - `https://www.googleapis.com/auth/script.external_request` (Supabase REST API 回寫)
 * **功能驗證狀態**：
-  1. ✅ **Google Drive 自動建檔**：建立案件即自動在母目錄建立案件同名資料夾與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動回填 Supabase `drive_url`。
+  1. ✅ **Google Drive 自動建檔與回寫**：建立案件即自動在母目錄建立案件同名資料夾（`日期_案件名稱`）與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動非同步透過 REST API 回填 Supabase `drive_url`。
   2. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
   3. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
   4. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
