@@ -11,25 +11,31 @@
 ### 🛠️ 技術規格
 - **後端與資料庫**：Supabase Cloud PostgreSQL 雲端資料庫（7 大核心資料表：`roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks`）。
 - **前端介面**：HTML5 + Vanilla JS + Tailwind CSS + `@supabase/supabase-js v2`，整合 FullCalendar v6（日曆）。
+- **輔助後端服務**：Google Apps Script (GAS) Web App 負責自動化串接（如 Google Drive 資料夾建立、檔案處理）。
 - **極速效能與 Realtime 架構**：
-  - **資料層與歷史資料備份**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)；已完整將原 Google Sheets 資料庫 24 筆案件、308 筆待辦事項、23 條留言無損匯入。
-  - **即時連線 (WebSocket Realtime)**：掛載 Supabase Realtime 頻道監聽 (`tasks`, `cases`, `comments`)，團隊成員修改資料時自動無感刷新全站視圖。
-  - **主鍵序號自愈與容錯寫入 (`safeInsert`)**：針對歷史資料匯入可能引起的 sequence 滯後問題，內建 `safeInsert` 自動捕捉 `23505 duplicate key` 錯誤，0ms 動態以 `max(id) + 1` 恢復重試，確保留言與任務寫入 100% 成功。
-  - **前端效能**：`Promise.all` 7 表併行載入 (`loadSupabaseData`)；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應，消除全站 DOM 銷毀重繪卡頓。
+  - **資料層與歷史資料備份**：淘汰原本 GAS Web App 之 HTTP Table Lock 與寫入延遲，改採 **Supabase Client SDK 直接讀寫 PostgreSQL**，具備 ACID 特性與外鍵級聯刪除 (`ON DELETE CASCADE`)；原試算表歷史案件、待辦與留言已完整無損匯入。
+  - **即時連線 (WebSocket Realtime)**：掛載 Supabase Realtime 頻道監聽 (`tasks`, `cases`, `comments`)，團隊成員異動資料時自動無感刷新全站視圖。
+  - **主鍵序號自愈與容錯寫入 (`safeInsert`)**：內建 `safeInsert` 自動捕捉 `23505 duplicate key` 錯誤，0ms 動態以 `max(id) + 1` 恢復重試，確保留言與任務寫入 100% 成功。
+  - **前端效能**：`Promise.all` 7 表併行載入 (`loadSupabaseData`)；`renderActiveViewOnly` 視圖懶加載與原地 DOM 變更 (In-place Mutation)，待辦勾選 0ms 立即響應。
 - **行動優先與自適應字級架構 (Mobile-First UX)**：
   - **行動抽屜選單**：`<1024px` 預設隱藏側邊欄，透過頂欄 ☰ 漢堡按鈕與毛玻璃遮罩展開，切換分頁自動平滑收合。
   - **個人化字級調節器 (Font Scaler)**：動態控制根元素 `html.font-scale-*`（標準 16px / 舒適 18px / 大字 20px），透過 `localStorage` 跨裝置持久化記憶。
-  - **44px 拇指友善觸控與 iOS 體驗**：加大 Checkbox (`h-5 w-5`) 與按鈕熱區，表單輸入框自適應 `text-base`/`text-sm` 消除 iOS Safari 點擊輸入時自動拉近放大跳動。
+  - **44px 拇指友善觸控**：加大 Checkbox (`h-5 w-5`) 與按鈕熱區，輸入框防 iOS Safari 點擊自動拉近放大。
 - **門禁與權限控管**：
   - **Email 白名單門禁**：以 `users.google_email` 為進站名單（`#login-modal`）。
-  - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域專案與任務檢視穿透權限，外加單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
-  - **動態 RBAC 權限體系**：由 `roles.can_create_case` 全域動態賦權，載入時由 `enrichUsersWithRoles` 動態注入使用者物件，完整涵蓋「可新增案件」與「自由指派任務可見成員」雙重職能；案件管理按鈕採安全解耦機制：「編輯/批量指派」與「封存/解封」（開放 OP/具權限者、SuperMaster 與案件建立者），高風險「刪除案件」（嚴格限定 SuperMaster 與案件原建立者）。
+  - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域穿透檢視權限與單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
+  - **動態 RBAC 權限體系**：由 `roles.can_create_case` 全域動態賦權，載入時由 `enrichUsersWithRoles` 動態注入使用者物件，涵蓋「新增案件」與「自由指派任務可見成員」雙重職能。
+  - **案件操作安全解耦**：
+    - `✏️ 編輯案件 / 批量人員指派`：開放 SuperMaster、案件建立者，以及具權限者（如 OP）。
+    - `📦 封存案件 / 🔓 解除封存`：開放 SuperMaster、案件建立者，以及具權限者（如 OP）。
+    - `🗑️ 永久刪除案件`：嚴格限定 SuperMaster 與案件原建立者。
 
 ---
 
 ## 🗄️ 2. Supabase Cloud PostgreSQL 資料庫架構 (7 大資料表)
 
-👉 **Supabase 專屬 Project URL**: `https://lzfiemnygaarzgvvonwt.supabase.co`
+👉 **Supabase Project URL**: `https://lzfiemnygaarzgvvonwt.supabase.co`  
+👉 **Google Drive 母目錄 ID**: `1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
 
 | 資料表 | 作用 | 核心欄位結構 (Key Schema) |
 | :--- | :--- | :--- |
@@ -48,43 +54,33 @@
 ### 📊 A. 個人待辦儀表板 (Personal Dashboard - 預設首頁)
 - **智慧排序與狀態燈號**：自動依 🔴 過期 ➡️ 🟡 48H內急件 ➡️ 🔵 進行中 排序；當日截止日精確解析至 23:59:59 消除過期誤判。
 - **互動操作**：列表中 0ms 原地動畫勾選完成 (`dashboard-task-row` in-place mutation)、點擊案件名稱跳轉案件樹狀圖（帶閃爍高亮定位）、一鍵開啟討論抽屜。
-- **強化表格排版**：消除微型字，狀態徽章加粗加大，清晰展示任務組別、死線時程與倒數天數。
 
 ### 📅 B. 日曆模式 (Calendar View)
 - 支援死線狀態燈號（紅/黃/綠/藍）與「組別色彩優先 / 雙色混合 / 死線優先」3 種配色切換。
 
 ### 📋 C. 案件樹狀模式 (Case Tree View)
-- **卡片管理**：標題採用自適應 `text-base sm:text-xl font-bold`，預設收合帶有 `openCaseIds` 記憶；支援專案「📦 封存 / 🔓 解封」（封存案件可透過開關顯示，預設自儀表板與日曆隱藏）。
-- **案件出發日自愈與排序**：自動從出發日或團號編碼（如 `JX260916A`）提取日期並升序排列，直顯出發日大字徽章。
-- **任務群組自愈與保底容器**：若案件無預設群組或為空白，系統自愈回退為「一般待辦」群組容器，確保每個案件開展時隨時具備快速新增待辦表單。
-- **➕ 原地新增任務群組**：案件卡片底部內建「➕ 新增任務群組」即時展開式輸入工具，支援輸入後按 `Enter` 或點擊建立，0ms 原地樂觀渲染新任務組與快速新增待辦框，並自動持久化同步至雲端專案 `group_names`。
-- **⚡ 待辦事項快速建立與 `Enter` 快捷流**：待辦項目採用 `text-sm sm:text-base font-semibold` 搭配放鬆行距與 `h-5 w-5` 大尺寸核取方塊；快速新增待辦支援標題與截止日按下 `Enter` 鍵立即送出；具權限者（如 OP）可自由於「🔒 可見成員」Checkboxes 指定任務可見成員名單。
-- **編輯案件內建批量權限設定**：OP 與具權限成員可直接開啟案件「✏️ 編輯」，提供「➕ 批量加入 (預設)」、「🔄 覆蓋重設」、「⏸️ 不變更」3 種模式一鍵套用至該案件所有待辦。
-- **即時留言氣泡預覽與抽屜背景拉取**：樹狀圖直顯最新留言氣泡與 `+X 則討論` 徽章；點擊待辦開啟抽屜時背景自動拉取雲端最新留言串 (`getTaskComments`)，支援 `Enter` 快捷送出與 inline 編輯；具權限者可在抽屜內自由調整「可見人員設定」並即時持久化至雲端。
-- **⚡ 雙向時程偏移計算機 (Date Calculator)**：
-  - 任務抽屜內建折疊式時程推算工具，支援專案出發日（`reference_date`）或指定基準日。
-  - 支援「◀ 往前 (行前倒算)」與「▶ 往後 (團後順推)」，可勾選「`[v] 僅計臺灣工作天`」自動避開週末與國定假日（支援補班日計算）。
-  - 提供即時推算預覽與「⬅️ 套用為開始日」/「➡️ 套用為截止日」一鍵填入並自動批量儲存。
-
-### 🔠 D. 個人化字級調節器與行動體驗 (Font Scaler & Mobile UX)
-- **側邊欄字級切換器**：提供 `[ 標準 (100%) | 舒適 (115%) | 大字 (125%) ]` 3 段式切換，支援中越雙語。
-- **無損向量縮放**：基於 Tailwind `rem` 根字級縮放架構，容器與間距等比例縮放，保證大字體下 100% 不破版、不溢出。
-- **偏好記憶**：透過 `localStorage` 永久記憶使用者在該裝置上的字級設定。
+- **卡片管理**：標題採用自適應字級，預設收合帶有 `openCaseIds` 記憶；支援專案「📦 封存 / 🔓 解封」（封存案件可透過切換開關顯示）。
+- **案件出發日自愈與排序**：自動從出發日或團號編碼提取日期並升序排列，直顯出發日大字徽章。
+- **任務群組保底與即時新增**：無預設群組時自愈為「一般待辦」容器；案件底部內建「➕ 新增任務群組」即時展開式輸入工具，支援 `Enter` 快捷送出。
+- **快速待辦建立**：標題與截止日支援按下 `Enter` 立即建立；OP 可自由指派「🔒 可見成員」。
+- **批次人員權限**：編輯案件內建「➕ 批量加入」、「🔄 覆蓋重設」、「⏸️ 不變更」3 種模式一鍵套用至所有待辦。
+- **討論抽屜與時程推算機**：任務抽屜直顯留言討論串，內建雙向時程偏移計算機（行前倒算/團後順推 + 臺灣國定假日/補班工作天計算引擎 + 一鍵套用）。
+- **Google Drive 直連導航**：案件卡片「📂 雲端資料夾」按鈕與任務抽屜「📂 案件雲端資料夾」捷徑，點擊可直接在新分頁開啟該案件專屬雲端硬碟。
 
 ---
 
-## ⚙️ 4. 部署方式與 AI 合作協議
+## ⚙️ 4. 部署方式與自動化協議
 
-### 🚀 部署指南 (GitHub Pages)
-1. 靜態網頁架構託管於 **GitHub Pages**。
-2. 前端 [index.html](file:///d:/Projects/CaseFlow_OS/index.html) 引入 `@supabase/supabase-js` CDN 並設置 `SUPABASE_URL` 與 `SUPABASE_ANON_KEY` 即可完成雲端雙向連線。
+### 🚀 部署架構
+1. **前端與靜態資源**：託管於 **GitHub Pages**，透過 `@supabase/supabase-js` 直接與 Supabase Cloud 連線。
+2. **後端自動化**：託管於 **Google Apps Script**（Web App 發布），處理 Google Drive 自動化建檔與目錄建立。
 
 ### 🤝 AI 自動化部署協議
-- AI 完成程式碼修改與驗證後，全權代理執行以下流程：
-  1. `git add .`
-  2. `git commit -m "..."`
-  3. `git push origin main`（同步 GitHub 儲存庫並觸發 GitHub Pages 自動部署）
-- 使用者僅於最終發布網頁環境進行功能驗證。
+- 程式碼修改完成後，依序執行：
+  1. `clasp push` 與 `clasp deploy`（若涉及後端 GAS 自動化）
+  2. `git add .`
+  3. `git commit -m "..."`
+  4. `git push origin main`（觸發 GitHub Pages 自動部署）
 
 ---
 
@@ -92,154 +88,38 @@
 
 | 階段與日期 | 里程碑核心成果 | 版本 |
 | :--- | :--- | :--- |
-| **Phase 1** (2026-08-17) | 建立專案基礎設施、ORM 模型、權限過濾、FullCalendar 基礎整合。 | MVP |
-| **Phase 2** (2026-08-18) | GAS 無伺服器移轉、Google Sheets 資料庫落地、多語系 (zh-TW / vi-VN) 字典。 | v0.2 |
-| **Phase 3** (2026-08-19) | 全站樂觀更新 (0ms 響應)、Task/Case CRUD 與聯動刪除、任務組 10 色彩盤管理。 | v0.3 |
-| **Phase 4** (2026-08-20) | 臺灣工作天計算引擎（國定假日與補班日判定）、Roles 防禦性初始化與權限重構。 | v0.4 |
-| **Phase 5** (2026-08-26) | 案件範本系統、個人儀表板、單通道極速載入 (`getInitialData` <0.3s)、`SpreadsheetApp.flush()` 強制落盤、`silent = true` 靜音背景同步。 | v0.5 |
-| **Phase 6** (2026-08-31) | 案件封存與解封機制、Checkbox 0ms 極速響應 (`requestAnimationFrame`)、抽屜日期批次儲存按鈕、Email 白名單門禁 (`#login-modal`)、Super Master 單向 PIN (`8888`)、頂端安全身分指示器。 | v0.6 |
-| **Phase 7** (2026-09-01) | 案件批量人員權限持久化修復 (`batchUpdateCaseTaskVisibility` + `parseInt`)、GAS 後端改採記憶體 2D 陣列單次 `setValues` 批次寫入（寫入耗時降至 <0.05s，效能提升 200 倍）、前端 `renderActiveViewOnly` 視圖懶加載。 | `@46` |
-| **Phase 8** (2026-09-02) | 討論留言 0ms 樂觀更新與背景視圖即時連動（氣泡預覽與徽章同步）、開抽屜背景動態拉取最新留言串 (`getTaskComments`)、鍵盤 `Enter` 快捷送出、留言 CRUD 權限控管。 | `@47` |
-| **Phase 9** (2026-09-03) | ⚡ 任務抽屜雙向時程偏移計算機（行前倒算/團後順推 + 臺灣國定假日/補班工作天計算引擎 + 一鍵套用）、Super Master 全域穿透檢視權限、移除 GET 迴圈寫入操作提升效能。 | `@50` |
-| **Phase 10** (2026-09-03) | 待辦勾選 0ms 極速原地 DOM 更新 (In-place Mutation)、解耦視圖同步重繪、全站視圖 Dirty 標記與切換按需懶加載 (Lazy Evaluation)。 | `@51` |
-| **Phase 11** (2026-09-03) | 移除甘特圖模式（減重前端架構與消除依賴庫負載）、儀表板 0ms 原地動畫回饋 (`dashboard-task-row` in-place mutation) 與平滑重繪、清除殘留字典（正式基準點）。 | `@53` |
-| **Phase 12** (2026-09-03) | 📱 手機視角與響應式重構：側邊欄轉為行動抽屜 (Drawer) + 漢堡選單按鈕 + 背景遮罩 + 切換分頁自動收合；案件樹狀排版自適應與任務抽屜全寬優化。 | `@54` |
-| **Phase 13** (2026-09-03) | 🔠 字體層級全面升級與個人化字級調節器：消除微型字 (10px->12~14px)、側邊欄新增 [標準 100% / 舒適 115% / 大字 125%] 即時切換並持久化、流動式 Badge 防破版、44px 拇指觸控友善與輸入框防 iOS 自動縮放；徹底清理未授權提示殘存遮罩。 | `@57` |
-| **Phase 14** (2026-09-27) | ⚡ 全面資料層遷移至 Supabase PostgreSQL 雲端資料庫：淘汰 GAS Web App 即時資料庫連線，改採 Supabase Client SDK 直連 7 大 PostgreSQL 表，並掛載 WebSocket Realtime 頻道對 `tasks` / `cases` / `comments` 實現跨裝置無感靜默刷新。 | `v3.0` |
-| **Phase 15** (2026-09-29) | 🛠️ PostgreSQL 序號自愈與 `safeInsert` 衝突容錯機制、案件無群組自動自愈回退（「一般待辦」保證隨時可快速新增任務）、案件樹內建即時「➕ 新增任務群組」組件與 `Enter` 快捷鍵新增待辦。 | `v3.1` |
-| **Phase 16** (2026-10-22) | 🛡️ 人員與職位權限鏈路修復：解決 Supabase 使用者資料未關聯角色權限之問題，落實 OP「可新增案件與指派成員」權限；支援案件樹 OP 編輯案件與批量指派成員、快速待辦與任務抽屜可見人員設定與雲端持久化。 | `v3.2` |
-| **Phase 17** (2026-11-10) | 📦 案件封存與解封權限解耦：正式開放 OP 與具備建立案件權限之成員執行案件封存與解封 (`canArchive`)，並於 `toggleArchiveCaseAction` 與 `deleteCaseAction` 加入防禦性權限檢查；高風險「刪除案件」嚴格維持限定 SuperMaster 與案件原建立者。 | `v3.3` |
-| **Phase 18** (2026-11-10) | 📁 Google Drive 母資料夾與 4 大標準子目錄 (TKT/LOCAL/PP/INS) 自動建立：發起新案件時透過非同步 GAS 背景自動於 Drive 指定母目錄建立案件同名資料夾與 4 個標準子目錄，並透過 Supabase REST API 自動回填 `drive_url`，案件樹卡片與任務抽屜支援直連導航開啟。 | `v3.4` |
+| **Phase 1~6** (2026-08) | 建立專案基礎設施、ORM 模型、多語系 (zh-TW / vi-VN)、臺灣工作天計算、個人儀表板、Email 門禁與 SuperMaster PIN 鎖。 | `v0.1` ~ `v0.6` |
+| **Phase 7~11** (2026-09-01~03) | 案件批量權限持久化、討論留言 0ms 樂觀連動、雙向時程偏移計算機、待辦勾選 0ms 原地 DOM 更新、卸載甘特圖回歸輕量核心。 | `@46` ~ `@53` |
+| **Phase 12~13** (2026-09-03) | 📱 手機響應式抽屜選單 (Drawer) + 漢堡按鈕；🔠 個人化字級調節器 (標準/舒適/大字) 與 44px 拇指友善觸控熱區。 | `@54` ~ `@57` |
+| **Phase 14** (2026-09-27) | ⚡ 全面遷移至 Supabase PostgreSQL 雲端資料庫，無損匯入歷史資料，掛載 WebSocket Realtime 跨裝置靜默刷新。 | `v3.0` |
+| **Phase 15** (2026-09-29) | 🛠️ PostgreSQL 序號自愈與 `safeInsert` 衝突容錯、群組「一般待辦」保底容器、即時「➕ 新增任務群組」與 `Enter` 快捷流。 | `v3.1` |
+| **Phase 16** (2026-10-22) | 🛡️ 動態職位注入 (`enrichUsersWithRoles`)，全面落實 OP「新增案件」、「卡片編輯與批量指派」、「待辦可見人員指派」完整權限。 | `v3.2` |
+| **Phase 17** (2026-11-10) | 📦 案件封存與解封權限重構：解耦「封存/解封」與「刪除」權限，正式開放 OP 執行案件封存/解封 (`canArchive`)，並加入防禦性權限檢查。 | `v3.3` |
+| **Phase 18** (2026-11-10) | 📁 Google Drive 自動化目錄建置：發起新案件自動於 Drive 母目錄建立案件同名資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`)，並自動回填 Supabase `drive_url`。 | `v3.4` |
 
 ---
 
 ## 🔮 6. 未來展望與待辦事項 (Future Roadmap)
 
-1. **📧 即時 Google Workspace 通訊通知**：討論串 `@同事` 時自動觸發 MailApp 或 Gmail/Chat 郵件提醒。
-2. **📁 雲端硬碟檔案直接上傳**：於抽屜組件中支援直接上傳圖片/PDF 至該 Case 的 `drive_url` 資料夾。
-3. **📊 高級統計與專案報告匯出**：一鍵匯出專案進度報告（PDF/Excel）與過期任務統計。
+1. **📊 高級統計與專案報告匯出**：一鍵匯出專案進度報告（PDF / Excel）與逾期任務統計。
+2. **📎 任務抽屜直傳檔案至 4 大子目錄**：支援於抽屜中直接上傳圖片/PDF 至該案件的 `TKT`、`LOCAL`、`PP`、`INS` 子目錄。
+3. **📧 即時 Google Workspace 通訊通知**：討論串 `@同事` 時自動觸發 Gmail 郵件或 Google Chat 推播提醒。
 4. **📶 離線快取與 PWA 支援**：導入 Service Worker 與 LocalStorage 快取，支援離線唯讀查詢。
 5. **🔗 任務相依性關聯 (Task Dependencies)**：支援前置任務連鎖關聯與延期警告提示。
 
 ---
 
-## 📝 7. 開發日誌 (Development Log)
+## 🎯 7. 當前開發基準點 (Current Benchmark Milestone)
 
-### 📅 2026-09-03 開發日誌摘要 (Phase 9 ~ Phase 13)
+> 本區塊作為後續功能擴充與 AI 協同開發的最新穩定起點。
 
-今日完成專案重大效能躍進、架構輕量化、手機視角重構與字體排版系統化升級，重點總結如下：
-
-1. **⚡ 雙向時程偏移計算機 (Date Offset Calculator)**：
-   - 於任務詳情抽屜中實作雙向時程計算面板，支援出發日（基準日）之「行前倒算」與「團後順推」。
-   - 內建臺灣國定假日與補班日工作天計算引擎，支援即時推算結果預覽與一鍵套用至開始日/截止日。
-2. **🚀 待辦勾選 0ms 原地 DOM 更新與視圖懶加載 (In-place Mutation & Lazy Evaluation)**：
-   - 重構 `toggleTask`：勾選時直接原地修改該 DOM 節點之樣式、刪除線與圖示，不再銷毀重繪整個案件樹，達到 0ms 零延遲極致操作感。
-   - 導入全站視圖 Dirty 標記機制，切換導覽分頁時按需懶加載（Lazy Evaluation），大幅降低瀏覽器重繪負載。
-3. **🧹 甘特圖模式卸載與輕量化重構**：
-   - 根據業務實務需求果斷移除不適用的甘特圖視圖與第三方相依，精簡前端 DOM 結構並清除殘留多語系字典，回歸輕快流暢核心。
-4. **📱 手機響應式與行動抽屜 (Mobile Slide-over Drawer)**：
-   - 頂欄 Header 新增 ☰ 漢堡選單按鈕；側邊欄在 `<1024px` 手機視角下轉化為滑出式抽屜，搭配毛玻璃背景遮罩，切換分頁時自動收合。
-   - 任務詳情抽屜與所有彈窗（發起案件、編輯案件、任務組色彩、範本管理）均升級為手機全寬自適應防破版佈局。
-5. **🔠 個人化字級調節器 (Font Scaler) 與易讀性全面提升**：
-   - 側邊欄新增 `[ 標準 100% | 舒適 115% | 大字 125% ]` 3 段式根字級調節器，透過 `localStorage` 永久記憶個人偏好。
-   - 全面消除 `10px` / `11px` 微型字，標籤與燈號升級為 `12px~15px`，案件標題升級至 `18px~20px`，待辦事項標題升級至 `14px~16px`。
-   - Checkbox 放大至 `h-5 w-5`，按鈕擴展至 44px 拇指友善觸控熱區，表單輸入框升級以杜絕 iOS Safari 自動拉近跳動。
-6. **🛡️ 未授權提示殘留遮罩徹底清理與樣式防護**：
-   - 完整拔除未使用的未授權帳戶阻擋遮罩 HTML 與 JS 判斷，並於 CSS 注入 `.hidden { display: none !important; }`，徹底杜絕畫面底部出現「前往 Gmail 收信 / 切換帳戶」之殘留提示。
-7. **當前最新部署與版本標記**：
-   - **GAS 雲端部署版本**：`@57` (Legacy)
-   - **GitHub 記錄點**：`ac5205b`
-
-### 📅 2026-09-27 開發日誌摘要 (Phase 14 - Supabase 全面資料層遷移與歷史資料無損轉移)
-
-今日完成專案重大架構躍進，將資料層由 Google Apps Script (GAS) 全面遷移至 Supabase PostgreSQL 雲端資料庫，並完成歷史全量資料搬遷：
-
-1. **🔥 Supabase Client SDK 整合與憑證配置**：
-   - 在 `index.html` 頂部配置官方 Supabase SDK CDN 及專屬憑證 (`SUPABASE_URL` 與 `SUPABASE_ANON_KEY`)。
-2. **⚡ `loadSupabaseData` 7 大資料表 `Promise.all` 併行載入**：
-   - 重構資料載入流程，以 `Promise.all` 併行讀取 `roles`, `users`, `cases`, `tasks`, `comments`, `case_templates`, `template_tasks` 7 張 PostgreSQL 資料表。
-3. **📦 歷史全量資料無損轉移與核對**：
-   - 撰寫並執行專屬資料搬遷腳本，將原本 Google Sheets 雲端試算表中之 24 筆案件、308 筆待辦事項、23 筆留言討論、3 位成員帳號、5 個權限職位、3 個範本與 30 筆預置任務成功無損轉移至 Supabase PostgreSQL 雲端資料庫。
-4. **🛠️ 全站 CRUD 操作對齊 Supabase SDK**：
-   - 待辦勾選 (`toggleTask`)、新增/編輯/刪除待辦 (`tasks`)、任務備註/時程/可見人員權限。
-   - 新增案件 (`createCase`)、編輯/刪除/封存案件 (`cases`)，且自動觸發範本標準任務之批量生成與 cascade 刪除。
-   - 留言討論區 (`comments`) 新增、編輯與刪除。
-   - 人員/職位與 SOP 範本組件之 CRUD 全數對齊 Supabase 資料表。
-5. **📡 Supabase Realtime WebSocket 訂閱監聽**：
-   - 訂閱 `tasks`, `cases`, `comments` 之變更事件，在團隊成員進行更新時自動觸發靜默背景刷新 (`refreshActiveViewQuietly`)。
-6. **🎯 下階段開發基準標記 (Benchmark Milestone)**：
-   - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
-   - **GitHub 記錄點**：`f098f70`
-
-### 📅 2026-09-29 開發日誌摘要 (Phase 15 - PostgreSQL 序號自愈與案件任務群組彈性擴展)
-
-今日完成資料庫主鍵序號全自動衝突自愈、無群組案件快速新增待辦保障，以及案件樹狀圖即時「➕ 新增任務群組」組件實作：
-
-1. **🛡️ PostgreSQL 序號全面校準與 `safeInsert` 衝突恢復機制**：
-   - 解決由歷史資料導入導致之主鍵序號滯後（`23505 duplicate key value violates unique constraint`）問題，將 7 大資料表序號全部同步至歷史最大值之上。
-   - 前端新增 `safeInsert` 封裝，遭遇序號衝突時自動在 0ms 內動態以 `max(id) + 1` 恢復重試，徹底根絕留言與待辦送出失敗情況。
-2. **🚀 案件群組自愈與「一般待辦」保底機制**：
-   - 重構 `assembleCasesData` 與 `renderCaseTree`：無論案件建立時是否有設定任務群組、或設定為空字串，系統一律自動保底提供「一般待辦」群組容器，確保每個案件開展時隨時具備即時快速新增待辦（Quick Add Task）表單，消除空白卡死現象。
-3. **➕ 案件樹狀圖內建即時「新增任務群組」組件**：
-   - 每個案件卡片底部新增「➕ 新增任務群組」展開式輸入工具，支援輸入新組名後按 `Enter` 或點擊「建立群組」在 0ms 內原地樂觀渲染新任務組與快速新增待辦表單，並在背景自動同步更新專案 `group_names` 欄位。
-4. **⚡ 待辦事項快速輸入 `Enter` 快捷鍵支援**：
-   - 快速新增待辦之標題與截止日輸入框全面支援按下 `Enter` 鍵立即送出，免滑鼠點擊即可連續鍵盤流快速建構工作清單。
-5. **🎯 下階段開發基準標記 (Benchmark Milestone)**：
-   - **版本**：`v3.1`
-   - **資料庫狀態**：Supabase PostgreSQL 7 大資料表序號校準完畢 + 前端 `safeInsert` 容錯自愈防護。
-   - **主要模組狀態**：案件樹（含「一般待辦」保底與即時「新增任務群組」）、任務詳情抽屜（含時程計算機與留言板）、個人儀表板、日曆視圖皆正常運作。
-
-### 📅 2026-10-22 開發日誌摘要 (Phase 16 - 人員與職位權限鏈路修復，落實 OP 新增案件與指派成員權限)
-
-今日針對「人員控管中 OP 可新增案件與指派成員權限未實現」問題進行全鏈路排查與重構修復：
-
-1. **🔗 Supabase 使用者資料表動態注入職位中繼資料 (`enrichUsersWithRoles`)**：
-   - 原因排查：Supabase PostgreSQL 採正規化設計，`users` 表僅儲存 `role_id`，未冗餘 `role_name` 與 `can_create_case`；前端 `loadSupabaseData` 與 `apiRequest('getUsers')` 載入時漏失關聯對應，導致 OP（Josie、Ning、Apple）之 `role_name` 與 `can_create_case` 均為 `undefined`。
-   - 解決方案：實作 `enrichUsersWithRoles`，在資料載入時以 `rolesMap` 即時將 `role_name` 與 `can_create_case` 賦予每位使用者物件，消除人員切換器與控管清單中職位顯示為 `undefined` 的問題。
-2. **🛡️ 權限檢驗器 (`hasCreateCasePermission`) 多重容錯與 'OP' 職位名稱識別**：
-   - 擴展 `hasCreateCasePermission`：新增以 `user.role_id` 於 `allRoles` 查表作為雙重保底；將判定白名單擴增支援真實資料庫之 `'OP'` 角色名稱（相容原 `'Operation'`、`'Owner/Admin'`、`'Sales'`）。
-3. **🚀 案件樹狀圖 OP「編輯案件與批量指派成員」權限解鎖**：
-   - 重構案件卡片操作按鈕權限：解耦「編輯/指派成員」與「刪除/封存」之權限分離：
-     - `canEdit`（✏️ 編輯案件與批量人員指派）：開放給 SuperMaster、案件建立者，以及具備「可新增案件與指派成員」權限之職位（如 OP）。
-     - `canDelete`（🗑️ 刪除案件 / 📦 封存案件）：維持嚴格限定由 SuperMaster 或案件原建立者操作，確保專案安全。
-4. **👥 快速待辦與任務抽屜可見人員設定流暢化**：
-   - 修正 Quick Add Task 區塊中「🔒 可見成員」Checkboxes：OP 登入時解除 `disabled` 唯讀限制，可自由指定可見人員。
-   - 修正任務詳情抽屜（Task Drawer）「可見人員設定」Checkboxes 與「更新可見權限」按鈕：OP 登入時完整啟用，支援即時勾選更新並持久化至雲端 `tasks.visible_user_ids`。
-   - 人員控管中心 (User & Role Control) 表格欄位名升級為「可新增案件與指派成員」，燈號標籤升級為「可新增與指派 / 唯讀」。
-5. **🎯 開發基準標記 (Milestone)**：
-   - **版本**：`v3.2`
-   - **基準 Commit**：`e7d4d45`
-
-### 📅 2026-11-10 開發日誌摘要 (Phase 17 - 案件封存與解封權限重構，解鎖 OP 封存案件權限)
-
-今日針對案件管理中「封存案件與解鎖封存權限」進行安全解耦與權限重構：
-
-1. **🔓 案件樹狀圖「📦 封存 / 🔓 解封」按鈕權限解耦 (`canArchive`)**：
-   - 原先架構將「封存/解封」按鈕直接與高危險的「刪除案件」綑綁在 `canDelete`（僅限 SuperMaster 或 Case Owner）。
-   - 重構後將其獨立為 `canArchive = currentUser && (isSuper || isOwner || hasCreatePerm)`，使 OP 成員（如 Josie、Ning、Apple）與具備建立案件權限者可直接在案件卡片執行案件封存與解除封存。
-2. **🛡️ 函數級防禦性權限校驗 (`toggleArchiveCaseAction` & `deleteCaseAction`)**：
-   - 於 `toggleArchiveCaseAction` 加入防禦性檢查：驗證 `isSuper || isOwner || hasCreatePerm`，非授權使用者嘗試操作時即時彈出阻擋提示並中止請求。
-   - 於 `deleteCaseAction` 加入防禦性檢查：確保刪除高危操作嚴格限定由 SuperMaster 或案件原建立者操作（`isSuper || isOwner`），杜絕誤刪風險。
-3. **🎯 開發基準標記 (Milestone)**：
-   - **版本**：`v3.3`
-   - **基準 Commit**：`85c56e2`
-
-### 📅 2026-11-10 開發日誌摘要 (Phase 18 - 發起案件自動於 Google Drive 建立母資料夾與 4 大標準子目錄)
-
-今日完成案件開展時之雲端硬碟自動化目錄建置與 Supabase 雙向回填：
-
-1. **📁 GAS 後端 `createDriveFolder` 處理分支實作 (`Code.js`)**：
-   - 接收 `action: 'createDriveFolder'`、`caseId` 與 `folderName`。
-   - 透過 `DriveApp.getFolderById(PARENT_FOLDER_ID)` 取得指定之雲端母目錄（生產環境母目錄 ID：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`），並建立案件同名主目錄。
-   - 自動於該主目錄內建 4 大標準子資料夾：`TKT`（票務與交通）、`LOCAL`（地接與住宿）、`PP`（護照與簽證）、`INS`（保險）。
-   - 透過 `UrlFetchApp` 呼叫 Supabase REST API（`PATCH /rest/v1/cases?id=eq.${caseId}`），將新生成的 `drive_url` 自動回填持久化至 PostgreSQL。
-2. **⚡ 前端非同步 Fire-and-forget 連動 (`index.html`)**：
-   - 於 `submitNewCase` 建立案件成功時，以非同步背景模式 `fetch(GAS_WEBAPP_URL, { mode: 'no-cors' })` 觸發目錄生成，完全不阻擋前端使用者介面操作。
-   - 案件樹卡片直連按鈕（`📂 雲端資料夾`）與任務詳情抽屜（Task Drawer）均已完整對應 `case.drive_url`，可一鍵直達新分頁開啟專案母資料夾。
-3. **🎯 當前開發基準標記 (Benchmark Milestone - 下階段開發起點)**：
-   - **版本**：`v3.4`
-   - **資料庫**：Supabase Cloud PostgreSQL (`lzfiemnygaarzgvvonwt`)
-   - **核心模組驗證狀態**：
-     1. **Google Drive 自動化**：建立案件即自動於 Drive 建立母資料夾與 4 大標準子目錄（TKT/LOCAL/PP/INS），並回填 Supabase `drive_url`。
-     2. **導航直連**：案件卡片與任務抽屜「📂 案件雲端資料夾」快捷連結即時對應。
-     3. **既有核心全鏈路 (v3.3)**：OP 建立案件、案件樹「✏️ 編輯」與批量指派成員、快速待辦與抽屜可見人員設定、案件「📦 封存 / 🔓 解封」全面穩定運作。
+* **目前系統版本**：`v3.4`
+* **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
+* **Google Apps Script 部署**：`@59` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
+* **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
+* **功能驗證狀態**：
+  1. ✅ **Google Drive 自動建檔**：建立案件即自動在母目錄建立案件同名資料夾與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動回填 Supabase `drive_url`。
+  2. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
+  3. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
+  4. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
+  5. ✅ **基礎架構穩定性**：`safeInsert` 主鍵衝突自動自愈、視圖懶加載 (Lazy Evaluation)、原地 DOM 更新 (In-place Mutation)、3 段個人化字級調節器穩定運作。
