@@ -230,7 +230,7 @@
 
 1. **📁 GAS 後端 `createDriveFolder` 處理分支實作 (`Code.js`)**：
    - 接收 `action: 'createDriveFolder'`、`caseId` 與 `folderName`。
-   - 透過 `DriveApp.getFolderById(PARENT_FOLDER_ID)` 取得指定之雲端母目錄，並建立案件同名主目錄。
+   - 透過 `DriveApp.getFolderById(PARENT_FOLDER_ID)` 取得指定之雲端母目錄（生產環境母目錄 ID：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`），並建立案件同名主目錄。
    - 自動於該主目錄內建 4 大標準子資料夾：`TKT`（票務與交通）、`LOCAL`（地接與住宿）、`PP`（護照與簽證）、`INS`（保險）。
    - 透過 `UrlFetchApp` 呼叫 Supabase REST API（`PATCH /rest/v1/cases?id=eq.${caseId}`），將新生成的 `drive_url` 自動回填持久化至 PostgreSQL。
 2. **⚡ 前端非同步 Fire-and-forget 連動 (`index.html`)**：

@@ -1,5 +1,5 @@
 const SPREADSHEET_ID = "19NBQmVYYCg3ej3DDBrX0f3Zb1Ueougr-m-8xQHoK6Jk";
-const PARENT_FOLDER_ID = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || "貼上你的母資料夾ID";
+const PARENT_FOLDER_ID = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || "1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI";
 const SUPABASE_URL = PropertiesService.getScriptProperties().getProperty("SUPABASE_URL") || "https://lzfiemnygaarzgvvonwt.supabase.co";
 const SUPABASE_ANON_KEY = PropertiesService.getScriptProperties().getProperty("SUPABASE_ANON_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6ZmllbW55Z2FhcnpndnZvbnd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NDgwODcsImV4cCI6MjEwNjAyNDA4N30.3o-wB6osep9PhxajGvapoXTDdLc8hAuwhj77duFEi8M";
 
@@ -1575,10 +1575,9 @@ function testDebug() {
  */
 function createDriveFolder(caseId, folderName) {
   try {
-    const parentId = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || PARENT_FOLDER_ID;
+    let parentId = PropertiesService.getScriptProperties().getProperty("PARENT_FOLDER_ID") || PARENT_FOLDER_ID;
     if (!parentId || parentId === "貼上你的母資料夾ID") {
-      console.warn("PARENT_FOLDER_ID 尚未配置有效 Google Drive 資料夾 ID");
-      return { status: "error", message: "PARENT_FOLDER_ID not configured" };
+      parentId = "1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI";
     }
     const rootFolder = DriveApp.getFolderById(parentId);
     const safeFolderName = (folderName && String(folderName).trim()) ? String(folderName).trim() : ("Case_" + caseId);
