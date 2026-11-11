@@ -3554,7 +3554,17 @@
                     if (g.tasks.length === 0) {
                         taskList.innerHTML = `<p class="text-xs sm:text-sm text-slate-500 italic py-1">尚無待辦事項，請在下方快速新增</p>`;
                     } else {
-                        g.tasks.forEach(t => {
+                        // Sort tasks within the group by due_date ascending (empty due_dates sorted to the end)
+                        const sortedGroupTasks = [...g.tasks].sort((a, b) => {
+                            const dueA = a.due_date || "";
+                            const dueB = b.due_date || "";
+                            if (dueA === "" && dueB === "") return (a.id || 0) - (b.id || 0);
+                            if (dueA === "") return 1;
+                            if (dueB === "") return -1;
+                            const cmp = dueA.localeCompare(dueB);
+                            return cmp !== 0 ? cmp : ((a.id || 0) - (b.id || 0));
+                        });
+                        sortedGroupTasks.forEach(t => {
                             const taskItem = document.createElement('div');
                             taskItem.id = `case-task-row-${t.id}`;
                             taskItem.className = "flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-850 hover:border-slate-700 bg-slate-900/20 hover:bg-slate-900/60 transition-all duration-150 gap-3 sm:gap-4";
