@@ -5,6 +5,16 @@
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaseFlow OS - 案件協同與權限管家</title>
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CaseFlow OS">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
     <!-- Favicon -->
     <link rel="icon" href="logo.jpg" type="image/jpeg">
     <!-- Tailwind CSS CDN -->
@@ -136,7 +146,7 @@
             <div class="min-w-0">
                 <h1 class="text-base sm:text-xl font-bold text-slate-100 tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
                     <span>CaseFlow OS</span>
-                    <span class="text-[10px] sm:text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-indigo-400 font-normal shrink-0">v2.0</span>
+                    <span class="text-[10px] sm:text-xs bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-indigo-400 font-normal shrink-0">v3.5</span>
                 </h1>
                 <p class="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block" data-i18n="subtitle">專案協同與權限管家</p>
             </div>
@@ -205,6 +215,9 @@
                 </button>
                 <button id="btn-group-color" onclick="openGroupColorModal(); closeMobileSidebar();" class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-indigo-400 border border-slate-800/80 hover:bg-slate-800 hover:text-indigo-300 mt-3 shadow-sm">
                     <span data-i18n="groupColorSettingsBtn">🎨 任務組配色設定</span>
+                </button>
+                <button id="btn-pwa-install" onclick="triggerPWAInstall(); closeMobileSidebar();" class="hidden w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 mt-3">
+                    <span data-i18n="installAppBtn">📱 安裝手機 App</span>
                 </button>
             </nav>
             <!-- Font Size Scaling Switcher -->
@@ -1189,6 +1202,11 @@
                 fontNormal: "標準",
                 fontComfort: "舒適",
                 fontLarge: "大字",
+                installAppBtn: "📱 安裝手機 App",
+                installBannerTitle: "安裝 CaseFlow OS",
+                installBannerDesc: "免開啟瀏覽器網址列，點擊圖示一秒開啟，支援極速操作體驗！",
+                installNow: "立即安裝",
+                later: "稍後再說",
             },
             "vi-VN": {
                 subtitle: "Quản lý Dự án & Quyền hạn",
@@ -1289,6 +1307,11 @@
                 fontNormal: "Chuẩn",
                 fontComfort: "Vừa",
                 fontLarge: "Lớn",
+                installAppBtn: "📱 Cài đặt Ứng dụng",
+                installBannerTitle: "Cài đặt CaseFlow OS",
+                installBannerDesc: "Mở ứng dụng chỉ bằng một chạm, trải nghiệm độc lập mượt mà!",
+                installNow: "Cài đặt ngay",
+                later: "Để sau",
             }
         };
 
@@ -5761,6 +5784,203 @@
                 window.toggleDevDebug();
             }
         });
+
+        // ==========================================
+        // 📱 PWA (Progressive Web App) Support
+        // ==========================================
+        let deferredInstallPrompt = null;
+
+        function isRunningInStandaloneMode() {
+            return (
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true ||
+                document.referrer.includes('android-app://')
+            );
+        }
+
+        function isIOSDevice() {
+            return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => {
+                        console.log('[PWA] Service Worker registered with scope:', reg.scope);
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        console.log('[PWA] New version ready.');
+                                    }
+                                });
+                            }
+                        });
+                    })
+                    .catch((err) => {
+                        console.warn('[PWA] Service Worker registration failed:', err);
+                    });
+            });
+        }
+
+        // Capture beforeinstallprompt (Chromium / Android)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+
+            if (isRunningInStandaloneMode()) return;
+
+            // Show sidebar install button
+            const btnSidebar = document.getElementById('btn-pwa-install');
+            if (btnSidebar) {
+                btnSidebar.classList.remove('hidden');
+                btnSidebar.classList.add('flex');
+            }
+
+            // Show floating install banner if not dismissed recently
+            const isDismissed = localStorage.getItem('caseflow_pwa_banner_dismissed');
+            const dismissTime = parseInt(isDismissed, 10);
+            if (!isDismissed || (Date.now() - dismissTime > 7 * 86400000)) {
+                const banner = document.getElementById('pwa-install-banner');
+                if (banner) {
+                    banner.classList.remove('hidden');
+                }
+            }
+        });
+
+        // App successfully installed
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] App successfully installed!');
+            deferredInstallPrompt = null;
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.classList.add('hidden');
+            const btnSidebar = document.getElementById('btn-pwa-install');
+            if (btnSidebar) btnSidebar.classList.add('hidden');
+        });
+
+        // Trigger installation or show guide
+        window.triggerPWAInstall = async function() {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                console.log('[PWA] Install prompt outcome:', outcome);
+                deferredInstallPrompt = null;
+                dismissPWABanner();
+            } else if (isIOSDevice()) {
+                openIOSInstallModal();
+            } else {
+                alert('請透過瀏覽器選單點擊「安裝」或「加到主畫面」即可安裝 CaseFlow OS！');
+            }
+        };
+
+        window.dismissPWABanner = function() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.classList.add('hidden');
+            localStorage.setItem('caseflow_pwa_banner_dismissed', Date.now());
+        };
+
+        window.openIOSInstallModal = function() {
+            const modal = document.getElementById('ios-install-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeIOSInstallModal = function() {
+            const modal = document.getElementById('ios-install-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        // Initialize mobile / iOS PWA detection
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isRunningInStandaloneMode()) {
+                console.log('[PWA] Running in Standalone App mode.');
+                return;
+            }
+
+            // For iOS Safari
+            if (isIOSDevice() && !isRunningInStandaloneMode()) {
+                const btnSidebar = document.getElementById('btn-pwa-install');
+                if (btnSidebar) {
+                    btnSidebar.classList.remove('hidden');
+                    btnSidebar.classList.add('flex');
+                }
+
+                const isDismissed = localStorage.getItem('caseflow_pwa_banner_dismissed');
+                const dismissTime = parseInt(isDismissed, 10);
+                if (!isDismissed || (Date.now() - dismissTime > 7 * 86400000)) {
+                    const banner = document.getElementById('pwa-install-banner');
+                    const iosNotes = document.getElementById('pwa-ios-instructions');
+                    if (banner) banner.classList.remove('hidden');
+                    if (iosNotes) iosNotes.classList.remove('hidden');
+                    const installBtn = document.getElementById('pwa-banner-install-btn');
+                    if (installBtn) {
+                        installBtn.textContent = '安裝指引';
+                        installBtn.onclick = openIOSInstallModal;
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- PWA Install Floating Banner -->
+    <div id="pwa-install-banner" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-50 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-4 rounded-2xl shadow-2xl shadow-black/60 hidden transition-all duration-300">
+        <div class="flex items-start gap-3">
+            <img src="icons/icon-192.png" class="w-12 h-12 rounded-xl shadow-md border border-slate-700 shrink-0" alt="App Icon">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                    <h4 class="text-sm font-bold text-white truncate" data-i18n="installBannerTitle">安裝 CaseFlow OS</h4>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-medium shrink-0">獨立 App</span>
+                </div>
+                <p class="text-xs text-slate-300 mt-1 line-clamp-2" data-i18n="installBannerDesc">免開啟瀏覽器網址列，點擊圖示一秒開啟，支援極速操作體驗！</p>
+                <div id="pwa-ios-instructions" class="hidden mt-2 p-2 bg-slate-800/90 rounded-lg text-[11px] text-amber-300 border border-amber-500/30">
+                    點擊 Safari 下方分享按鈕 <span class="font-bold">「⎋」</span>，並選擇 <span class="font-bold">「加入主畫面 ➕」</span> 即可安裝。
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                    <button id="pwa-banner-install-btn" onclick="triggerPWAInstall()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors" data-i18n="installNow">
+                        立即安裝
+                    </button>
+                    <button onclick="dismissPWABanner()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-medium rounded-lg transition-colors" data-i18n="later">
+                        稍後再說
+                    </button>
+                </div>
+            </div>
+            <button onclick="dismissPWABanner()" class="text-slate-400 hover:text-slate-200 p-1 -mr-1 -mt-1" aria-label="關閉">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- iOS PWA Install Instruction Modal -->
+    <div id="ios-install-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-700 max-w-sm w-full rounded-2xl p-6 shadow-2xl relative text-center">
+            <button onclick="closeIOSInstallModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <img src="icons/icon-192.png" class="w-16 h-16 rounded-2xl shadow-lg border border-slate-700 mx-auto mb-3" alt="CaseFlow OS">
+            <h3 class="text-base font-bold text-white mb-1">安裝 CaseFlow OS 到手機主畫面</h3>
+            <p class="text-xs text-slate-400 mb-4">在 iPhone / iPad 上透過 Safari 快速安裝：</p>
+            
+            <div class="space-y-3 text-left text-xs bg-slate-950/60 p-4 rounded-xl border border-slate-800 mb-5">
+                <div class="flex items-start gap-2.5">
+                    <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] shrink-0 mt-0.5">1</span>
+                    <span class="text-slate-200">點擊 Safari 底部的 <span class="inline-flex items-center text-indigo-400 font-semibold">分享按鈕 <svg class="w-4 h-4 inline-block mx-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg> （方框箭頭 ⎋）</span></span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] shrink-0 mt-0.5">2</span>
+                    <span class="text-slate-200">在功能選單中往下滑動，選擇 <span class="text-emerald-400 font-semibold">「加入主畫面」➕</span></span>
+                </div>
+                <div class="flex items-start gap-2.5">
+                    <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] shrink-0 mt-0.5">3</span>
+                    <span class="text-slate-200">點擊右上角 <span class="text-indigo-400 font-semibold">「新增」</span>，即可在手機桌面使用獨立 App！</span>
+                </div>
+            </div>
+
+            <button onclick="closeIOSInstallModal()" class="w-full py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-sm font-semibold rounded-xl shadow-md transition-all">
+                我知道了
+            </button>
+        </div>
+    </div>
     </script>
 
     <!-- Floating Developer Debugger Panel (Hidden by default; toggle with Ctrl+Shift+D) -->

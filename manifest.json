@@ -1,0 +1,64 @@
+{
+  "id": "caseflow-os-app",
+  "name": "CaseFlow OS - 案件協同與權限管家",
+  "short_name": "CaseFlow OS",
+  "description": "以 Supabase 為核心的事件驅動專案作業系統與案件協同管家",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "📊 個人儀表板",
+      "short_name": "儀表板",
+      "description": "查看今日與即將到期個人待辦事項",
+      "url": "./index.html#dashboard",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "📅 日曆模式",
+      "short_name": "日曆",
+      "description": "查看月曆與案件死線時程",
+      "url": "./index.html#calendar",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "📋 案件樹狀",
+      "short_name": "案件樹",
+      "description": "查看完整專案結構與待辦群組",
+      "url": "./index.html#case",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

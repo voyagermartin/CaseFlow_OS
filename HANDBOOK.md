@@ -98,6 +98,7 @@
 | **Phase 18** (2026-11-10) | 📁 Google Drive 自動化目錄建置：發起新案件自動於 Drive 母目錄建立案件同名資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`)，並自動回填 Supabase `drive_url`。 | `v3.4` |
 | **Phase 19** (2026-11-10) | 🔐 GAS OAuth 授權鏈修復與雲端自動化實測驗證：補齊 `appsscript.json` 之 `oauthScopes`（Drive 完整讀寫與 External Request），新增 `testOrAuthorizeDrive` 診斷工具，修復 `DriveApp` 與 `UrlFetchApp` 權限阻擋，完成端點實測並為歷史案件 (Case #36) 補建資料夾。 | `v3.4.1` |
 | **Phase 20** (2026-11-10) | 🧹 UI 調校與 2027 全量案件 Drive 目錄批次補建：將右下角 Debugger 面板預設隱藏並支援 `Ctrl+Shift+D` 快捷切換；批次為 2027 年 1 月 1 日起出發之全數 9 筆案件於 Google Drive 自動建立「日期_案件名」專屬資料夾與 4 大子目錄 (`TKT`/`LOCAL`/`PP`/`INS`) 並回寫 Supabase。 | `v3.4.2` |
+| **Phase 21** (2026-11-18) | 📱 完整 PWA (Progressive Web App) 支援：導入標準 `manifest.json`、多尺寸與 Maskable App 圖示、Service Worker (`sw.js`) 離線外殼快取（智慧直通 Supabase 與 GAS API）、Android/Chromium 原生安裝提示、iOS Safari「加入主畫面」圖解指引 Modal、側邊欄一鍵安裝捷徑。 | `v3.5.0` |
 
 ---
 
@@ -106,8 +107,7 @@
 1. **📊 高級統計與專案報告匯出**：一鍵匯出專案進度報告（PDF / Excel）與逾期任務統計。
 2. **📎 任務抽屜直傳檔案至 4 大子目錄**：支援於抽屜中直接上傳圖片/PDF 至該案件的 `TKT`、`LOCAL`、`PP`、`INS` 子目錄。
 3. **📧 即時 Google Workspace 通訊通知**：討論串 `@同事` 時自動觸發 Gmail 郵件或 Google Chat 推播提醒。
-4. **📶 離線快取與 PWA 支援**：導入 Service Worker 與 LocalStorage 快取，支援離線唯讀查詢。
-5. **🔗 任務相依性關聯 (Task Dependencies)**：支援前置任務連鎖關聯與延期警告提示。
+4. **🔗 任務相依性關聯 (Task Dependencies)**：支援前置任務連鎖關聯與延期警告提示。
 
 ---
 
@@ -115,7 +115,7 @@
 
 > 本區塊作為後續功能擴充與 AI 協同開發的最新穩定起點。
 
-* **目前系統版本**：`v3.4.2`
+* **目前系統版本**：`v3.5.0`
 * **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
 * **Google Apps Script 部署**：`@64` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
 * **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
@@ -124,10 +124,13 @@
   - `https://www.googleapis.com/auth/drive` (完整讀寫與目錄建立)
   - `https://www.googleapis.com/auth/script.external_request` (Supabase REST API 回寫)
 * **功能驗證狀態**：
-  1. ✅ **Google Drive 自動建檔與回寫**：建立案件即自動在母目錄建立案件同名資料夾（`日期_案件名稱`）與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動非同步透過 REST API 回填 Supabase `drive_url`。
-  2. ✅ **歷史/未來案件全數掛載**：2027 年出發之 9 筆案件（Case #35, #36, #6, #31, #4, #14, #34, #32, #30）已全數補建資料夾與 4 大子目錄，雲端目錄連結 100% 寫入資料庫。
-  3. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
-  4. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
-  5. ✅ **介面乾淨度優化**：`CaseFlow OS Debugger` 預設隱藏，保留 `Ctrl+Shift+D` 快捷調出機制，日常使用介面維持清爽。
-  6. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
-  7. ✅ **基礎架構穩定性**：`safeInsert` 主鍵衝突自動自愈、視圖懶加載 (Lazy Evaluation)、原地 DOM 更新 (In-place Mutation)、3 段個人化字級調節器穩定運作。
+  1. ✅ **PWA 原生獨立 App 支援**：通過完整 PWA 標準規範（Web App Manifest + Service Worker + App Icons + Maskable），使用者在 Android Chrome、Edge、iOS Safari 等手機瀏覽器可一鍵「安裝為獨立 App」到手機主畫面。
+  2. ✅ **智慧快取與直通策略**：`sw.js` 預先快取 App Shell 與 CDN 套件，靜態資源採 Stale-While-Revalidate；Supabase REST / Realtime WebSocket 與 GAS 端點 100% 直通網路，確保資料庫異動 0ms 即時連動不延遲。
+  3. ✅ **iOS / Android 友善引導**：提供原生安裝提示攔截、側邊欄專屬「📱 安裝手機 App」按鈕、以及針對 iOS Safari 的三步驟視覺引導 Modal。
+  4. ✅ **Google Drive 自動建檔與回寫**：建立案件即自動在母目錄建立案件同名資料夾（`日期_案件名稱`）與 4 大標準子目錄（`TKT`、`LOCAL`、`PP`、`INS`），並自動非同步透過 REST API 回填 Supabase `drive_url`。
+  5. ✅ **歷史/未來案件全數掛載**：2027 年出發之 9 筆案件（Case #35, #36, #6, #31, #4, #14, #34, #32, #30）已全數補建資料夾與 4 大子目錄，雲端目錄連結 100% 寫入資料庫。
+  6. ✅ **專案導航直連**：案件卡片「`📂 雲端資料夾`」與任務抽屜「`📂 案件雲端資料夾`」快捷鍵均正常在新分頁開啟該案件目錄。
+  7. ✅ **安全防護機制**：刪除專案時僅刪除資料庫案件與關聯項目，Google Drive 上實體資料夾與檔案安全留存不誤刪。
+  8. ✅ **介面乾淨度優化**：`CaseFlow OS Debugger` 預設隱藏，保留 `Ctrl+Shift+D` 快捷調出機制，日常使用介面維持清爽。
+  9. ✅ **完整 RBAC 權限鏈**：OP（如 Josie, Ning, Apple）具備新增案件、編輯案件、批量指派成員、指定可見人員與「📦 封存 / 🔓 解封」完整權限；高風險「🗑️ 永久刪除案件」限定 SuperMaster 與建立者。
+  10. ✅ **基礎架構穩定性**：`safeInsert` 主鍵衝突自動自愈、視圖懶加載 (Lazy Evaluation)、原地 DOM 更新 (In-place Mutation)、3 段個人化字級調節器穩定運作。
