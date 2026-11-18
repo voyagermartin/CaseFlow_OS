@@ -21,6 +21,10 @@
   - **行動抽屜選單**：`<1024px` 預設隱藏側邊欄，透過頂欄 ☰ 漢堡按鈕與毛玻璃遮罩展開，切換分頁自動平滑收合。
   - **個人化字級調節器 (Font Scaler)**：動態控制根元素 `html.font-scale-*`（標準 16px / 舒適 18px / 大字 20px），透過 `localStorage` 跨裝置持久化記憶。
   - **44px 拇指友善觸控**：加大 Checkbox (`h-5 w-5`) 與按鈕熱區，輸入框防 iOS Safari 點擊自動拉近放大。
+- **全平台 PWA 原生應用架構 (Progressive Web App)**：
+  - **全螢幕獨立運行**：支援 Android 與 iOS 瀏覽器一鍵「安裝為獨立 App」至手機主畫面，無網址列干擾。
+  - **智慧快取與 API 零延遲直通**：`sw.js` 預載 App Shell 靜態資源；Supabase REST、Realtime WebSocket 與 GAS 端點 100% 旁路直通，杜絕資料延遲或快取污染。
+  - **自適應 Maskable 圖示**：內建 Android 80% 安全防護區圖示與 iOS 專屬 `apple-touch-icon`。
 - **門禁與權限控管**：
   - **Email 白名單門禁**：以 `users.google_email` 為進站名單（`#login-modal`）。
   - **Super Master 穿透權限**：`Martin` (`id: 1` / `is_super_master: true`) 具全域穿透檢視權限與單向 PIN 碼鎖（`ADMIN_PASSCODE: 8888`）。
@@ -67,13 +71,22 @@
 - **討論抽屜與時程推算機**：任務抽屜直顯留言討論串，內建雙向時程偏移計算機（行前倒算/團後順推 + 臺灣國定假日/補班工作天計算引擎 + 一鍵套用）。
 - **Google Drive 直連導航**：案件卡片「📂 雲端資料夾」按鈕與任務抽屜「📂 案件雲端資料夾」捷徑，點擊可直接在新分頁開啟該案件專屬雲端硬碟。
 
+### 📱 D. PWA 原生應用模式 (Mobile Standalone App)
+- **獨立全螢幕視窗**：安裝後點擊桌面圖示直接以全螢幕啟動，完全隱藏瀏覽器網址列與選單，極致提升操作專注度與視覺空間。
+- **雙平台安裝導引**：
+  - **Android / Chromium**：主動捕捉 `beforeinstallprompt` 事件，頁面底部滑出安裝橫幅，點擊「立即安裝」一秒呼叫系統安裝對話框。
+  - **iOS Safari**：自動辨識 iPhone / iPad 瀏覽環境，彈出清晰的三步驟圖解指示（分享按鈕 ⎋ ➡️「加入主畫面 ➕」➡️ 右上角「新增」）。
+  - **側邊欄快捷入口**：選單內建「📱 安裝手機 App」按鈕；使用者進入獨立 App 模式後自動靜默隱藏所有安裝提示。
+- **桌面快捷操作 (App Shortcuts)**：長按手機桌面圖示可直接捷徑進入「📊 個人儀表板」、「📅 日曆模式」或「📋 案件樹狀」。
+
 ---
 
 ## ⚙️ 4. 部署方式與自動化協議
 
 ### 🚀 部署架構
-1. **前端與靜態資源**：託管於 **GitHub Pages**，透過 `@supabase/supabase-js` 直接與 Supabase Cloud 連線。
+1. **前端與靜態資源**：託管於 **GitHub Pages**，包含 PWA 核心資產（`manifest.json`, `sw.js`, `icons/`），透過 `@supabase/supabase-js` 直接與 Supabase Cloud 連線。
 2. **後端自動化**：託管於 **Google Apps Script**（Web App 發布），處理 Google Drive 自動化建檔與目錄建立。
+3. **雲端隔離協議 (.claspignore)**：配置白名單隔離規則，確保僅有 GAS 相關程式碼 (`Code.js`, `index.html`, `appsscript.json`) 推送至雲端，防止瀏覽器專用資產 (`sw.js`, `manifest.json`, `icons/`) 污染 GAS 專案。
 
 ### 🤝 AI 自動化部署協議
 - 程式碼修改完成後，依序執行：
@@ -117,7 +130,7 @@
 
 * **目前系統版本**：`v3.5.0`
 * **資料庫環境**：Supabase Cloud PostgreSQL (`https://lzfiemnygaarzgvvonwt.supabase.co`)
-* **Google Apps Script 部署**：`@64` (`AKfycbz_YCRl9tS92Y7tR1GTaVOTMEV7pDmQv3mIN7MiAYwGGDli664-lcx5mg3JonyNRjexIg`)
+* **Google Apps Script 部署**：`@66` (`AKfycbxdwLsiLCVd0SH5hNMEkjnrg6cWFImEbzunzHWe2U1zp5bFj2IbHg_5LEWRel39smgKgg`)
 * **Google Drive 生產母目錄 ID**：`1VH0znKP7xmG_UKF4BcqV6hb6c7c_BwMI`
 * **OAuth 授權規格 (appsscript.json)**：
   - `https://www.googleapis.com/auth/spreadsheets`
